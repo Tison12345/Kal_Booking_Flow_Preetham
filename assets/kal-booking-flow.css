@@ -7,6 +7,7 @@
   height: 100%;
   max-width: 100%;
   max-height: 100%;
+  font-family: 'Avenir', -apple-system, 'Segoe UI', sans-serif;
 }
 
 .kal-booking-flow::backdrop {
@@ -38,18 +39,18 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  z-index: 1;
+  z-index: 2;
 }
 
 .kal-booking-flow__content {
   height: 100%;
   box-sizing: border-box;
-  padding: 24px;
+  padding: 20px 16px;
 }
 
-@media screen and (max-width: 749px) {
+@media screen and (min-width: 750px) {
   .kal-booking-flow__content {
-    padding: 20px 16px;
+    padding: 0;
   }
 }
 
@@ -58,87 +59,144 @@
 ----------------------------------------- */
 
 .kal-step--entry {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
+  height: 100%;
 }
 
 @media screen and (min-width: 750px) {
   .kal-step--entry {
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-    gap: 32px;
-    height: 100%;
+    flex-direction: row;
+    gap: 0;
+  }
+}
+
+/* Left info column */
+
+.kal-step-entry__info {
+  display: flex;
+  flex-direction: column;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-entry__info {
+    width: 300px;
+    flex-shrink: 0;
+    justify-content: space-between;
+    background: #fff;
+    border-radius: 16px 0 0 16px;
+    overflow: hidden;
+  }
+}
+
+.kal-step-entry__info-content {
+  padding: 0;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-entry__info-content {
+    padding: 60px 24px 24px;
   }
 }
 
 .kal-eyebrow {
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 1.44px;
   text-transform: uppercase;
-  color: #7d7d7d;
-  margin: 0 0 12px;
+  color: #5d5e60;
+  margin: 0 0 8px;
 }
 
 .kal-heading {
-  font-size: 28px;
-  line-height: 1.15;
-  font-weight: 700;
-  color: #1e4b3c;
-  margin: 0 0 16px;
+  font-size: 24px;
+  line-height: 34px;
+  font-weight: 800;
+  color: #191919;
+  margin: 0 0 12px;
 }
 
 .kal-body-text {
   font-size: 15px;
-  line-height: 1.5;
-  color: #5a5a5a;
-  margin: 0 0 24px;
+  line-height: 24px;
+  font-weight: 400;
+  color: #5d5d5d;
+  margin: 0;
 }
 
 .kal-step-entry__location {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  color: #5a5a5a;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0 0;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-entry__location {
+    padding: 24px 36px;
+    background: rgba(255, 255, 255, 0.8);
+    border-top: 1px solid #dcdcdc;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+}
+
+.kal-step-entry__location-text {
+  font-size: 12px;
+  line-height: 150%;
+  font-weight: 400;
+  text-transform: capitalize;
+  color: #4b4b4b;
+}
+
+/* Right action panel */
+
+.kal-step-entry__action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-entry__action-panel {
+    width: 500px;
+    flex-shrink: 0;
+    padding: 16px;
+    box-sizing: border-box;
+  }
 }
 
 .kal-step-entry__banner {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #d9d3c4 0%, #a9b89c 50%, #7d8f74 100%);
-  margin-bottom: 16px;
+  aspect-ratio: 468 / 225;
+  border-radius: 20px;
+  background:
+    linear-gradient(0deg, rgba(0, 80, 58, 0.45) 0%, rgba(0, 80, 58, 0) 50%, rgba(0, 80, 58, 0) 100%),
+    linear-gradient(135deg, #d9d3c4 0%, #a9b89c 50%, #7d8f74 100%);
 }
 
 .kal-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.44px;
   text-transform: uppercase;
-  color: #7d7d7d;
-  margin: 0 0 12px;
+  color: #5d5e60;
+  margin: 0;
 }
 
 .kal-option-card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   width: 100%;
-  padding: 16px;
-  border-radius: 12px;
-  border: none;
+  padding: 20px;
+  border-radius: 16px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  margin-bottom: 12px;
+  box-sizing: border-box;
   transition: transform 0.15s ease;
-}
-
-.kal-option-card:last-child {
-  margin-bottom: 0;
 }
 
 .kal-option-card:hover {
@@ -146,13 +204,14 @@
 }
 
 .kal-option-card--primary {
-  background: #1e4b3c;
-  color: #fff;
+  background: #00503a;
+  border: none;
+  box-shadow: 0px 14px 28px -10px rgba(25, 25, 25, 0.5);
 }
 
 .kal-option-card--secondary {
-  background: #f3f6ef;
-  color: #1e4b3c;
+  background: #fff;
+  border: 1px solid #dcdcdc;
 }
 
 .kal-option-card__text {
@@ -163,13 +222,32 @@
 }
 
 .kal-option-card__title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 17px;
+  line-height: 26px;
+  font-weight: 800;
+}
+
+.kal-option-card--primary .kal-option-card__title {
+  color: #fafaf9;
+}
+
+.kal-option-card--secondary .kal-option-card__title {
+  color: #191919;
 }
 
 .kal-option-card__subtitle {
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.kal-option-card--primary .kal-option-card__subtitle {
+  color: #fafaf9;
   opacity: 0.8;
+}
+
+.kal-option-card--secondary .kal-option-card__subtitle {
+  color: #5d5d5d;
 }
 
 .kal-icon {
@@ -188,24 +266,19 @@
    in the exported SVG, so they render at full size with no extra wrapper styling */
 .kal-icon--calendar svg,
 .kal-icon--monitor svg {
-  width: 44px;
-  height: 44px;
-}
-
-.kal-option-card--primary .kal-icon--arrow {
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-}
-
-.kal-option-card--secondary .kal-icon--arrow {
-  width: 32px;
-  height: 32px;
-  background: rgba(30, 75, 60, 0.08);
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
 }
 
 .kal-icon--arrow {
   margin-left: auto;
+}
+
+.kal-option-card--primary .kal-icon--arrow {
+  color: #fafaf9;
+  opacity: 0.8;
+}
+
+.kal-option-card--secondary .kal-icon--arrow {
+  color: #5d5d5d;
 }
