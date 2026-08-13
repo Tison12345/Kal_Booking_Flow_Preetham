@@ -1,0 +1,52 @@
+.kal-booking-flow[hidden] {
+  display: none;
+}
+
+.kal-booking-flow__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 900;
+}
+
+.kal-booking-flow__panel {
+  position: fixed;
+  inset: 0;
+  z-index: 901;
+  background: #fff;
+  overflow-y: auto;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-booking-flow__panel {
+    top: 50%;
+    left: 50%;
+    inset: auto;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 560px;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+}
+
+.kal-booking-flow__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.kal-booking-flow__content {
+  padding: 24px;
+}
+
+@media screen and (max-width: 749px) {
+  .kal-booking-flow__content {
+    padding: 20px 16px;
+  }
+}

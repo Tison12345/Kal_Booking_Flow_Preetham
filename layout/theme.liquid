@@ -401,5 +401,9 @@
     {%- if settings.cart_type == 'drawer' -%}
       <script src="{{ 'cart-drawer.js' | asset_url }}" defer="defer"></script>
     {%- endif -%}
+
+    {%- if settings.kal_booking_enabled -%}
+      {% render 'kal-booking-flow' %}
+    {%- endif -%}
   </body>
 </html>
