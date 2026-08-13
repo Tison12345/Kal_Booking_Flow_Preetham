@@ -1466,5 +1466,46 @@
         "label": "t:settings_schema.customer_accounts.settings.customer_account_menu.label"
       }
     ]
+  },
+  {
+    "name": "Kal Booking Flow",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "kal_booking_enabled",
+        "label": "Enable booking flow",
+        "info": "Turn the entire booking flow on/off site-wide without removing the code.",
+        "default": true
+      },
+      {
+        "type": "header",
+        "content": "Backend connection"
+      },
+      {
+        "type": "url",
+        "id": "kal_booking_api_base_url",
+        "label": "CMS backend API base URL",
+        "info": "Every step (consultation, therapy, reschedule, cancel) calls this backend."
+      },
+      {
+        "type": "header",
+        "content": "CTA text"
+      },
+      {
+        "type": "text",
+        "id": "kal_booking_cta_text",
+        "label": "Default CTA button text",
+        "default": "Request Appointment"
+      },
+      {
+        "type": "header",
+        "content": "Fallback contact"
+      },
+      {
+        "type": "number",
+        "id": "kal_booking_whatsapp_number",
+        "label": "WhatsApp fallback number"
+      }
+    ]
   }
 ]
