@@ -1,23 +1,21 @@
 {% comment %}
   Global booking flow, triggered from any CTA with class "kal-request-appointment-cta"
   anywhere in the theme. Rendered once in layout/theme.liquid.
+  Uses the native <dialog> element so it always renders above all other page
+  content, regardless of any CSS transform/stacking-context elsewhere in the theme.
 {% endcomment %}
 
 {{ 'kal-booking-flow.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'kal-booking-flow.js' | asset_url }}" defer></script>
 
-<div
+<dialog
   id="kal-booking-flow"
   class="kal-booking-flow"
-  data-state="closed"
   data-api-base-url="{{ settings.kal_booking_api_base_url }}"
   data-whatsapp-number="{{ settings.kal_booking_whatsapp_number }}"
 >
-  <div class="kal-booking-flow__overlay" data-kal-close></div>
-  <div class="kal-booking-flow__panel" role="dialog" aria-modal="true">
-    <button class="kal-booking-flow__close" data-kal-close aria-label="Close">×</button>
-    <div class="kal-booking-flow__content" id="kal-booking-flow-content">
-      <!-- Step screens go here once we have the design -->
-    </div>
+  <button class="kal-booking-flow__close" data-kal-close aria-label="Close">×</button>
+  <div class="kal-booking-flow__content" id="kal-booking-flow-content">
+    <!-- Step screens go here once we have the design -->
   </div>
-</div>
+</dialog>

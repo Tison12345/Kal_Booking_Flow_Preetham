@@ -6,13 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const whatsappNumber = flow.dataset.whatsappNumber || '';
 
   function openFlow() {
-    flow.classList.add('is-open');
-    flow.dataset.state = 'open';
+    flow.showModal();
   }
 
   function closeFlow() {
-    flow.dataset.state = 'closed';
-    flow.classList.remove('is-open');
+    flow.close();
   }
 
   // Any CTA anywhere on the site with this class opens the flow
@@ -25,9 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Close on Escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && flow.dataset.state === 'open') {
+  // Click on the backdrop (outside the dialog box itself) closes it
+  flow.addEventListener('click', (e) => {
+    if (e.target === flow) {
       closeFlow();
     }
   });
