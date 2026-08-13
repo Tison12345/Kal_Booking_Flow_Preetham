@@ -6,14 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const whatsappNumber = flow.dataset.whatsappNumber || '';
 
   function openFlow() {
-    flow.hidden = false;
+    flow.classList.add('is-open');
     flow.dataset.state = 'open';
     document.body.style.overflow = 'hidden';
   }
 
   function closeFlow() {
     flow.dataset.state = 'closed';
-    flow.hidden = true;
+    flow.classList.remove('is-open');
     document.body.style.overflow = '';
   }
 

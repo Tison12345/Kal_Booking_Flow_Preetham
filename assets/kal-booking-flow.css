@@ -1,18 +1,22 @@
-.kal-booking-flow[hidden] {
+.kal-booking-flow {
   display: none;
+}
+
+.kal-booking-flow.is-open {
+  display: block;
 }
 
 .kal-booking-flow__overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 900;
+  z-index: 999998;
 }
 
 .kal-booking-flow__panel {
   position: fixed;
   inset: 0;
-  z-index: 901;
+  z-index: 999999;
   background: #fff;
   overflow-y: auto;
 }
