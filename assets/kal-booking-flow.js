@@ -8,13 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function openFlow() {
     flow.classList.add('is-open');
     flow.dataset.state = 'open';
-    document.body.style.overflow = 'hidden';
   }
 
   function closeFlow() {
     flow.dataset.state = 'closed';
     flow.classList.remove('is-open');
-    document.body.style.overflow = '';
   }
 
   // Any CTA anywhere on the site with this class opens the flow
