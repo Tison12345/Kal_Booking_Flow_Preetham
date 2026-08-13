@@ -1,0 +1,60 @@
+{% comment %}
+  Entry step — the first screen shown when the booking flow opens.
+  Lets the visitor choose between "Book a consultation" and "Request a therapy session".
+
+  Location line is a DUMMY placeholder for now (we're building in the demo store,
+  not on a real clinic page). Once this is ported to the real theme, this should
+  read from that page's clinic settings instead — see custom-clinic-consultation-form.liquid
+  in the real theme export for the pattern (clinic_name / clinic_area settings).
+{% endcomment %}
+
+<div class="kal-step kal-step--entry">
+  <div class="kal-step-entry__info">
+    <p class="kal-eyebrow">No sign-in needed</p>
+    <h2 class="kal-heading">Calm care,<br>closer than you think.</h2>
+    <p class="kal-body-text">
+      Book a consultation in under a minute — in-clinic or video. Confirmation
+      arrives instantly, no account required.
+    </p>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin -->
+      </span>
+      <span>
+        <!-- DUMMY VALUE — replace with real clinic name/area once on a real clinic page -->
+        Kerala Ayurveda Wellness Center, Koramangala &middot; Opens 8 AM
+      </span>
+    </div>
+  </div>
+
+  <div class="kal-step-entry__action-panel">
+    <div class="kal-step-entry__banner" aria-hidden="true"></div>
+    <p class="kal-label">What would you like to do?</p>
+
+    <button type="button" class="kal-option-card kal-option-card--primary" data-kal-goto="consultation">
+      <span class="kal-icon kal-icon--calendar">
+        <!-- ICON: calendar -->
+      </span>
+      <span class="kal-option-card__text">
+        <span class="kal-option-card__title">Book a consultation</span>
+        <span class="kal-option-card__subtitle">In-clinic or video &mdash; under a minute</span>
+      </span>
+      <span class="kal-icon kal-icon--arrow">
+        <!-- ICON: arrow-right -->
+      </span>
+    </button>
+
+    <button type="button" class="kal-option-card kal-option-card--secondary" data-kal-goto="therapy">
+      <span class="kal-icon kal-icon--monitor">
+        <!-- ICON: monitor -->
+      </span>
+      <span class="kal-option-card__text">
+        <span class="kal-option-card__title">Request a therapy session</span>
+        <span class="kal-option-card__subtitle">Talk to our care coordinator</span>
+      </span>
+      <span class="kal-icon kal-icon--arrow">
+        <!-- ICON: arrow-right -->
+      </span>
+    </button>
+  </div>
+</div>
