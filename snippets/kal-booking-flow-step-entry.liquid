@@ -10,6 +10,10 @@
   Icons are looked up from snippets/kal-booking-icons.liquid, matching the real
   theme's kerala-ayurveda-icons.liquid pattern.
 
+  Banner image is uploaded through Theme settings → Kal Booking Flow → Entry step
+  banner image (a global image_picker setting, not hardcoded) — falls back to a
+  CSS gradient placeholder until one is uploaded.
+
   BEM: single block "kal-step-entry" for everything specific to this step.
   "kal-option-card" and "kal-icon" are separate, reusable component blocks.
 {% endcomment %}
@@ -36,7 +40,20 @@
   </div>
 
   <div class="kal-step-entry__action-panel">
-    <div class="kal-step-entry__banner" aria-hidden="true"></div>
+    <div class="kal-step-entry__banner" aria-hidden="true">
+      {%- if settings.kal_booking_entry_banner_image -%}
+        <img
+          src="{{ settings.kal_booking_entry_banner_image | image_url: width: 936 }}"
+          srcset="
+            {{ settings.kal_booking_entry_banner_image | image_url: width: 468 }} 468w,
+            {{ settings.kal_booking_entry_banner_image | image_url: width: 936 }} 936w"
+          sizes="468px"
+          alt=""
+          loading="lazy"
+          class="kal-step-entry__banner-image"
+        >
+      {%- endif -%}
+    </div>
     <p class="kal-step-entry__label">What would you like to do?</p>
 
     <button type="button" class="kal-option-card kal-option-card--primary" data-kal-goto="consultation">

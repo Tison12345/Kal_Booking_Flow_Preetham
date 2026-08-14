@@ -1505,6 +1505,15 @@
         "type": "number",
         "id": "kal_booking_whatsapp_number",
         "label": "WhatsApp fallback number"
+      },
+      {
+        "type": "header",
+        "content": "Entry step"
+      },
+      {
+        "type": "image_picker",
+        "id": "kal_booking_entry_banner_image",
+        "label": "Entry step banner image"
       }
     ]
   }
