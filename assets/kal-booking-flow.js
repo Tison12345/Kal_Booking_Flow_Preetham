@@ -5,13 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const apiBaseUrl = flow.dataset.apiBaseUrl || '';
   const whatsappNumber = flow.dataset.whatsappNumber || '';
 
-  function openFlow() {
+  const openFlow = () => {
     flow.showModal();
-  }
+  };
 
-  function closeFlow() {
+  const closeFlow = () => {
     flow.close();
-  }
+  };
 
   // Any CTA anywhere on the site with this class opens the flow
   document.addEventListener('click', (e) => {

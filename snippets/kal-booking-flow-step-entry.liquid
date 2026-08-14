@@ -10,17 +10,16 @@
   Icons are looked up from snippets/kal-booking-icons.liquid, matching the real
   theme's kerala-ayurveda-icons.liquid pattern.
 
-  Sizing/colors match the exact Figma "Copy as CSS" export for Frame 1.
-  Still missing (placeholders until provided): left-panel faint background image,
-  right-panel banner photo, location-pin icon.
+  BEM: single block "kal-step-entry" for everything specific to this step.
+  "kal-option-card" and "kal-icon" are separate, reusable component blocks.
 {% endcomment %}
 
-<div class="kal-step kal-step--entry">
+<div class="kal-step-entry">
   <div class="kal-step-entry__info">
     <div class="kal-step-entry__info-content">
-      <p class="kal-eyebrow">No sign-in needed</p>
-      <h2 class="kal-heading">Calm care, closer than you think.</h2>
-      <p class="kal-body-text">
+      <p class="kal-step-entry__eyebrow">No sign-in needed</p>
+      <h2 class="kal-step-entry__heading">Calm care, closer than you think.</h2>
+      <p class="kal-step-entry__body-text">
         Book a consultation in under a minute in-clinic or video. Confirmation
         arrives instantly, no account required.
       </p>
@@ -38,7 +37,7 @@
 
   <div class="kal-step-entry__action-panel">
     <div class="kal-step-entry__banner" aria-hidden="true"></div>
-    <p class="kal-label">What would you like to do?</p>
+    <p class="kal-step-entry__label">What would you like to do?</p>
 
     <button type="button" class="kal-option-card kal-option-card--primary" data-kal-goto="consultation">
       <span class="kal-icon kal-icon--calendar">

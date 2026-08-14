@@ -1,17 +1,44 @@
+:root {
+  /* Colors */
+  --kal-color-primary: #00503a;
+  --kal-color-on-primary: #fafaf9;
+  --kal-color-heading: #191919;
+  --kal-color-body: #5d5d5d;
+  --kal-color-label: #5d5e60;
+  --kal-color-location-text: #4b4b4b;
+  --kal-color-border: #dcdcdc;
+  --kal-color-white: #ffffff;
+  --kal-color-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Typography */
+  --kal-font-family: 'Avenir', -apple-system, 'Segoe UI', sans-serif;
+  --kal-font-size-eyebrow: 12px;
+  --kal-letter-spacing-eyebrow: 1.44px;
+  --kal-font-size-heading: 24px;
+  --kal-line-height-heading: 34px;
+  --kal-font-size-body: 15px;
+  --kal-line-height-body: 24px;
+  --kal-font-size-title: 17px;
+  --kal-line-height-title: 26px;
+  --kal-font-size-subtitle: 12px;
+  --kal-line-height-subtitle: 20px;
+  --kal-font-size-location: 12px;
+}
+
 .kal-booking-flow {
   border: none;
   padding: 0;
   margin: 0;
-  background: #fff;
+  background: var(--kal-color-white);
   width: 100%;
   height: 100%;
   max-width: 100%;
   max-height: 100%;
-  font-family: 'Avenir', -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--kal-font-family);
 }
 
 .kal-booking-flow::backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--kal-color-overlay);
 }
 
 @media screen and (min-width: 750px) {
@@ -25,7 +52,7 @@
     max-width: 802px;
     height: 500px;
     max-height: 90vh;
-    border: 1px solid #dcdcdc;
+    border: 1px solid var(--kal-color-border);
     border-radius: 16px;
     box-shadow: 0px 24px 48px -16px rgba(25, 25, 25, 0.18), 0px 8px 16px -8px rgba(25, 25, 25, 0.1);
   }
@@ -56,9 +83,10 @@
 
 /* ----------------------------------------
    ENTRY STEP
+   Single block: kal-step-entry — every element below is scoped to it
 ----------------------------------------- */
 
-.kal-step--entry {
+.kal-step-entry {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -66,13 +94,11 @@
 }
 
 @media screen and (min-width: 750px) {
-  .kal-step--entry {
+  .kal-step-entry {
     flex-direction: row;
     gap: 0;
   }
 }
-
-/* Left info column */
 
 .kal-step-entry__info {
   display: flex;
@@ -84,7 +110,7 @@
     width: 300px;
     flex-shrink: 0;
     justify-content: space-between;
-    background: #fff;
+    background: var(--kal-color-white);
     border-radius: 16px 0 0 16px;
     overflow: hidden;
   }
@@ -100,28 +126,33 @@
   }
 }
 
-.kal-eyebrow {
-  font-size: 12px;
+.kal-step-entry__eyebrow,
+.kal-step-entry__label {
+  font-size: var(--kal-font-size-eyebrow);
   font-weight: 800;
-  letter-spacing: 1.44px;
+  letter-spacing: var(--kal-letter-spacing-eyebrow);
   text-transform: uppercase;
-  color: #5d5e60;
-  margin: 0 0 8px;
+  color: var(--kal-color-label);
+  margin: 0;
 }
 
-.kal-heading {
-  font-size: 24px;
-  line-height: 34px;
+.kal-step-entry__eyebrow {
+  margin-bottom: 8px;
+}
+
+.kal-step-entry__heading {
+  font-size: var(--kal-font-size-heading);
+  line-height: var(--kal-line-height-heading);
   font-weight: 800;
-  color: #191919;
+  color: var(--kal-color-heading);
   margin: 0 0 12px;
 }
 
-.kal-body-text {
-  font-size: 15px;
-  line-height: 24px;
+.kal-step-entry__body-text {
+  font-size: var(--kal-font-size-body);
+  line-height: var(--kal-line-height-body);
   font-weight: 400;
-  color: #5d5d5d;
+  color: var(--kal-color-body);
   margin: 0;
 }
 
@@ -136,21 +167,19 @@
   .kal-step-entry__location {
     padding: 24px 36px;
     background: rgba(255, 255, 255, 0.8);
-    border-top: 1px solid #dcdcdc;
+    border-top: 1px solid var(--kal-color-border);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
   }
 }
 
 .kal-step-entry__location-text {
-  font-size: 12px;
+  font-size: var(--kal-font-size-location);
   line-height: 150%;
   font-weight: 400;
   text-transform: capitalize;
-  color: #4b4b4b;
+  color: var(--kal-color-location-text);
 }
-
-/* Right action panel */
 
 .kal-step-entry__action-panel {
   display: flex;
@@ -176,14 +205,10 @@
     linear-gradient(135deg, #d9d3c4 0%, #a9b89c 50%, #7d8f74 100%);
 }
 
-.kal-label {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 1.44px;
-  text-transform: uppercase;
-  color: #5d5e60;
-  margin: 0;
-}
+/* ----------------------------------------
+   OPTION CARD — reusable component, own block
+   (used by the entry step, and reusable anywhere else a similar choice card is needed)
+----------------------------------------- */
 
 .kal-option-card {
   display: flex;
@@ -204,14 +229,14 @@
 }
 
 .kal-option-card--primary {
-  background: #00503a;
+  background: var(--kal-color-primary);
   border: none;
   box-shadow: 0px 14px 28px -10px rgba(25, 25, 25, 0.5);
 }
 
 .kal-option-card--secondary {
-  background: #fff;
-  border: 1px solid #dcdcdc;
+  background: var(--kal-color-white);
+  border: 1px solid var(--kal-color-border);
 }
 
 .kal-option-card__text {
@@ -222,33 +247,37 @@
 }
 
 .kal-option-card__title {
-  font-size: 17px;
-  line-height: 26px;
+  font-size: var(--kal-font-size-title);
+  line-height: var(--kal-line-height-title);
   font-weight: 800;
 }
 
 .kal-option-card--primary .kal-option-card__title {
-  color: #fafaf9;
+  color: var(--kal-color-on-primary);
 }
 
 .kal-option-card--secondary .kal-option-card__title {
-  color: #191919;
+  color: var(--kal-color-heading);
 }
 
 .kal-option-card__subtitle {
-  font-size: 12px;
-  line-height: 20px;
+  font-size: var(--kal-font-size-subtitle);
+  line-height: var(--kal-line-height-subtitle);
   font-weight: 400;
 }
 
 .kal-option-card--primary .kal-option-card__subtitle {
-  color: #fafaf9;
+  color: var(--kal-color-on-primary);
   opacity: 0.8;
 }
 
 .kal-option-card--secondary .kal-option-card__subtitle {
-  color: #5d5d5d;
+  color: var(--kal-color-body);
 }
+
+/* ----------------------------------------
+   ICON — reusable component, own block
+----------------------------------------- */
 
 .kal-icon {
   display: inline-flex;
@@ -275,10 +304,10 @@
 }
 
 .kal-option-card--primary .kal-icon--arrow {
-  color: #fafaf9;
+  color: var(--kal-color-on-primary);
   opacity: 0.8;
 }
 
 .kal-option-card--secondary .kal-icon--arrow {
-  color: #5d5d5d;
+  color: var(--kal-color-body);
 }
