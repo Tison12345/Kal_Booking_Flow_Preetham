@@ -95,7 +95,12 @@
 
 @media screen and (min-width: 750px) {
   .kal-step-entry {
-    flex-direction: row;
+    display: grid;
+    /* fr units, not fixed px — matches the real theme's own two-column
+       sections (custom-clinic-consultation-form.css, custom-hero-banner-slider.css),
+       and keeps this fluid down to tablet widths instead of overflowing. 3fr/5fr
+       preserves the original 300px/500px (3:5) ratio from the Figma spec. */
+    grid-template-columns: 3fr 5fr;
     gap: 0;
   }
 }
@@ -107,8 +112,6 @@
 
 @media screen and (min-width: 750px) {
   .kal-step-entry__info {
-    width: 300px;
-    flex-shrink: 0;
     justify-content: space-between;
     background: var(--kal-color-white);
     border-radius: 16px 0 0 16px;
@@ -189,8 +192,6 @@
 
 @media screen and (min-width: 750px) {
   .kal-step-entry__action-panel {
-    width: 500px;
-    flex-shrink: 0;
     padding: 16px;
     box-sizing: border-box;
   }
