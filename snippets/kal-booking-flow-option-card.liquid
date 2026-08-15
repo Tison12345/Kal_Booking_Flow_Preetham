@@ -1,0 +1,28 @@
+{% comment %}
+  One "choose an option" card — shared between the mobile and desktop
+  compositions of the entry step, since the card itself is identical in
+  both, only its surrounding layout differs.
+
+  Accepts:
+  - variant: {String} 'primary' or 'secondary'
+  - icon_name: {String} passed to kal-booking-icons
+  - title: {String}
+  - subtitle: {String}
+  - goto: {String} value for data-kal-goto, used by the flow JS later to route to the right next step
+
+  Usage:
+  {% render 'kal-booking-flow-option-card', variant: 'primary', icon_name: 'calendar', title: 'Book a consultation', subtitle: 'In-clinic or video — under a minute', goto: 'consultation' %}
+{% endcomment %}
+
+<button type="button" class="kal-option-card kal-option-card--{{ variant }}" data-kal-goto="{{ goto }}">
+  <span class="kal-icon kal-icon--{{ icon_name }}">
+    {%- render 'kal-booking-icons', icon_name: icon_name -%}
+  </span>
+  <span class="kal-option-card__text">
+    <span class="kal-option-card__title">{{ title }}</span>
+    <span class="kal-option-card__subtitle">{{ subtitle }}</span>
+  </span>
+  <span class="kal-icon kal-icon--arrow">
+    {%- render 'kal-booking-icons', icon_name: 'arrow-right' -%}
+  </span>
+</button>

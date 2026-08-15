@@ -2,33 +2,62 @@
   Entry step — the first screen shown when the booking flow opens.
   Lets the visitor choose between "Book a consultation" and "Request a therapy session".
 
+  Mobile and desktop have genuinely different compositions here, not just a reflow:
+  on mobile the heading overlays the banner image directly and the location line
+  sits at the very bottom with no eyebrow; on desktop they're separate, with an
+  eyebrow and a frosted location bar. Rather than force one DOM structure to serve
+  both via complex CSS repositioning, each gets its own markup below, toggled by
+  breakpoint via CSS display (.kal-step-entry__mobile / .kal-step-entry__desktop).
+  The option cards ARE shared between the two (via kal-booking-flow-option-card.liquid)
+  since those are identical in both.
+
   Location line is a DUMMY placeholder for now (we're building in the demo store,
   not on a real clinic page). Once this is ported to the real theme, this should
   read from that page's clinic settings instead — see custom-clinic-consultation-form.liquid
   in the real theme export for the pattern (clinic_name / clinic_area settings).
 
-  Icons are looked up from snippets/kal-booking-icons.liquid, matching the real
-  theme's kerala-ayurveda-icons.liquid pattern.
-
   Banner image: ships with a default (assets/kal-booking-entry-banner.png), but a
   merchant can override it via Theme settings → Kal Booking Flow → Entry step
   banner image (image_picker setting) without touching code.
-
-  BEM: single block "kal-step-entry" for everything specific to this step.
-  "kal-option-card" and "kal-icon" are separate, reusable component blocks.
 {% endcomment %}
 
+{%- liquid
+  assign banner_image_url = settings.kal_booking_entry_banner_image | default: nil
+-%}
+
 <div class="kal-step-entry">
-  <div class="kal-step-entry__info">
-    <div class="kal-step-entry__info-content">
-      <p class="kal-step-entry__eyebrow">No sign-in needed</p>
-      <h2 class="kal-step-entry__heading">Calm care, closer than you think.</h2>
-      <p class="kal-step-entry__body-text">
-        Book a consultation in under a minute in-clinic or video. Confirmation
-        arrives instantly, no account required.
-      </p>
+
+  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
+  <div class="kal-step-entry__mobile">
+    <div class="kal-step-entry__banner kal-step-entry__banner--mobile" aria-hidden="true">
+      {%- if banner_image_url -%}
+        <img
+          src="{{ banner_image_url | image_url: width: 750 }}"
+          alt=""
+          loading="lazy"
+          class="kal-step-entry__banner-image"
+        >
+      {%- else -%}
+        <img
+          src="{{ 'kal-booking-entry-banner.png' | asset_url }}"
+          alt=""
+          loading="lazy"
+          class="kal-step-entry__banner-image"
+        >
+      {%- endif -%}
+      <h2 class="kal-step-entry__heading kal-step-entry__heading--overlay">Calm care,<br>closer than you think.</h2>
     </div>
-    <div class="kal-step-entry__location">
+
+    <p class="kal-step-entry__body-text">
+      Book a consultation in under a minute, no account needed. Pay at the clinic when you arrive.
+    </p>
+
+    <p class="kal-step-entry__label">What would you like to do?</p>
+
+    {%- render 'kal-booking-flow-option-card', variant: 'primary', icon_name: 'calendar', title: 'Book a consultation', subtitle: 'In-clinic or video — under a minute', goto: 'consultation' -%}
+    {%- render 'kal-booking-flow-option-card', variant: 'secondary', icon_name: 'monitor', title: 'Request a therapy session', subtitle: 'Talk to our care coordinator', goto: 'therapy' -%}
+
+    <div class="kal-step-entry__location kal-step-entry__location--mobile">
       <span class="kal-icon kal-icon--location">
         <!-- ICON: location-pin (not received yet) -->
       </span>
@@ -39,56 +68,54 @@
     </div>
   </div>
 
-  <div class="kal-step-entry__action-panel">
-    <div class="kal-step-entry__banner" aria-hidden="true">
-      {%- if settings.kal_booking_entry_banner_image -%}
-        {%- comment -%} Merchant-uploaded override, via Theme settings {%- endcomment -%}
-        <img
-          src="{{ settings.kal_booking_entry_banner_image | image_url: width: 936 }}"
-          srcset="
-            {{ settings.kal_booking_entry_banner_image | image_url: width: 468 }} 468w,
-            {{ settings.kal_booking_entry_banner_image | image_url: width: 936 }} 936w"
-          sizes="468px"
-          alt=""
-          loading="lazy"
-          class="kal-step-entry__banner-image"
-        >
-      {%- else -%}
-        {%- comment -%} Default banner, shipped as a theme asset {%- endcomment -%}
-        <img
-          src="{{ 'kal-booking-entry-banner.png' | asset_url }}"
-          alt=""
-          loading="lazy"
-          class="kal-step-entry__banner-image"
-        >
-      {%- endif -%}
+  {%- comment -%} ============ DESKTOP ONLY (750px and up) ============ {%- endcomment -%}
+  <div class="kal-step-entry__desktop">
+    <div class="kal-step-entry__info">
+      <div class="kal-step-entry__info-content">
+        <p class="kal-step-entry__eyebrow">No sign-in needed</p>
+        <h2 class="kal-step-entry__heading">Calm care, closer than you think.</h2>
+        <p class="kal-step-entry__body-text">
+          Book a consultation in under a minute in-clinic or video. Confirmation
+          arrives instantly, no account required.
+        </p>
+      </div>
+      <div class="kal-step-entry__location">
+        <span class="kal-icon kal-icon--location">
+          <!-- ICON: location-pin (not received yet) -->
+        </span>
+        <span class="kal-step-entry__location-text">
+          Kerala Ayurveda Wellness Center, Kormangala &middot; Opens 8 AM
+        </span>
+      </div>
     </div>
-    <p class="kal-step-entry__label">What would you like to do?</p>
 
-    <button type="button" class="kal-option-card kal-option-card--primary" data-kal-goto="consultation">
-      <span class="kal-icon kal-icon--calendar">
-        {%- render 'kal-booking-icons', icon_name: 'calendar' -%}
-      </span>
-      <span class="kal-option-card__text">
-        <span class="kal-option-card__title">Book a consultation</span>
-        <span class="kal-option-card__subtitle">In-clinic or video &mdash; under a minute</span>
-      </span>
-      <span class="kal-icon kal-icon--arrow">
-        {%- render 'kal-booking-icons', icon_name: 'arrow-right' -%}
-      </span>
-    </button>
+    <div class="kal-step-entry__action-panel">
+      <div class="kal-step-entry__banner" aria-hidden="true">
+        {%- if banner_image_url -%}
+          <img
+            src="{{ banner_image_url | image_url: width: 936 }}"
+            srcset="
+              {{ banner_image_url | image_url: width: 468 }} 468w,
+              {{ banner_image_url | image_url: width: 936 }} 936w"
+            sizes="468px"
+            alt=""
+            loading="lazy"
+            class="kal-step-entry__banner-image"
+          >
+        {%- else -%}
+          <img
+            src="{{ 'kal-booking-entry-banner.png' | asset_url }}"
+            alt=""
+            loading="lazy"
+            class="kal-step-entry__banner-image"
+          >
+        {%- endif -%}
+      </div>
+      <p class="kal-step-entry__label">What would you like to do?</p>
 
-    <button type="button" class="kal-option-card kal-option-card--secondary" data-kal-goto="therapy">
-      <span class="kal-icon kal-icon--monitor">
-        {%- render 'kal-booking-icons', icon_name: 'monitor' -%}
-      </span>
-      <span class="kal-option-card__text">
-        <span class="kal-option-card__title">Request a therapy session</span>
-        <span class="kal-option-card__subtitle">Talk to our care coordinator</span>
-      </span>
-      <span class="kal-icon kal-icon--arrow">
-        {%- render 'kal-booking-icons', icon_name: 'arrow-right' -%}
-      </span>
-    </button>
+      {%- render 'kal-booking-flow-option-card', variant: 'primary', icon_name: 'calendar', title: 'Book a consultation', subtitle: 'In-clinic or video — under a minute', goto: 'consultation' -%}
+      {%- render 'kal-booking-flow-option-card', variant: 'secondary', icon_name: 'monitor', title: 'Request a therapy session', subtitle: 'Talk to our care coordinator', goto: 'therapy' -%}
+    </div>
   </div>
+
 </div>
