@@ -1,54 +1,28 @@
 :root {
-  /* Colors — mobile values by default (mobile-first); desktop overrides below.
-     Primary card color and label color genuinely differ per breakpoint per the
-     exact Figma exports, not an approximation. */
-  --kal-color-primary: #1e4b3c;
+  /* Colors */
+  --kal-color-primary: #00503a;
   --kal-color-on-primary: #fafaf9;
-  --kal-color-on-primary-subtitle: #ffffff;
   --kal-color-heading: #191919;
   --kal-color-body: #5d5d5d;
-  --kal-color-body-text: #4b4b4b;
-  --kal-color-label: #191919;
+  --kal-color-label: #5d5e60;
   --kal-color-location-text: #4b4b4b;
   --kal-color-border: #dcdcdc;
   --kal-color-white: #ffffff;
   --kal-color-overlay: rgba(0, 0, 0, 0.5);
 
-  /* Typography — mobile values by default (mobile-first); desktop overrides
-     below, since the two breakpoints use genuinely different sizes/weights
-     per the Figma specs, not just a scaled-down version of the same values */
+  /* Typography */
   --kal-font-family: 'Avenir', -apple-system, 'Segoe UI', sans-serif;
-  --kal-font-size-eyebrow: 14px;
-  --kal-letter-spacing-eyebrow: 0.05em;
-  --kal-font-size-heading: 28px;
-  --kal-line-height-heading: 130%;
-  --kal-font-weight-heading: 500;
-  --kal-font-size-body: 14px;
-  --kal-line-height-body: 140%;
-  --kal-font-size-title: 16px;
-  --kal-line-height-title: 140%;
+  --kal-font-size-eyebrow: 12px;
+  --kal-letter-spacing-eyebrow: 1.44px;
+  --kal-font-size-heading: 24px;
+  --kal-line-height-heading: 34px;
+  --kal-font-size-body: 15px;
+  --kal-line-height-body: 24px;
+  --kal-font-size-title: 17px;
+  --kal-line-height-title: 26px;
   --kal-font-size-subtitle: 12px;
   --kal-line-height-subtitle: 20px;
   --kal-font-size-location: 12px;
-}
-
-@media screen and (min-width: 750px) {
-  :root {
-    --kal-color-primary: #00503a;
-    --kal-color-on-primary-subtitle: #fafaf9;
-    --kal-color-body-text: #5d5d5d;
-    --kal-color-label: #5d5e60;
-
-    --kal-font-size-eyebrow: 12px;
-    --kal-letter-spacing-eyebrow: 1.44px;
-    --kal-font-size-heading: 24px;
-    --kal-line-height-heading: 34px;
-    --kal-font-weight-heading: 800;
-    --kal-font-size-body: 15px;
-    --kal-line-height-body: 24px;
-    --kal-font-size-title: 17px;
-    --kal-line-height-title: 26px;
-  }
 }
 
 .kal-booking-flow {
@@ -121,8 +95,7 @@
 .kal-step-entry__mobile {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 20px;
+  gap: 20px;
 }
 
 @media screen and (min-width: 750px) {
@@ -177,46 +150,29 @@
 .kal-step-entry__heading {
   font-size: var(--kal-font-size-heading);
   line-height: var(--kal-line-height-heading);
-  font-weight: var(--kal-font-weight-heading);
+  font-weight: 800;
   color: var(--kal-color-heading);
   margin: 0 0 12px;
 }
 
-/* Mobile-only: heading overlaid directly on the banner image, in white,
-   positioned with the exact inset from the Figma spec (21px sides, 29px bottom) */
+/* Mobile-only: heading overlaid directly on the banner image, in white */
 .kal-step-entry__heading--overlay {
   position: absolute;
-  left: 21px;
-  right: 21px;
-  bottom: 29px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 1;
   color: var(--kal-color-white);
   margin: 0;
-  padding: 0;
+  padding: 20px;
 }
 
 .kal-step-entry__body-text {
   font-size: var(--kal-font-size-body);
   line-height: var(--kal-line-height-body);
   font-weight: 400;
-  color: var(--kal-color-body-text);
+  color: var(--kal-color-body);
   margin: 0;
-}
-
-.kal-step-entry__mobile .kal-step-entry__body-text {
-  padding: 0 24px;
-}
-
-.kal-step-entry__label {
-  padding: 0;
-  margin: 0;
-}
-
-.kal-step-entry__mobile .kal-step-entry__label,
-.kal-step-entry__mobile .kal-option-card {
-  margin-left: 24px;
-  margin-right: 24px;
-  width: auto;
 }
 
 .kal-step-entry__location {
@@ -234,11 +190,9 @@
   backdrop-filter: blur(4px);
 }
 
-/* Mobile: simple centered row, no bar/border/blur, tighter gap */
+/* Mobile: simple inline row, no bar/border/blur */
 .kal-step-entry__location--mobile {
-  justify-content: center;
-  gap: 4px;
-  padding: 0 24px;
+  padding: 0 4px;
 }
 
 .kal-step-entry__location-text {
@@ -267,11 +221,10 @@
   background: linear-gradient(135deg, #d9d3c4 0%, #a9b89c 50%, #7d8f74 100%);
 }
 
-/* Mobile: only the bottom two corners are rounded (flush with the device/dialog
-   top edge), taller proportions matching the iPhone frame's banner area exactly */
+/* Mobile: full corner rounding, taller proportions, holds the overlay heading */
 .kal-step-entry__banner--mobile {
-  aspect-ratio: 393 / 313;
-  border-radius: 0 0 28px 28px;
+  aspect-ratio: 343 / 240;
+  border-radius: 20px;
 }
 
 .kal-step-entry__banner::after {
@@ -299,19 +252,13 @@
   align-items: center;
   gap: 16px;
   width: 100%;
-  padding: 16px;
+  padding: 20px;
   border-radius: 16px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
   box-sizing: border-box;
   transition: transform 0.15s ease;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-option-card {
-    padding: 20px;
-  }
 }
 
 .kal-option-card:hover {
@@ -357,16 +304,8 @@
 }
 
 .kal-option-card--primary .kal-option-card__subtitle {
-  color: var(--kal-color-on-primary-subtitle);
-  text-transform: capitalize;
-}
-
-/* Desktop only: subtitle is dimmed via opacity; mobile spec uses solid white instead */
-@media screen and (min-width: 750px) {
-  .kal-option-card--primary .kal-option-card__subtitle {
-    opacity: 0.8;
-    text-transform: none;
-  }
+  color: var(--kal-color-on-primary);
+  opacity: 0.8;
 }
 
 .kal-option-card--secondary .kal-option-card__subtitle {
