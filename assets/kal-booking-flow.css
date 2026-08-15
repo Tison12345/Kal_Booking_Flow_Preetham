@@ -98,15 +98,19 @@
   gap: 16px;
 }
 
-/* These two spots get extra breathing room beyond the base gap — matches the
-   larger gaps marked in the Figma spacing annotations, vs. the tighter gap
-   used everywhere else (banner→text, label→cards, card→card). */
+/* These two spots get 56px total gap (the exact value from Frame 3's own
+   gap property in the Figma spec — the outer wrapper holding [banner+text
+   block, label+cards block, location line] uses gap:56 uniformly between
+   all three). Base flex gap above is 16px, so we add 40px more here to
+   reach 56px total. Everywhere else (banner→text, label→cards, card→card)
+   stays at the tighter 16px, since those are nested inside their own
+   sub-frames with their own smaller gap values, not this outer one. */
 .kal-step-entry__mobile .kal-step-entry__label {
-  margin-top: 20px;
+  margin-top: 40px;
 }
 
 .kal-step-entry__mobile .kal-step-entry__location--mobile {
-  margin-top: 20px;
+  margin-top: 40px;
 }
 
 @media screen and (min-width: 750px) {
