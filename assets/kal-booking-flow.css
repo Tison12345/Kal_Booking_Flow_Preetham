@@ -72,7 +72,11 @@
 .kal-booking-flow__content {
   height: 100%;
   box-sizing: border-box;
-  padding: 20px 16px;
+  /* Matches Frame 3 in the Figma spec exactly: padding: 0px 0px 36px —
+     zero top, zero sides, so the banner sits flush with no gap around it.
+     Everything else that needs side spacing (body text, label, cards,
+     location) applies its own horizontal padding individually. */
+  padding: 0 0 36px;
 }
 
 @media screen and (min-width: 750px) {
@@ -111,6 +115,22 @@
 
 .kal-step-entry__mobile .kal-step-entry__location--mobile {
   margin-top: 40px;
+}
+
+/* Only the banner goes flush edge-to-edge — everything else in the mobile
+   composition needs its own 24px side inset, matching the Figma spec's
+   inner containers (padding: 0px 24px), since the outer content wrapper
+   itself now has zero side padding. */
+.kal-step-entry__mobile .kal-step-entry__body-text,
+.kal-step-entry__mobile .kal-step-entry__label,
+.kal-step-entry__mobile .kal-option-card,
+.kal-step-entry__mobile .kal-step-entry__location--mobile {
+  margin-left: 24px;
+  margin-right: 24px;
+}
+
+.kal-step-entry__mobile .kal-option-card {
+  width: auto;
 }
 
 @media screen and (min-width: 750px) {
@@ -240,10 +260,8 @@
    Breaks out of the content wrapper's side padding (negative margin) so it
    goes edge-to-edge, matching the design. */
 .kal-step-entry__banner--mobile {
-  aspect-ratio: 343 / 240;
-  border-radius: 20px;
-  margin: 0 -16px;
-  width: calc(100% + 32px);
+  aspect-ratio: 393 / 313;
+  border-radius: 0 0 28px 28px;
 }
 
 .kal-step-entry__banner::after {
