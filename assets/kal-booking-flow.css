@@ -95,7 +95,18 @@
 .kal-step-entry__mobile {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
+}
+
+/* These two spots get extra breathing room beyond the base gap — matches the
+   larger gaps marked in the Figma spacing annotations, vs. the tighter gap
+   used everywhere else (banner→text, label→cards, card→card). */
+.kal-step-entry__mobile .kal-step-entry__label {
+  margin-top: 20px;
+}
+
+.kal-step-entry__mobile .kal-step-entry__location--mobile {
+  margin-top: 20px;
 }
 
 @media screen and (min-width: 750px) {
