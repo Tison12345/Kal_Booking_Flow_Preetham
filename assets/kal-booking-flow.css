@@ -832,6 +832,13 @@
   gap: 16px;
   height: 100%;
   min-height: 0;
+  /* Grid items default to min-width:auto (their content's min-content
+     width), same underlying issue as the min-height:0 fix above but on the
+     width axis — this is the grid item in .kal-step-slot-picker__desktop's
+     3fr/5fr row. Without this, the day-strip's 10 chips (more than the
+     original static markup had) pushed this column's min-content past its
+     5fr share, squeezing the left column down to a sliver of vertical text. */
+  min-width: 0;
   padding: 16px 16px 0;
   box-sizing: border-box;
 }
@@ -839,6 +846,7 @@
 .kal-step-slot-picker__scroll {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -912,6 +920,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .kal-step-slot-picker__mobile .kal-slot-section {
