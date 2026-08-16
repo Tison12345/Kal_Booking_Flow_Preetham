@@ -217,16 +217,17 @@
   margin: 0;
 }
 
+/* Floating frosted bar pinned to the bottom of the info column.
+   Unscoped on purpose — .kal-step-entry__location (no --mobile modifier) is
+   only ever used in a desktop-composition left column, by any step that
+   reuses this same layout (Entry, Doctor Select, Slot Picker, ...). Mobile
+   always uses the separate --mobile modifier below instead, so there's no
+   need to enumerate every step's desktop wrapper class here — which is what
+   caused this to silently not apply to a new step earlier. */
 .kal-step-entry__location {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-/* Desktop: floating frosted bar pinned to the bottom of the info column —
-   reused by any step that has this same left-column layout (Entry, Doctor Select) */
-.kal-step-entry__desktop .kal-step-entry__location,
-.kal-step-doctor-select__desktop .kal-step-entry__location {
   padding: 24px 36px;
   background: rgba(255, 255, 255, 0.8);
   border-top: 1px solid var(--kal-color-border);
