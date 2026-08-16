@@ -760,6 +760,7 @@
   justify-content: space-between;
   gap: 16px;
   height: 100%;
+  min-height: 0; /* without this, flex/grid items default to min-height:auto and won't shrink below their content's natural size — the whole reason the list wasn't actually scrolling before */
   padding: 16px 16px 0;
   box-sizing: border-box;
 }
@@ -767,10 +768,12 @@
 .kal-step-doctor-select__progress--desktop {
   justify-content: flex-end;
   padding: 0 24px;
+  flex-shrink: 0;
 }
 
 .kal-step-doctor-select__list--desktop {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
