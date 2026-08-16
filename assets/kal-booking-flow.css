@@ -792,3 +792,273 @@
   padding: 0 24px 24px;
   flex-shrink: 0;
 }
+
+/* ----------------------------------------
+   STEP: SLOT PICKER (Step 2 of 5)
+   Desktop values match the Figma spec exactly. Mobile is extrapolated from
+   the same conventions used by the other steps — no mobile spec was given
+   for this screen yet, so treat mobile spacing as best-effort, not exact.
+----------------------------------------- */
+
+.kal-step-slot-picker__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-slot-picker__mobile {
+    display: none;
+  }
+}
+
+.kal-step-slot-picker__desktop {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-slot-picker__desktop {
+    display: grid;
+    height: 100%;
+    grid-template-columns: 3fr 5fr;
+  }
+}
+
+.kal-step-slot-picker__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 16px 16px 0;
+  box-sizing: border-box;
+}
+
+.kal-step-slot-picker__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.kal-step-slot-picker__footer {
+  padding: 0 16px 20px;
+}
+
+/* Doctor summary card */
+
+.kal-doctor-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--kal-color-border);
+  border-radius: 16px;
+}
+
+.kal-step-slot-picker__mobile .kal-doctor-summary {
+  margin: 0 16px;
+}
+
+.kal-step-slot-picker__desktop .kal-doctor-summary {
+  margin: 0 24px;
+}
+
+.kal-doctor-summary__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #d8d4c9, #aab89d);
+}
+
+.kal-doctor-summary__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kal-doctor-summary__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--kal-color-heading);
+}
+
+.kal-doctor-summary__meta {
+  font-size: 12px;
+  color: var(--kal-color-body);
+}
+
+.kal-doctor-summary__mode {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: #e4f2eb;
+  color: var(--kal-color-primary);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+/* Choose a day / Available time sections */
+
+.kal-slot-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kal-step-slot-picker__mobile .kal-slot-section {
+  padding: 0 16px;
+}
+
+.kal-step-slot-picker__desktop .kal-slot-section {
+  padding: 0 24px;
+}
+
+.kal-slot-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kal-slot-section__label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #646464;
+  margin: 0;
+}
+
+.kal-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #4b4b4b;
+  cursor: pointer;
+}
+
+.kal-icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Day strip */
+
+.kal-day-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.kal-day-chip {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 56px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid #e6e6e8;
+  background: var(--kal-color-white);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.kal-day-chip__label {
+  font-size: 14px;
+  color: #646464;
+}
+
+.kal-day-chip__date {
+  font-size: 14px;
+  color: #4b4b4b;
+}
+
+.kal-day-chip--active {
+  background: #122d24;
+  border-color: #122d24;
+}
+
+.kal-day-chip--active .kal-day-chip__label,
+.kal-day-chip--active .kal-day-chip__date {
+  color: var(--kal-color-white);
+}
+
+.kal-day-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Time slots, grouped by period */
+
+.kal-slot-periods {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.kal-slot-period {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kal-slot-period__label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #4b4b4b;
+  margin: 0;
+}
+
+.kal-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media screen and (max-width: 420px) {
+  .kal-slot-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.kal-slot-chip {
+  padding: 8px 4px;
+  border-radius: 12px;
+  border: 1px solid #e6e6e8;
+  background: var(--kal-color-white);
+  color: var(--kal-color-heading);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.kal-slot-chip--active {
+  background: var(--kal-color-primary);
+  border-color: var(--kal-color-primary);
+  color: var(--kal-color-on-primary);
+}
+
+.kal-slot-chip:disabled {
+  background: rgba(250, 250, 250, 0.35);
+  color: #646464;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}

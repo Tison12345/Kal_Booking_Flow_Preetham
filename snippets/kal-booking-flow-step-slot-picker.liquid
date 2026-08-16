@@ -1,0 +1,209 @@
+{% comment %}
+  Step 3 (shown as "Step 2 of 5" once wired) — pick a day and time slot.
+
+  STATIC PASS ONLY for now: the day-strip and time-slot grid below are placeholder
+  markup matching the Figma layout, not yet wired to real data. Once confirmed
+  visually correct, these get replaced with JS-rendered content from:
+  - Day strip: generated client-side (today + next several days, no API needed)
+  - Time slots: GET /api/public/availability/slots?doctor_id=&date=&facility_id=&duration_minutes=45
+    grouped into Morning/Afternoon/Evening client-side, matching the real CMS's
+    SlotPicker.tsx bucketing exactly (Morning 6-12, Afternoon 12-16, Evening 16-22).
+  - Calendar icon opens a month-grid modal, matching the real CMS's CalendarModal
+    (past dates and >90-days-future dates greyed out/disabled).
+
+  Doctor summary card at top also uses dummy data — real doctor_id/name/mode will
+  come from whichever doctor was picked in the previous step, once that's wired.
+
+  Left column reuses .kal-step-entry__info (desktop), same as the other steps.
+{% endcomment %}
+
+<div class="kal-step-slot-picker">
+
+  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
+  <div class="kal-step-slot-picker__mobile">
+
+    <div class="kal-step-slot-picker__header">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-back="doctor-select" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+      </button>
+      <div class="kal-step-doctor-select__progress">
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-text">2/5</span>
+      </div>
+    </div>
+
+    <div class="kal-doctor-summary" data-kal-doctor-summary>
+      <span class="kal-doctor-summary__avatar"></span>
+      <span class="kal-doctor-summary__info">
+        <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Meera Pillai</span>
+        <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
+      </span>
+      <span class="kal-doctor-summary__mode" data-kal-summary-mode>In-Clinic</span>
+    </div>
+
+    <div class="kal-slot-section">
+      <div class="kal-slot-section__head">
+        <p class="kal-slot-section__label">Choose a day</p>
+        <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
+          {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+        </button>
+      </div>
+      <div class="kal-day-strip" data-kal-day-strip>
+        <button type="button" class="kal-day-chip kal-day-chip--active">
+          <span class="kal-day-chip__label">Fri</span>
+          <span class="kal-day-chip__date">7</span>
+        </button>
+        <button type="button" class="kal-day-chip">
+          <span class="kal-day-chip__label">Sat</span>
+          <span class="kal-day-chip__date">8</span>
+        </button>
+        <button type="button" class="kal-day-chip">
+          <span class="kal-day-chip__label">Sun</span>
+          <span class="kal-day-chip__date">9</span>
+        </button>
+        <button type="button" class="kal-day-chip">
+          <span class="kal-day-chip__label">Mon</span>
+          <span class="kal-day-chip__date">10</span>
+        </button>
+        <button type="button" class="kal-day-chip">
+          <span class="kal-day-chip__label">Tue</span>
+          <span class="kal-day-chip__date">11</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="kal-slot-section">
+      <p class="kal-slot-section__label">Available time</p>
+      <div class="kal-slot-periods" data-kal-slot-periods>
+        <div class="kal-slot-period">
+          <p class="kal-slot-period__label">Morning</p>
+          <div class="kal-slot-grid">
+            <button type="button" class="kal-slot-chip kal-slot-chip--active">09:00 AM</button>
+            <button type="button" class="kal-slot-chip" disabled>9:15 AM</button>
+            <button type="button" class="kal-slot-chip">9:30 AM</button>
+            <button type="button" class="kal-slot-chip">9:45 AM</button>
+            <button type="button" class="kal-slot-chip">10:00 AM</button>
+            <button type="button" class="kal-slot-chip">10:15 AM</button>
+            <button type="button" class="kal-slot-chip">10:30 AM</button>
+            <button type="button" class="kal-slot-chip" disabled>10:45 AM</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kal-step-slot-picker__footer">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
+        Continue with Aug 7, 09:00 AM
+      </button>
+    </div>
+
+  </div>
+
+  {%- comment -%} ============ DESKTOP (750px and up) — matches Figma Frame 4 exactly ============ {%- endcomment -%}
+  <div class="kal-step-slot-picker__desktop">
+    <div class="kal-step-entry__info">
+      <div class="kal-step-entry__info-content">
+        <h2 class="kal-step-entry__heading">Pick your visit</h2>
+        <p class="kal-step-entry__body-text">
+          Book a consultation in under a minute in-clinic or video. Confirmation
+          arrives instantly, no account required.
+        </p>
+      </div>
+      <div class="kal-step-entry__location">
+        <span class="kal-icon kal-icon--location">
+          <!-- ICON: location-pin (not received yet) -->
+        </span>
+        <span class="kal-step-entry__location-text">
+          Kerala Ayurveda Wellness Center, Kormangala &middot; Opens 8 AM
+        </span>
+      </div>
+    </div>
+
+    <div class="kal-step-slot-picker__panel">
+      <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-text">2/5</span>
+      </div>
+
+      <div class="kal-step-slot-picker__scroll">
+        <div class="kal-doctor-summary" data-kal-doctor-summary>
+          <span class="kal-doctor-summary__avatar"></span>
+          <span class="kal-doctor-summary__info">
+            <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Neethu</span>
+            <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
+          </span>
+          <span class="kal-doctor-summary__mode" data-kal-summary-mode>In-clinic</span>
+        </div>
+
+        <div class="kal-slot-section">
+          <div class="kal-slot-section__head">
+            <p class="kal-slot-section__label">Choose a day</p>
+            <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
+              {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+            </button>
+          </div>
+          <div class="kal-day-strip" data-kal-day-strip>
+            <button type="button" class="kal-day-chip">
+              <span class="kal-day-chip__label">Today</span>
+              <span class="kal-day-chip__date">6</span>
+            </button>
+            <button type="button" class="kal-day-chip kal-day-chip--active">
+              <span class="kal-day-chip__label">Fri</span>
+              <span class="kal-day-chip__date">7</span>
+            </button>
+            <button type="button" class="kal-day-chip" disabled>
+              <span class="kal-day-chip__label">Sat</span>
+              <span class="kal-day-chip__date">8</span>
+            </button>
+            <button type="button" class="kal-day-chip">
+              <span class="kal-day-chip__label">Sun</span>
+              <span class="kal-day-chip__date">9</span>
+            </button>
+            <button type="button" class="kal-day-chip">
+              <span class="kal-day-chip__label">Mon</span>
+              <span class="kal-day-chip__date">10</span>
+            </button>
+            <button type="button" class="kal-day-chip">
+              <span class="kal-day-chip__label">Tue</span>
+              <span class="kal-day-chip__date">11</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="kal-slot-section">
+          <p class="kal-slot-section__label">Available time</p>
+          <div class="kal-slot-periods" data-kal-slot-periods>
+            <div class="kal-slot-period">
+              <p class="kal-slot-period__label">Morning</p>
+              <div class="kal-slot-grid">
+                <button type="button" class="kal-slot-chip">09:00 AM</button>
+                <button type="button" class="kal-slot-chip" disabled>9:15 AM</button>
+                <button type="button" class="kal-slot-chip">9:30 AM</button>
+                <button type="button" class="kal-slot-chip">9:45AM</button>
+                <button type="button" class="kal-slot-chip">10:00 AM</button>
+                <button type="button" class="kal-slot-chip">10:15 AM</button>
+                <button type="button" class="kal-slot-chip">10:30 AM</button>
+                <button type="button" class="kal-slot-chip" disabled>10:45 AM</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kal-step-doctor-select__desktop-footer">
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
+          Continue with Aug 7, 09:00 AM
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
