@@ -1,23 +1,46 @@
 {% comment %}
   Step 3 (shown as "Step 2 of 5" once wired) — pick a day and time slot.
 
-  STATIC PASS ONLY for now: the day-strip and time-slot grid below are placeholder
-  markup matching the Figma layout, not yet wired to real data. Once confirmed
-  visually correct, these get replaced with JS-rendered content from:
-  - Day strip: generated client-side (today + next several days, no API needed)
-  - Time slots: GET /api/public/availability/slots?doctor_id=&date=&facility_id=&duration_minutes=45
-    grouped into Morning/Afternoon/Evening client-side, matching the real CMS's
-    SlotPicker.tsx bucketing exactly (Morning 6-12, Afternoon 12-16, Evening 16-22).
-  - Calendar icon opens a month-grid modal, matching the real CMS's CalendarModal
-    (past dates and >90-days-future dates greyed out/disabled).
+  Day strip, calendar modal, and time-slot grid are all JS-driven — see the
+  "SLOT PICKER" section of kal-booking-flow.js. Mirrors the real staff CMS's
+  SlotPicker.tsx mechanics exactly:
+  - Day strip: today + next 9 days (matches STRIP_DAYS = 10 in SlotPicker.tsx),
+    generated client-side, no API call needed.
+  - Calendar modal: month grid, chevron nav clamped to [today, today+90 days]
+    (MAX_FUTURE_DAYS), past/beyond-cap cells disabled.
+  - Time slots: GET /api/public/availability/slots?doctor_id=&date=&facility_id=&duration_minutes=45,
+    grouped into Morning/Afternoon/Evening client-side (6-12 / 12-16 / 16-22,
+    same ranges as SlotPicker.tsx). Slots come back for the whole day and are
+    rendered disabled+struck-through when is_available is false, rather than
+    omitted — same as the real CMS (SlotPicker.tsx line ~386).
+  - Mode filtering matches SlotPicker.tsx exactly: video/online mode filters
+    client-side to slot_type "online"/"both" (no facility_id sent); in-clinic
+    mode sends facility_id and relies on the RPC's own facility join to scope
+    results, no client-side slot_type filter needed.
 
-  Doctor summary card at top also uses dummy data — real doctor_id/name/mode will
-  come from whichever doctor was picked in the previous step, once that's wired.
+  Doctor id/facility id are still placeholders (data-kal-doctor-id/
+  data-kal-facility-id on the wrapper below) — real values come from whichever
+  doctor was picked in the previous step, once doctor-selection data fetching
+  is wired (explicitly deferred, see build log). Doctor summary card text is
+  still dummy for the same reason.
 
   Left column reuses .kal-step-entry__info (desktop), same as the other steps.
+
+  The calendar modal itself lives in kal-booking-flow.liquid, not here — see
+  the comment there for why (overflow-clipping bug when nested inside the
+  scrollable content area).
 {% endcomment %}
 
-<div class="kal-step-slot-picker">
+{%- comment -%}
+  data-kal-doctor-id / data-kal-facility-id: PLACEHOLDER values (a real
+  doctor/facility pair from the CMS — Neethu Jayachandran at Kerala Ayurveda,
+  Koramangala — used so slot fetching hits real availability data). Once
+  doctor-selection is wired to real backend data, the doctor-card click
+  handler should just overwrite these two attributes before navigating here —
+  the slot-picker JS itself reads them fresh on every fetch and needs no
+  other change.
+{%- endcomment -%}
+<div class="kal-step-slot-picker" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
 
   {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
   <div class="kal-step-slot-picker__mobile">
@@ -52,52 +75,21 @@
           {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
         </button>
       </div>
-      <div class="kal-day-strip" data-kal-day-strip>
-        <button type="button" class="kal-day-chip kal-day-chip--active">
-          <span class="kal-day-chip__label">Fri</span>
-          <span class="kal-day-chip__date">7</span>
-        </button>
-        <button type="button" class="kal-day-chip">
-          <span class="kal-day-chip__label">Sat</span>
-          <span class="kal-day-chip__date">8</span>
-        </button>
-        <button type="button" class="kal-day-chip">
-          <span class="kal-day-chip__label">Sun</span>
-          <span class="kal-day-chip__date">9</span>
-        </button>
-        <button type="button" class="kal-day-chip">
-          <span class="kal-day-chip__label">Mon</span>
-          <span class="kal-day-chip__date">10</span>
-        </button>
-        <button type="button" class="kal-day-chip">
-          <span class="kal-day-chip__label">Tue</span>
-          <span class="kal-day-chip__date">11</span>
-        </button>
-      </div>
+      {%- comment -%} Populated client-side by renderDayStrip() in kal-booking-flow.js {%- endcomment -%}
+      <div class="kal-day-strip" data-kal-day-strip></div>
     </div>
 
     <div class="kal-slot-section">
       <p class="kal-slot-section__label">Available time</p>
+      {%- comment -%} Populated client-side by renderSlotPeriods() in kal-booking-flow.js {%- endcomment -%}
       <div class="kal-slot-periods" data-kal-slot-periods>
-        <div class="kal-slot-period">
-          <p class="kal-slot-period__label">Morning</p>
-          <div class="kal-slot-grid">
-            <button type="button" class="kal-slot-chip kal-slot-chip--active">09:00 AM</button>
-            <button type="button" class="kal-slot-chip" disabled>9:15 AM</button>
-            <button type="button" class="kal-slot-chip">9:30 AM</button>
-            <button type="button" class="kal-slot-chip">9:45 AM</button>
-            <button type="button" class="kal-slot-chip">10:00 AM</button>
-            <button type="button" class="kal-slot-chip">10:15 AM</button>
-            <button type="button" class="kal-slot-chip">10:30 AM</button>
-            <button type="button" class="kal-slot-chip" disabled>10:45 AM</button>
-          </div>
-        </div>
+        <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
       </div>
     </div>
 
     <div class="kal-step-slot-picker__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
-        Continue with Aug 7, 09:00 AM
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details" data-kal-slot-continue disabled>
+        Select a date and time
       </button>
     </div>
 
@@ -150,57 +142,22 @@
               {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
             </button>
           </div>
-          <div class="kal-day-strip" data-kal-day-strip>
-            <button type="button" class="kal-day-chip">
-              <span class="kal-day-chip__label">Today</span>
-              <span class="kal-day-chip__date">6</span>
-            </button>
-            <button type="button" class="kal-day-chip kal-day-chip--active">
-              <span class="kal-day-chip__label">Fri</span>
-              <span class="kal-day-chip__date">7</span>
-            </button>
-            <button type="button" class="kal-day-chip" disabled>
-              <span class="kal-day-chip__label">Sat</span>
-              <span class="kal-day-chip__date">8</span>
-            </button>
-            <button type="button" class="kal-day-chip">
-              <span class="kal-day-chip__label">Sun</span>
-              <span class="kal-day-chip__date">9</span>
-            </button>
-            <button type="button" class="kal-day-chip">
-              <span class="kal-day-chip__label">Mon</span>
-              <span class="kal-day-chip__date">10</span>
-            </button>
-            <button type="button" class="kal-day-chip">
-              <span class="kal-day-chip__label">Tue</span>
-              <span class="kal-day-chip__date">11</span>
-            </button>
-          </div>
+          {%- comment -%} Populated client-side by renderDayStrip() in kal-booking-flow.js {%- endcomment -%}
+          <div class="kal-day-strip" data-kal-day-strip></div>
         </div>
 
         <div class="kal-slot-section">
           <p class="kal-slot-section__label">Available time</p>
+          {%- comment -%} Populated client-side by renderSlotPeriods() in kal-booking-flow.js {%- endcomment -%}
           <div class="kal-slot-periods" data-kal-slot-periods>
-            <div class="kal-slot-period">
-              <p class="kal-slot-period__label">Morning</p>
-              <div class="kal-slot-grid">
-                <button type="button" class="kal-slot-chip">09:00 AM</button>
-                <button type="button" class="kal-slot-chip" disabled>9:15 AM</button>
-                <button type="button" class="kal-slot-chip">9:30 AM</button>
-                <button type="button" class="kal-slot-chip">9:45AM</button>
-                <button type="button" class="kal-slot-chip">10:00 AM</button>
-                <button type="button" class="kal-slot-chip">10:15 AM</button>
-                <button type="button" class="kal-slot-chip">10:30 AM</button>
-                <button type="button" class="kal-slot-chip" disabled>10:45 AM</button>
-              </div>
-            </div>
+            <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
           </div>
         </div>
       </div>
 
       <div class="kal-step-doctor-select__desktop-footer">
-        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
-          Continue with Aug 7, 09:00 AM
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details" data-kal-slot-continue disabled>
+          Select a date and time
         </button>
       </div>
     </div>

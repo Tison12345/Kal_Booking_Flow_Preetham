@@ -26,4 +26,35 @@
       {% render 'kal-booking-flow-step-slot-picker' %}
     </div>
   </div>
+
+  {%- comment -%}
+    Calendar modal for the Slot Picker step — deliberately a direct child of
+    <dialog>, NOT nested inside #kal-booking-flow-content. That div has
+    overflow-y:auto, and on desktop the dialog itself has a transform (for
+    centering), which makes the dialog the containing block for any
+    position:fixed descendant. Once that happens, any overflow:auto ancestor
+    sitting between the fixed element and its containing block clips it — so
+    nesting the modal inside the scrolling content area was silently clipping
+    it on desktop. Living here, one level below the transformed <dialog>
+    with nothing scrollable in between, avoids that entirely.
+  {%- endcomment -%}
+  <div class="kal-calendar-modal" data-kal-calendar-modal hidden>
+    <div class="kal-calendar-modal__backdrop" data-kal-close-calendar></div>
+    <div class="kal-calendar-modal__panel">
+      <div class="kal-calendar-modal__header">
+        <button type="button" class="kal-icon-button" data-kal-calendar-prev aria-label="Previous month">
+          {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        </button>
+        <span class="kal-calendar-modal__month" data-kal-calendar-month>Month Year</span>
+        <button type="button" class="kal-icon-button" data-kal-calendar-next aria-label="Next month">
+          {%- render 'kal-booking-icons', icon_name: 'chevron-right' -%}
+        </button>
+      </div>
+      <div class="kal-calendar-modal__weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="kal-calendar-modal__grid" data-kal-calendar-grid></div>
+      <button type="button" class="kal-calendar-modal__close" data-kal-close-calendar>Done</button>
+    </div>
+  </div>
 </dialog>

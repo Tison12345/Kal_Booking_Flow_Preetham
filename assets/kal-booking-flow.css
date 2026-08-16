@@ -1063,3 +1063,154 @@
   text-decoration: line-through;
   cursor: not-allowed;
 }
+
+.kal-slot-periods__empty {
+  font-size: 13px;
+  color: var(--kal-color-body);
+  margin: 0;
+  padding: 8px 0;
+}
+
+.kal-step-doctor-select__continue:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.kal-icon-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ----------------------------------------
+   CALENDAR MODAL
+   Shared overlay opened by the "Choose a day" calendar icon. A sheet on
+   mobile (slides up from the bottom), a centered card on desktop. Positioned
+   fixed + inset:0 rather than absolute: on desktop the dialog's own
+   transform (see .kal-booking-flow) already creates a containing block for
+   fixed descendants, so this still ends up scoped to the dialog's box, not
+   the full viewport — no need to touch any ancestor's position.
+----------------------------------------- */
+
+.kal-calendar-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.kal-calendar-modal[hidden] {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-calendar-modal {
+    align-items: center;
+  }
+}
+
+.kal-calendar-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--kal-color-overlay);
+}
+
+.kal-calendar-modal__panel {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: var(--kal-color-white);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  box-sizing: border-box;
+  box-shadow: 0px 24px 48px -16px rgba(25, 25, 25, 0.18);
+}
+
+@media screen and (min-width: 750px) {
+  .kal-calendar-modal__panel {
+    border-radius: 20px;
+    margin: 0 16px;
+  }
+}
+
+.kal-calendar-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.kal-calendar-modal__month {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--kal-color-heading);
+}
+
+.kal-calendar-modal__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 8px;
+}
+
+.kal-calendar-modal__weekdays span {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kal-color-body);
+}
+
+.kal-calendar-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.kal-calendar-modal__cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--kal-color-heading);
+  cursor: pointer;
+}
+
+.kal-calendar-modal__cell--empty {
+  cursor: default;
+}
+
+.kal-calendar-modal__cell--today {
+  font-weight: 800;
+  color: var(--kal-color-primary);
+}
+
+.kal-calendar-modal__cell--selected {
+  background: var(--kal-color-primary);
+  color: var(--kal-color-on-primary);
+}
+
+.kal-calendar-modal__cell--disabled,
+.kal-calendar-modal__cell:disabled {
+  color: #c4c4c4;
+  cursor: not-allowed;
+}
+
+.kal-calendar-modal__close {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--kal-color-border);
+  border-radius: 14px;
+  background: var(--kal-color-white);
+  color: var(--kal-color-heading);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
