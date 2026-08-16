@@ -10,15 +10,25 @@
   - selected: {Boolean} true for the currently-selected doctor
   - avatar_url: {String} doctor photo URL — DUMMY/placeholder for now, no real
     doctor photos exist yet, falls back to a plain colored circle
+  - modes: {String} space-separated consultation modes this doctor is available
+    for, e.g. "in-clinic video". Defaults to both if not passed. Used by the JS
+    toggle to show/hide doctors when switching In-clinic / Video consult.
+    DUMMY for now — real per-doctor mode availability needs backend data;
+    right now all doctors default to both modes since we can't yet tell them apart.
 
   Usage:
-  {% render 'kal-booking-flow-doctor-card', name: 'Dr. Meera Pillai', specialization: 'General Physician', experience: '12 yrs', rating: '4.9', availability: 'Next available · Today, 3:30 pm', selected: true %}
+  {% render 'kal-booking-flow-doctor-card', name: 'Dr. Meera Pillai', specialization: 'General Physician', experience: '12 yrs', rating: '4.9', availability: 'Next available · Today, 3:30 pm', selected: true, modes: 'in-clinic video' %}
 {% endcomment %}
+
+{%- liquid
+  assign modes = modes | default: 'in-clinic video'
+-%}
 
 <button
   type="button"
   class="kal-doctor-card {% if selected %}kal-doctor-card--selected{% endif %}"
   data-kal-doctor-name="{{ name }}"
+  data-kal-modes="{{ modes }}"
 >
   <span class="kal-doctor-card__avatar">
     {%- if avatar_url != blank -%}

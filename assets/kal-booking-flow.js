@@ -25,6 +25,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // In-clinic / Video consult toggle: switches the active button (within
+  // whichever toggle group was clicked — mobile and desktop each have their
+  // own), swaps the price banner copy, and filters the doctor list down to
+  // doctors available in that mode.
+  const setMode = (mode) => {
+    flow.querySelectorAll('.kal-toggle-btn').forEach((btn) => {
+      btn.classList.toggle('kal-toggle-btn--active', btn.dataset.kalMode === mode);
+    });
+
+    flow.querySelectorAll('[data-kal-mode-content]').forEach((el) => {
+      el.hidden = el.dataset.kalModeContent !== mode;
+    });
+
+    flow.querySelectorAll('.kal-doctor-card').forEach((card) => {
+      const modes = (card.dataset.kalModes || '').split(' ');
+      card.hidden = !modes.includes(mode);
+    });
+  };
+
   // Any CTA anywhere on the site with this class opens the flow
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
@@ -41,6 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const backTrigger = e.target.closest('[data-kal-back]');
     if (backTrigger) {
       goToStep(backTrigger.dataset.kalBack);
+    }
+    const modeTrigger = e.target.closest('[data-kal-mode]');
+    if (modeTrigger) {
+      setMode(modeTrigger.dataset.kalMode);
     }
   });
 

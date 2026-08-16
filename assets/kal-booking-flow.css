@@ -554,6 +554,10 @@
   box-sizing: border-box;
 }
 
+.kal-doctor-card[hidden] {
+  display: none;
+}
+
 .kal-doctor-card--selected {
   border: 1px solid rgba(30, 75, 60, 0.7);
   box-shadow: 0px 10px 24px -12px rgba(30, 75, 60, 0.55);
