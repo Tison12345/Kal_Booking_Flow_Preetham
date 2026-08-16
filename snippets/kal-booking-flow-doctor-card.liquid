@@ -1,0 +1,47 @@
+{% comment %}
+  One doctor card in the doctor-selection step.
+
+  Accepts:
+  - name: {String} e.g. "Dr. Meera Pillai"
+  - specialization: {String} e.g. "General Physician"
+  - experience: {String} e.g. "12 yrs"
+  - rating: {String} e.g. "4.9"
+  - availability: {String} e.g. "Next available · Today, 3:30 pm"
+  - selected: {Boolean} true for the currently-selected doctor
+  - avatar_url: {String} doctor photo URL — DUMMY/placeholder for now, no real
+    doctor photos exist yet, falls back to a plain colored circle
+
+  Usage:
+  {% render 'kal-booking-flow-doctor-card', name: 'Dr. Meera Pillai', specialization: 'General Physician', experience: '12 yrs', rating: '4.9', availability: 'Next available · Today, 3:30 pm', selected: true %}
+{% endcomment %}
+
+<button
+  type="button"
+  class="kal-doctor-card {% if selected %}kal-doctor-card--selected{% endif %}"
+  data-kal-doctor-name="{{ name }}"
+>
+  <span class="kal-doctor-card__avatar">
+    {%- if avatar_url != blank -%}
+      <img src="{{ avatar_url }}" alt="{{ name }}" loading="lazy">
+    {%- endif -%}
+    <span class="kal-doctor-card__rating">{{ rating }}</span>
+  </span>
+  <span class="kal-doctor-card__info">
+    <span class="kal-doctor-card__top-row">
+      <span class="kal-doctor-card__name">{{ name }}</span>
+      <span class="kal-doctor-card__experience">{{ experience }}</span>
+    </span>
+    <span class="kal-doctor-card__specialization">{{ specialization }}</span>
+    <span class="kal-doctor-card__availability">
+      <span class="kal-icon kal-icon--clock">
+        {%- render 'kal-booking-icons', icon_name: 'clock' -%}
+      </span>
+      {{ availability }}
+    </span>
+  </span>
+  <span class="kal-doctor-card__indicator" aria-hidden="true">
+    {%- if selected -%}
+      {%- render 'kal-booking-icons', icon_name: 'check' -%}
+    {%- endif -%}
+  </span>
+</button>

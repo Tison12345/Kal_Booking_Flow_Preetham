@@ -1,0 +1,108 @@
+{% comment %}
+  Step 2 (shown as "Step 1 of 5") — doctor selection.
+  Visitor picks in-clinic or video consult, then a doctor from a list.
+
+  Doctor data is DUMMY/hardcoded for now (3 doctors, matching the design) —
+  no backend connected yet. Once real data exists, this should loop over
+  actual doctor records instead of the three explicit renders below.
+
+  Desktop composition not built yet — waiting on the rest of the Figma CSS
+  spec (it was cut off partway through). Mobile only for now.
+{% endcomment %}
+
+<div class="kal-step-doctor-select">
+
+  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
+  <div class="kal-step-doctor-select__mobile">
+
+    <div class="kal-step-doctor-select__header">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-back="entry" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+      </button>
+      <div class="kal-step-doctor-select__progress">
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-text">1/5</span>
+      </div>
+    </div>
+
+    <div class="kal-step-doctor-select__intro">
+      <p class="kal-step-doctor-select__eyebrow">Step 1 of 5</p>
+      <h2 class="kal-step-doctor-select__heading">Who would you like to see?</h2>
+      <p class="kal-step-doctor-select__subtext">Choose a doctor or browse by specialty.</p>
+    </div>
+
+    <div class="kal-toggle-group">
+      <button type="button" class="kal-toggle-btn" data-kal-mode="in-clinic">
+        <span class="kal-icon kal-icon--location">
+          {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+        </span>
+        In-clinic
+      </button>
+      <button type="button" class="kal-toggle-btn kal-toggle-btn--active" data-kal-mode="video">
+        <span class="kal-icon kal-icon--video">
+          {%- render 'kal-booking-icons', icon_name: 'video-camera' -%}
+        </span>
+        Video consult
+      </button>
+    </div>
+
+    <div class="kal-step-doctor-select__list">
+      {%- render 'kal-booking-flow-doctor-card',
+        name: 'Dr. Meera Pillai',
+        specialization: 'General Physician',
+        experience: '12 yrs',
+        rating: '4.9',
+        availability: 'Next available · Today, 3:30 pm',
+        selected: true
+      -%}
+      {%- render 'kal-booking-flow-doctor-card',
+        name: 'Dr. Rohan Nair',
+        specialization: 'Pediatrician',
+        experience: '18 yrs',
+        rating: '4.8',
+        availability: 'Next available · Today, 5:00 pm',
+        selected: false
+      -%}
+      {%- render 'kal-booking-flow-doctor-card',
+        name: 'Dr. Devika',
+        specialization: 'Dermatologist',
+        experience: '9 yrs',
+        rating: '4.9',
+        availability: 'Next available · 15th Aug, 10:15 AM',
+        selected: false
+      -%}
+    </div>
+
+    <div class="kal-step-doctor-select__footer">
+      <div class="kal-step-doctor-select__price-banner">
+        <div class="kal-step-doctor-select__price-row">
+          <span class="kal-icon kal-icon--currency">
+            {%- render 'kal-booking-icons', icon_name: 'currency-rupee' -%}
+          </span>
+          <span class="kal-step-doctor-select__price">300</span>
+          <span class="kal-step-doctor-select__price-label">30 min video consult</span>
+        </div>
+        <p class="kal-step-doctor-select__price-note">
+          Joining link will be sent by SMS &amp; email 15 minutes before the slot
+        </p>
+      </div>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
+        Continue with Dr. Meera Pillai
+      </button>
+    </div>
+
+  </div>
+
+  {%- comment -%}
+    ============ DESKTOP (750px and up) ============
+    Not built yet — the Figma "Copy as CSS" export for this got cut off
+    partway through (missing the third doctor card, price banner, and
+    continue button). Once the rest is sent, build this the same way the
+    Entry step's desktop composition was built.
+  {%- endcomment -%}
+
+</div>

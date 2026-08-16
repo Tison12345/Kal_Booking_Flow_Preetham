@@ -41,4 +41,41 @@
       <path d="m12 5 7 7-7 7"/>
     </svg>
 
+  {% when 'chevron-left' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <path d="m15 18-6-6 6-6"/>
+    </svg>
+
+  {% when 'location-pin' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/>
+      <circle cx="12" cy="10" r="3"/>
+    </svg>
+
+  {% when 'video-camera' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <path d="m16 8 3.5-2.5A1 1 0 0 1 21 6.3v11.4a1 1 0 0 1-1.5.8L16 16"/>
+      <rect x="2" y="6" width="14" height="12" rx="2"/>
+    </svg>
+
+  {% when 'clock' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 6v6l4 2"/>
+    </svg>
+
+  {% when 'check' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <path d="M20 6 9 17l-5-5"/>
+    </svg>
+
+  {% when 'currency-rupee' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <path d="M6 3h12"/>
+      <path d="M6 8h12"/>
+      <path d="M6 13h3a4.5 4.5 0 0 0 0-9"/>
+      <path d="M9 13c6 0 8 4 8 8"/>
+      <path d="M6 13h1"/>
+    </svg>
+
 {% endcase %}

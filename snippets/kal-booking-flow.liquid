@@ -16,6 +16,11 @@
 >
   <button class="kal-booking-flow__close" data-kal-close aria-label="Close">×</button>
   <div class="kal-booking-flow__content" id="kal-booking-flow-content">
-    {% render 'kal-booking-flow-step-entry' %}
+    <div data-kal-step="entry">
+      {% render 'kal-booking-flow-step-entry' %}
+    </div>
+    <div data-kal-step="doctor-select" hidden>
+      {% render 'kal-booking-flow-step-doctor-select' %}
+    </div>
   </div>
 </dialog>
