@@ -78,34 +78,7 @@
     </div>
 
     <div class="kal-step-doctor-select__footer">
-      <div class="kal-step-doctor-select__price-banner">
-        {%- comment -%} Video consult variant — visible by default, since that toggle starts active {%- endcomment -%}
-        <div data-kal-mode-content="video">
-          <div class="kal-step-doctor-select__price-row">
-            <span class="kal-icon kal-icon--currency">
-              {%- render 'kal-booking-icons', icon_name: 'currency-rupee' -%}
-            </span>
-            <span class="kal-step-doctor-select__price">300</span>
-            <span class="kal-step-doctor-select__price-label">30 min video consult</span>
-          </div>
-          <p class="kal-step-doctor-select__price-note">
-            Joining link will be sent by SMS &amp; email 15 minutes before the slot
-          </p>
-        </div>
-        {%- comment -%} In-clinic variant — DUMMY price (₹800), hidden by default {%- endcomment -%}
-        <div data-kal-mode-content="in-clinic" hidden>
-          <div class="kal-step-doctor-select__price-row">
-            <span class="kal-icon kal-icon--currency">
-              {%- render 'kal-booking-icons', icon_name: 'currency-rupee' -%}
-            </span>
-            <span class="kal-step-doctor-select__price">800</span>
-            <span class="kal-step-doctor-select__price-label">30 min consultation</span>
-          </div>
-          <p class="kal-step-doctor-select__price-note">
-            No charge if rescheduled 24h ahead
-          </p>
-        </div>
-      </div>
+      {%- render 'kal-booking-flow-price-banner' -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
         Continue with Dr. Meera Pillai
       </button>
@@ -117,8 +90,6 @@
     ============ DESKTOP (750px and up) ============
     Left column reuses the exact same structure/copy as the Entry step's
     desktop left column (per the Figma spec — only the heading text differs).
-    No price banner on desktop — confirmed by the exact height math in the
-    spec, the continue-button container has no room for one.
   {%- endcomment -%}
   <div class="kal-step-doctor-select__desktop">
     <div class="kal-step-entry__info">
@@ -191,9 +162,12 @@
         -%}
       </div>
 
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
-        Continue with Dr. Meera Pillai
-      </button>
+      <div class="kal-step-doctor-select__desktop-footer">
+        {%- render 'kal-booking-flow-price-banner' -%}
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
+          Continue with Dr. Meera Pillai
+        </button>
+      </div>
     </div>
   </div>
 
