@@ -7,10 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const openFlow = () => {
     flow.showModal();
+    document.body.style.overflow = 'hidden';
   };
 
   const closeFlow = () => {
     flow.close();
+    document.body.style.overflow = '';
   };
 
   // Step navigation: each step screen is a direct child of #kal-booking-flow-content
