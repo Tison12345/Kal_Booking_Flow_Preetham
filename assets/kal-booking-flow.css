@@ -223,8 +223,10 @@
   gap: 12px;
 }
 
-/* Desktop: floating frosted bar pinned to the bottom of the info column */
-.kal-step-entry__desktop .kal-step-entry__location {
+/* Desktop: floating frosted bar pinned to the bottom of the info column —
+   reused by any step that has this same left-column layout (Entry, Doctor Select) */
+.kal-step-entry__desktop .kal-step-entry__location,
+.kal-step-doctor-select__desktop .kal-step-entry__location {
   padding: 24px 36px;
   background: rgba(255, 255, 255, 0.8);
   border-top: 1px solid var(--kal-color-border);
@@ -736,4 +738,47 @@
   .kal-step-doctor-select__mobile {
     display: none;
   }
+}
+
+/* Desktop composition — left column reuses .kal-step-entry__info and friends
+   (same visual treatment, per the Figma spec), right column is new */
+.kal-step-doctor-select__desktop {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-doctor-select__desktop {
+    display: grid;
+    height: 100%;
+    grid-template-columns: 3fr 5fr;
+  }
+}
+
+.kal-step-doctor-select__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  height: 100%;
+  padding: 16px 16px 0;
+  box-sizing: border-box;
+}
+
+.kal-step-doctor-select__progress--desktop {
+  justify-content: flex-end;
+  padding: 0 24px;
+}
+
+.kal-step-doctor-select__list--desktop {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.kal-step-doctor-select__desktop .kal-doctor-card {
+  margin-bottom: 16px;
+}
+
+.kal-step-doctor-select__desktop .kal-step-doctor-select__continue {
+  margin: 0 24px 24px;
+  width: calc(100% - 48px);
 }
