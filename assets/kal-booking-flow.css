@@ -1444,3 +1444,117 @@
   flex: 1;
   min-width: 0;
 }
+
+/* ----------------------------------------
+   STEP: CONFIRMATION (Step 5 of 5)
+   Mobile only for now, same as Patient Details. Doctor summary card reuses
+   .kal-doctor-summary exactly as-is from Slot Picker — same 16px horizontal
+   margin convention as that step's mobile composition.
+----------------------------------------- */
+
+.kal-step-confirmation__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-confirmation__mobile {
+    display: none;
+  }
+}
+
+.kal-step-confirmation__mobile .kal-doctor-summary,
+.kal-step-confirmation__mobile .kal-confirmation-details,
+.kal-step-confirmation__mobile .kal-confirmation-pay-notice {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+.kal-confirmation-details {
+  border: 1px solid var(--kal-color-border);
+  border-radius: 14px;
+  padding: 14px 0;
+  box-sizing: border-box;
+}
+
+.kal-confirmation-details__label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #4b4b4b;
+  margin: 0 0 12px;
+  padding: 0 14px;
+}
+
+.kal-confirmation-details__divider {
+  height: 1px;
+  background: #f2f2f2;
+}
+
+.kal-confirmation-details__rows {
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px;
+}
+
+.kal-confirmation-details__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--kal-color-border);
+}
+
+.kal-confirmation-details__row:last-child {
+  border-bottom: none;
+}
+
+.kal-confirmation-details__key {
+  font-size: 14px;
+  color: #646464;
+}
+
+.kal-confirmation-details__value {
+  font-size: 14px;
+  color: var(--kal-color-heading);
+  text-align: right;
+}
+
+.kal-confirmation-pay-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border: 1px solid var(--kal-color-border);
+  border-radius: 12px;
+  background: var(--kal-color-white);
+  box-sizing: border-box;
+}
+
+.kal-confirmation-pay-notice__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #e4f2eb;
+  color: #1e4b3c;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.kal-confirmation-pay-notice__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.kal-confirmation-pay-notice__text {
+  font-size: 12px;
+  font-weight: 350;
+  color: var(--kal-color-body);
+}

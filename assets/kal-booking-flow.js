@@ -32,6 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSlotPickerDay(todayStart());
       loadDaySummaries(slotPicker.mode);
     }
+
+    // Refreshed every time (not just once) — unlike the slot picker, this
+    // step has no state of its own to preserve, so it should always show
+    // whatever's currently in slotPicker/patientDetails.
+    if (stepName === 'confirmation') {
+      renderConfirmationSummary();
+    }
   };
 
   // In-clinic / Video consult toggle: switches the active button (within
@@ -89,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { key: 'Evening', startHour: 16, endHour: 22 },
   ];
   const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const FULL_DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MONTH_LABELS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
@@ -144,6 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const formatContinueDate = (date) => `${MONTH_LABELS[date.getMonth()].slice(0, 3)} ${date.getDate()}`;
+
+  const formatConfirmationDate = (date) =>
+    `${FULL_DAY_LABELS[date.getDay()]} ${date.getDate()} ${MONTH_LABELS[date.getMonth()].slice(0, 3)}`;
 
   const periodForHour = (hour) => {
     const period = SLOT_PERIODS.find((p) => hour >= p.startHour && hour < p.endHour);
@@ -496,6 +507,30 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.toggle('kal-gender-btn--active', btn.dataset.kalGender === gender);
     });
     updatePatientContinueButton();
+  };
+
+  // ----------------------------------------------------------------------
+  // CONFIRMATION — read-only summary of what was collected in the previous
+  // steps. No new state here, just displaying slotPicker/patientDetails.
+  // ----------------------------------------------------------------------
+
+  const renderConfirmationSummary = () => {
+    flow.querySelectorAll('[data-kal-confirm-name]').forEach((el) => {
+      el.textContent = patientDetails.name || '—';
+    });
+
+    flow.querySelectorAll('[data-kal-confirm-mode]').forEach((el) => {
+      const modeLabel = slotPicker.mode === 'video' ? 'Online' : 'In Clinic';
+      el.textContent = `${modeLabel} • ${CONSULT_DURATION_MINUTES} mins`;
+    });
+
+    flow.querySelectorAll('[data-kal-confirm-datetime]').forEach((el) => {
+      if (!slotPicker.selectedSlot) {
+        el.textContent = '—';
+        return;
+      }
+      el.textContent = `${formatConfirmationDate(slotPicker.selectedDate)}, ${formatTime12h(slotPicker.selectedSlot.start_time)}`;
+    });
   };
 
   // Any CTA anywhere on the site with this class opens the flow
