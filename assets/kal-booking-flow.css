@@ -867,6 +867,20 @@
    for this screen yet, so treat mobile spacing as best-effort, not exact.
 ----------------------------------------- */
 
+/* Without this, the outer wrapper falls back to height:auto (content-sized)
+   instead of filling the fixed-height dialog — which breaks every
+   percentage-height rule below it in the desktop chain (grid-template-rows:
+   minmax(0,1fr), .kal-step-doctor-select__panel's height:100%, .kal-step-
+   slot-picker__scroll's flex:1/min-height:0), since none of them have a
+   definite size to resolve against anymore. Same class of bug as
+   .kal-step-entry__info needing an explicit height:100% — Doctor Select
+   never hit this because .kal-step-doctor-select (its outer wrapper class)
+   already had this rule for its mobile layout; this step's outer wrapper
+   is a distinct class that never got the same treatment. */
+.kal-step-slot-picker {
+  height: 100%;
+}
+
 .kal-step-slot-picker__mobile {
   display: flex;
   flex-direction: column;
