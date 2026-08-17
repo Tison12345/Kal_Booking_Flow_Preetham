@@ -1345,3 +1345,57 @@
   border-color: #191919;
   color: #0b0b0c;
 }
+
+/* Desktop composition — same grid/panel/scroll pattern as every other
+   step's desktop composition (Doctor Select, Slot Picker). */
+
+.kal-step-patient-details__desktop {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-patient-details__desktop {
+    display: grid;
+    height: 100%;
+    grid-template-columns: 3fr 5fr;
+  }
+}
+
+.kal-step-patient-details__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  min-width: 0; /* same width-collapse issue as the Slot Picker panel — see that fix's comment */
+  padding: 16px 16px 0;
+  box-sizing: border-box;
+}
+
+.kal-step-patient-details__scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* Desktop form: the base .kal-form (mobile) has its own 0 24px padding and
+   24px gap. The panel here already supplies 16px of horizontal padding
+   (Figma's own math: 500px column - 16px - 16px = 468px form width, i.e.
+   zero additional horizontal padding from the form itself) — override both
+   the padding and the gap to match. */
+.kal-form--desktop {
+  padding: 0;
+  gap: 16px;
+}
+
+.kal-form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.kal-form-row .kal-form-field {
+  flex: 1;
+  min-width: 0;
+}

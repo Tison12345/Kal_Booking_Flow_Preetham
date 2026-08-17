@@ -113,4 +113,113 @@
 
   </div>
 
+  {%- comment -%}
+    ============ DESKTOP (750px and up) ============
+    Left column reuses .kal-step-entry__info exactly like every other step's
+    desktop composition. Heading text here is the clean version — the Figma
+    export's own text layer read "Pick your Who is this visit for?visit",
+    a leftover from duplicating the Slot Picker frame without fully
+    replacing its heading.
+
+    Date of Birth and "What are you coming in for?" from the Figma export
+    are both intentionally left out — DOB per instruction (mobile doesn't
+    have it, skipping it entirely rather than making platforms collect
+    different fields), "what are you coming in for" per explicit instruction
+    to ignore it.
+
+    Every input/button below reuses the exact same data-kal-field/
+    data-kal-gender/data-kal-patient-continue hooks as the mobile
+    composition, so the JS validation and input-delegation logic in
+    kal-booking-flow.js needed zero changes to cover this composition too.
+  {%- endcomment -%}
+  <div class="kal-step-patient-details__desktop">
+    <div class="kal-step-entry__info">
+      <div class="kal-step-entry__info-content">
+        <h2 class="kal-step-entry__heading">Who is this visit for?</h2>
+        <p class="kal-step-entry__body-text">
+          Book a consultation in under a minute in-clinic or video. Confirmation
+          arrives instantly, no account required.
+        </p>
+      </div>
+      <div class="kal-step-entry__location">
+        <span class="kal-icon kal-icon--location">
+          <!-- ICON: location-pin (not received yet) -->
+        </span>
+        <span class="kal-step-entry__location-text">
+          Kerala Ayurveda Wellness Center, Kormangala &middot; Opens 8 AM
+        </span>
+      </div>
+    </div>
+
+    <div class="kal-step-patient-details__panel">
+      <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-text">3/5</span>
+      </div>
+
+      <div class="kal-step-patient-details__scroll">
+        <div class="kal-form kal-form--desktop">
+          <div class="kal-form-field">
+            <label class="kal-form-label" for="kal-patient-name-desktop">Full Name*</label>
+            <input
+              type="text"
+              id="kal-patient-name-desktop"
+              class="kal-form-input"
+              data-kal-field="name"
+              placeholder="Enter full name"
+              autocomplete="name"
+            >
+          </div>
+
+          <div class="kal-form-field">
+            <p class="kal-form-label">Gender*</p>
+            <div class="kal-gender-group" data-kal-gender-group>
+              <button type="button" class="kal-gender-btn" data-kal-gender="female">Female</button>
+              <button type="button" class="kal-gender-btn" data-kal-gender="male">Male</button>
+            </div>
+          </div>
+
+          <div class="kal-form-row">
+            <div class="kal-form-field">
+              <label class="kal-form-label" for="kal-patient-whatsapp-desktop">WhatsApp Number*</label>
+              <input
+                type="tel"
+                id="kal-patient-whatsapp-desktop"
+                class="kal-form-input"
+                data-kal-field="whatsapp"
+                placeholder="10-digit mobile number"
+                autocomplete="tel"
+                inputmode="numeric"
+              >
+            </div>
+
+            <div class="kal-form-field">
+              <label class="kal-form-label" for="kal-patient-email-desktop">
+                Email <span class="kal-form-label__optional">Optional</span>
+              </label>
+              <input
+                type="email"
+                id="kal-patient-email-desktop"
+                class="kal-form-input"
+                data-kal-field="email"
+                placeholder="Enter email address"
+                autocomplete="email"
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kal-step-doctor-select__desktop-footer">
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="confirmation" data-kal-patient-continue disabled>
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
