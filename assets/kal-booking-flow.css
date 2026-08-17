@@ -1310,10 +1310,19 @@
 
 /* ----------------------------------------
    STEP: PATIENT DETAILS (Step 3 of 5)
-   Mobile only for now — desktop composition follows once that Figma export
-   is shared. Values match the Figma spec exactly (Male/Female pill toggle
-   styling, input borders/radius/padding).
+   Values match the Figma spec exactly (Male/Female pill toggle styling,
+   input borders/radius/padding).
 ----------------------------------------- */
+
+/* Same fix as .kal-step-slot-picker (see that rule's comment): this outer
+   wrapper needs its own explicit height:100% or it falls back to
+   height:auto, breaking every percentage-height rule in the desktop chain
+   below it and letting the panel grow to content size instead of staying
+   capped at the fixed dialog height — which is what pushed the Continue
+   button up out of place instead of keeping it pinned to the bottom. */
+.kal-step-patient-details {
+  height: 100%;
+}
 
 .kal-step-patient-details__mobile {
   display: flex;
