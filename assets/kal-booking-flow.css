@@ -879,56 +879,11 @@
   }
 }
 
-.kal-step-slot-picker__desktop {
-  display: none;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-step-slot-picker__desktop {
-    display: grid;
-    width: 100%;
-    height: 100%;
-    grid-template-columns: 3fr 5fr;
-    /* minmax(0, 1fr) instead of a plain 100%: still fills the full height,
-       but explicitly allows the row to shrink below its content's natural
-       size rather than just asserting a percentage that content could push
-       past. See .kal-step-entry__desktop's comment for why the row needs
-       to be sized at all (without it, height:100% on children below
-       doesn't resolve against anything real). */
-    grid-template-rows: minmax(0, 1fr);
-    min-width: 0;
-    min-height: 0;
-  }
-
-  /* Belt-and-suspenders: grid items default to min-width/min-height:auto
-     (sized to their content), which is what let the day-strip's chips blow
-     out the right column's minimum width and squeeze the left column
-     before. Zeroing this out on every direct child of the grid, not just
-     the one column that happened to cause a problem, so the same class of
-     bug can't quietly recur on the other column or a future step. */
-  .kal-step-slot-picker__desktop > * {
-    min-width: 0;
-    min-height: 0;
-  }
-}
-
-.kal-step-slot-picker__panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
-  height: 100%;
-  min-height: 0;
-  /* Grid items default to min-width:auto (their content's min-content
-     width), same underlying issue as the min-height:0 fix above but on the
-     width axis — this is the grid item in .kal-step-slot-picker__desktop's
-     3fr/5fr row. Without this, the day-strip's 10 chips (more than the
-     original static markup had) pushed this column's min-content past its
-     5fr share, squeezing the left column down to a sliver of vertical text. */
-  min-width: 0;
-  padding: 16px 16px 0;
-  box-sizing: border-box;
-}
+/* No .kal-step-slot-picker__desktop / __panel here anymore — the desktop
+   composition's outer <div> and right-column <div> now use
+   .kal-step-doctor-select__desktop / __panel directly (see that class's
+   own rules, near the Doctor Select section above), so this step's grid/
+   panel layout can't drift out of matching Doctor Select's. */
 
 .kal-step-slot-picker__scroll {
   flex: 1;
@@ -1436,38 +1391,9 @@
 /* Desktop composition — same grid/panel/scroll pattern as every other
    step's desktop composition (Doctor Select, Slot Picker). */
 
-.kal-step-patient-details__desktop {
-  display: none;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-step-patient-details__desktop {
-    display: grid;
-    width: 100%;
-    height: 100%;
-    grid-template-columns: 3fr 5fr;
-    grid-template-rows: minmax(0, 1fr); /* see .kal-step-entry__desktop's comment on this same property */
-    min-width: 0;
-    min-height: 0;
-  }
-
-  .kal-step-patient-details__desktop > * {
-    min-width: 0;
-    min-height: 0;
-  }
-}
-
-.kal-step-patient-details__panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
-  height: 100%;
-  min-height: 0;
-  min-width: 0; /* same width-collapse issue as the Slot Picker panel — see that fix's comment */
-  padding: 16px 16px 0;
-  box-sizing: border-box;
-}
+/* No .kal-step-patient-details__desktop / __panel here anymore — same
+   reasoning as Slot Picker (see that section's comment): this composition
+   reuses .kal-step-doctor-select__desktop / __panel directly. */
 
 .kal-step-patient-details__scroll {
   flex: 1;

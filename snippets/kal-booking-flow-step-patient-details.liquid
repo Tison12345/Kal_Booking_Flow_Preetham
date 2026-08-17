@@ -131,8 +131,13 @@
     data-kal-gender/data-kal-patient-continue hooks as the mobile
     composition, so the JS validation and input-delegation logic in
     kal-booking-flow.js needed zero changes to cover this composition too.
+
+    Reuses .kal-step-doctor-select__desktop/__panel directly (not a
+    separate kal-step-patient-details__desktop/__panel copy) — same reason
+    as Slot Picker: one shared CSS rule governing the grid/panel layout,
+    not three near-identical copies that can quietly drift apart.
   {%- endcomment -%}
-  <div class="kal-step-patient-details__desktop">
+  <div class="kal-step-doctor-select__desktop">
     <div class="kal-step-entry__info">
       <div class="kal-step-entry__info-content">
         <h2 class="kal-step-entry__heading">Who is this visit for?</h2>
@@ -151,7 +156,7 @@
       </div>
     </div>
 
-    <div class="kal-step-patient-details__panel">
+    <div class="kal-step-doctor-select__panel">
       <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
         <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot"></span>

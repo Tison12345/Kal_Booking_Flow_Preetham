@@ -106,8 +106,15 @@
 
   </div>
 
-  {%- comment -%} ============ DESKTOP (750px and up) — matches Figma Frame 4 exactly ============ {%- endcomment -%}
-  <div class="kal-step-slot-picker__desktop">
+  {%- comment -%}
+    ============ DESKTOP (750px and up) — matches Figma Frame 4 exactly ============
+    Reuses .kal-step-doctor-select__desktop/__panel directly (not a separate
+    kal-step-slot-picker__desktop/__panel copy) so the grid/panel layout is
+    governed by literally the same CSS rule as Doctor Select, not a second
+    copy that has to be kept in sync by hand — that's what let this drift
+    out of matching Doctor Select's proportions/behavior over several edits.
+  {%- endcomment -%}
+  <div class="kal-step-doctor-select__desktop">
     <div class="kal-step-entry__info">
       <div class="kal-step-entry__info-content">
         <h2 class="kal-step-entry__heading">Pick your visit</h2>
@@ -126,7 +133,7 @@
       </div>
     </div>
 
-    <div class="kal-step-slot-picker__panel">
+    <div class="kal-step-doctor-select__panel">
       <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
         <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
