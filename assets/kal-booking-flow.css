@@ -165,6 +165,7 @@
 @media screen and (min-width: 750px) {
   .kal-step-entry__desktop {
     display: grid;
+    width: 100%;
     height: 100%;
     /* fr units, not fixed px — matches the real theme's own two-column
        sections (custom-clinic-consultation-form.css, custom-hero-banner-slider.css),
@@ -175,9 +176,20 @@
        its content) rather than stretching to fill this container's own
        height:100% — meaning any child's height:100% below doesn't actually
        resolve against a definite 500px, it resolves against auto instead.
-       That's what let the absolutely-positioned footer end up positioned
-       against the wrong (content-sized, too-short) box. */
-    grid-template-rows: 100%;
+       minmax(0, 1fr) fills the same way a plain 100% does, but also makes
+       explicit that the row is allowed to shrink below its content's
+       natural size rather than being pushed taller by it. */
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* Grid items default to min-width/min-height:auto (sized to their
+     content) — zeroed out on every direct child so neither column can blow
+     out its own minimum size and steal space from the other. */
+  .kal-step-entry__desktop > * {
+    min-width: 0;
+    min-height: 0;
   }
 }
 
@@ -792,9 +804,17 @@
 @media screen and (min-width: 750px) {
   .kal-step-doctor-select__desktop {
     display: grid;
+    width: 100%;
     height: 100%;
     grid-template-columns: 3fr 5fr;
-    grid-template-rows: 100%; /* see .kal-step-entry__desktop's comment on this same property */
+    grid-template-rows: minmax(0, 1fr); /* see .kal-step-entry__desktop's comment on this same property */
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .kal-step-doctor-select__desktop > * {
+    min-width: 0;
+    min-height: 0;
   }
 }
 
@@ -866,9 +886,29 @@
 @media screen and (min-width: 750px) {
   .kal-step-slot-picker__desktop {
     display: grid;
+    width: 100%;
     height: 100%;
     grid-template-columns: 3fr 5fr;
-    grid-template-rows: 100%; /* see .kal-step-entry__desktop's comment on this same property */
+    /* minmax(0, 1fr) instead of a plain 100%: still fills the full height,
+       but explicitly allows the row to shrink below its content's natural
+       size rather than just asserting a percentage that content could push
+       past. See .kal-step-entry__desktop's comment for why the row needs
+       to be sized at all (without it, height:100% on children below
+       doesn't resolve against anything real). */
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* Belt-and-suspenders: grid items default to min-width/min-height:auto
+     (sized to their content), which is what let the day-strip's chips blow
+     out the right column's minimum width and squeeze the left column
+     before. Zeroing this out on every direct child of the grid, not just
+     the one column that happened to cause a problem, so the same class of
+     bug can't quietly recur on the other column or a future step. */
+  .kal-step-slot-picker__desktop > * {
+    min-width: 0;
+    min-height: 0;
   }
 }
 
@@ -1403,9 +1443,17 @@
 @media screen and (min-width: 750px) {
   .kal-step-patient-details__desktop {
     display: grid;
+    width: 100%;
     height: 100%;
     grid-template-columns: 3fr 5fr;
-    grid-template-rows: 100%; /* see .kal-step-entry__desktop's comment on this same property */
+    grid-template-rows: minmax(0, 1fr); /* see .kal-step-entry__desktop's comment on this same property */
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .kal-step-patient-details__desktop > * {
+    min-width: 0;
+    min-height: 0;
   }
 }
 
