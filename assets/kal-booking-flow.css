@@ -1009,6 +1009,34 @@
   color: var(--kal-color-white);
 }
 
+/* Per-day slot-count badge — from GET /api/public/availability/day-summaries.
+   Colors stay the same whether the chip itself is active/dark or not,
+   matching the Figma export exactly (the active "Fri 7" chip's badge is
+   still the same green as every other high-availability day). */
+
+.kal-day-chip__badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.kal-day-chip__badge--high {
+  background: #e4f2eb;
+  color: #1e4b3c;
+}
+
+.kal-day-chip__badge--low {
+  background: rgba(247, 199, 7, 0.3);
+  color: #955609;
+}
+
+.kal-day-chip__badge--none {
+  background: rgba(125, 125, 125, 0.2);
+  color: #191919;
+}
+
 .kal-day-chip:disabled {
   opacity: 0.4;
   cursor: not-allowed;

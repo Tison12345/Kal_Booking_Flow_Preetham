@@ -24,11 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
       step.hidden = step.dataset.kalStep !== stepName;
     });
 
-    // First time the visitor reaches the slot picker, load today's slots.
-    // After that, whatever day/time they'd picked just stays as-is.
+    // First time the visitor reaches the slot picker, load today's slots
+    // and the day-strip's slot-count badges. After that, whatever day/time
+    // they'd picked just stays as-is.
     if (stepName === 'slot-picker' && !slotPickerLoaded) {
       slotPickerLoaded = true;
       loadSlotPickerDay(todayStart());
+      loadDaySummaries(slotPicker.mode);
     }
   };
 
@@ -50,13 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
       card.hidden = !modes.includes(mode);
     });
 
+    flow.querySelectorAll('[data-kal-summary-mode]').forEach((el) => {
+      el.textContent = mode === 'video' ? 'Online' : 'In-Clinic';
+    });
+
     slotPicker.mode = mode;
     // If the slot picker has already loaded a day, the previously fetched
-    // slots were scoped to the old mode (in-clinic requests are filtered
-    // server-side by facility_id, video requests aren't) — reload rather
-    // than just re-render.
+    // slots/day-summaries were scoped to the old mode (in-clinic requests
+    // are filtered server-side by facility_id, video requests aren't) —
+    // reload rather than just re-render.
     if (slotPickerLoaded) {
       loadSlotPickerDay(slotPicker.selectedDate);
+      loadDaySummaries(mode);
     }
   };
 
@@ -90,6 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedSlot: null, // { start_time, end_time }
     calendarMonth: new Date(),
     slotsCache: new Map(), // "mode::YYYY-MM-DD" -> slots array
+    daySummaryMap: new Map(), // "YYYY-MM-DD" -> { summary_date, total_slots, booked_slots }
+    daySummariesCache: new Map(), // mode -> summaries array (day-strip range is fixed, so keyed by mode only)
   };
 
   const toDateKey = (date) => {
@@ -142,6 +151,26 @@ document.addEventListener('DOMContentLoaded', () => {
     return slotType === 'online' || slotType === 'both';
   };
 
+  // Renders a "N slots" badge per day chip from the day-summaries fetch, and
+  // disables days with zero availability — matches the Figma spec's
+  // green/amber/grey coding. Thresholds (0 / 1-2 / 3+) aren't from the real
+  // CMS (it doesn't expose one), chosen to match the Figma example spread.
+  const daySlotBadgeHtml = (dateKey) => {
+    const summary = slotPicker.daySummaryMap.get(dateKey);
+    if (!summary) return { badge: '', disabled: false }; // not loaded yet — plain chip, no badge
+    const available = Math.max(0, summary.total_slots - summary.booked_slots);
+    if (available === 0) {
+      return { badge: '<span class="kal-day-chip__badge kal-day-chip__badge--none">0 slot</span>', disabled: true };
+    }
+    if (available <= 2) {
+      return {
+        badge: `<span class="kal-day-chip__badge kal-day-chip__badge--low">${available} slot${available === 1 ? '' : 's'}</span>`,
+        disabled: false,
+      };
+    }
+    return { badge: `<span class="kal-day-chip__badge kal-day-chip__badge--high">${available} slots</span>`, disabled: false };
+  };
+
   const renderDayStrip = () => {
     const selectedKey = toDateKey(slotPicker.selectedDate);
     const chips = [];
@@ -153,16 +182,57 @@ document.addEventListener('DOMContentLoaded', () => {
       strip.innerHTML = '';
       chips.forEach((date) => {
         const dateKey = toDateKey(date);
+        const { badge, disabled } = daySlotBadgeHtml(dateKey);
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'kal-day-chip' + (dateKey === selectedKey ? ' kal-day-chip--active' : '');
         btn.dataset.kalDate = dateKey;
+        btn.disabled = disabled;
         btn.innerHTML =
           `<span class="kal-day-chip__label">${formatDayChipLabel(date)}</span>` +
-          `<span class="kal-day-chip__date">${date.getDate()}</span>`;
+          `<span class="kal-day-chip__date">${date.getDate()}</span>` +
+          badge;
         strip.appendChild(btn);
       });
     });
+  };
+
+  const fetchDaySummaries = async (mode) => {
+    if (slotPicker.daySummariesCache.has(mode)) {
+      return slotPicker.daySummariesCache.get(mode);
+    }
+
+    const doctorId = slotPickerEl.dataset.doctorId;
+    const facilityId = slotPickerEl.dataset.facilityId;
+    const startKey = toDateKey(todayStart());
+    const endKey = toDateKey(addDays(todayStart(), STRIP_DAYS - 1));
+    // Mirrors the mode logic in fetchSlotsForDate: video sends online_only
+    // instead of facility_id; in-clinic sends facility_id and no online_only.
+    const modeParam = mode === 'video' ? '&online_only=true' : `&facility_id=${encodeURIComponent(facilityId)}`;
+    const url =
+      `${apiBaseUrl}/api/public/availability/day-summaries?doctor_id=${encodeURIComponent(doctorId)}` +
+      `&start_date=${startKey}&end_date=${endKey}${modeParam}&duration_minutes=${CONSULT_DURATION_MINUTES}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Day summaries fetch failed: ${response.status}`);
+    }
+    const data = await response.json();
+    const summaries = data.summaries || [];
+    slotPicker.daySummariesCache.set(mode, summaries);
+    return summaries;
+  };
+
+  const loadDaySummaries = async (mode) => {
+    try {
+      const summaries = await fetchDaySummaries(mode);
+      if (slotPicker.mode !== mode) return; // mode changed again before this resolved
+      slotPicker.daySummaryMap = new Map(summaries.map((s) => [s.summary_date, s]));
+    } catch (err) {
+      if (slotPicker.mode !== mode) return;
+      slotPicker.daySummaryMap = new Map(); // fall back to plain chips, no badges
+    }
+    renderDayStrip();
   };
 
   const renderSlotPeriods = (allSlots) => {
