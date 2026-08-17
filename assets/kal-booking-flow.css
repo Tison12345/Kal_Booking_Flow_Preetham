@@ -89,16 +89,21 @@
 @media screen and (min-width: 750px) {
   .kal-booking-flow__content {
     padding: 0;
-    /* Mobile needs this container itself to scroll (a step's content can
-       genuinely be taller than the viewport there). Desktop doesn't — every
-       desktop composition is a fixed 500px row where the right-hand panel
-       already handles its own scrolling internally (.kal-step-*__scroll).
-       Leaving this auto meant the whole content block, left column
-       included, was itself a second scroll container layered on top of
-       that — so any wheel/trackpad scroll near the dialog could shift the
-       entire thing (including the left column, which should never move)
-       instead of just scrolling the intended inner panel. */
-    overflow-y: hidden;
+    /* Reinstated as a safety net: on a browser window short enough that the
+       dialog's max-height:90vh clamps it below 500px, the inner panel's
+       content (plus the now-absolutely-positioned footer) can genuinely
+       need more room than the clamped dialog has. Without any way to
+       scroll here, the Continue button became unreachable in that case —
+       reported as "can't move to the next page" on a real (non-DevTools-
+       squeezed) short window.
+       This was previously "hidden" to stop the left column from drifting
+       when scrolled — but that drift was actually caused by
+       grid-template-rows never being set (fixed separately, see
+       .kal-step-entry__desktop's comment), not by this being scrollable.
+       With that real fix in place, this container only needs to scroll at
+       all when content genuinely exceeds a clamped dialog height, and the
+       left column won't drift as a side effect anymore. */
+    overflow-y: auto;
   }
 }
 
