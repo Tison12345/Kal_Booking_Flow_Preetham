@@ -460,6 +460,44 @@ document.addEventListener('DOMContentLoaded', () => {
     calendarModal.hidden = true;
   };
 
+  // ----------------------------------------------------------------------
+  // PATIENT DETAILS — form state, validation, and the gender pill toggle.
+  // NOT wired to the backend yet (explicit instruction). Once it is, this
+  // state is exactly what POST /api/public/appointments needs for
+  // patientName/patientGender/patientMobile (email isn't sent there today —
+  // add it if/when the backend is extended to accept it).
+  // ----------------------------------------------------------------------
+
+  const patientDetails = {
+    name: '',
+    gender: '',
+    whatsapp: '',
+    email: '',
+  };
+
+  const isValidWhatsapp = (value) => value.replace(/\D/g, '').length >= 10;
+  const isValidEmail = (value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const isPatientDetailsValid = () =>
+    patientDetails.name.trim() !== '' &&
+    (patientDetails.gender === 'male' || patientDetails.gender === 'female') &&
+    isValidWhatsapp(patientDetails.whatsapp) &&
+    isValidEmail(patientDetails.email);
+
+  const updatePatientContinueButton = () => {
+    flow.querySelectorAll('[data-kal-patient-continue]').forEach((btn) => {
+      btn.disabled = !isPatientDetailsValid();
+    });
+  };
+
+  const setGender = (gender) => {
+    patientDetails.gender = gender;
+    flow.querySelectorAll('[data-kal-gender]').forEach((btn) => {
+      btn.classList.toggle('kal-gender-btn--active', btn.dataset.kalGender === gender);
+    });
+    updatePatientContinueButton();
+  };
+
   // Any CTA anywhere on the site with this class opens the flow
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
@@ -480,6 +518,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeTrigger = e.target.closest('[data-kal-mode]');
     if (modeTrigger) {
       setMode(modeTrigger.dataset.kalMode);
+    }
+
+    const genderTrigger = e.target.closest('[data-kal-gender]');
+    if (genderTrigger) {
+      setGender(genderTrigger.dataset.kalGender);
     }
 
     const dayChipTrigger = e.target.closest('.kal-day-chip');
@@ -526,5 +569,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === flow) {
       closeFlow();
     }
+  });
+
+  // Patient Details form fields — delegated the same way as clicks, so this
+  // keeps working once a desktop composition duplicates these inputs.
+  document.addEventListener('input', (e) => {
+    const field = e.target.closest('[data-kal-field]');
+    if (!field) return;
+    patientDetails[field.dataset.kalField] = field.value;
+    updatePatientContinueButton();
   });
 });

@@ -1251,3 +1251,97 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ----------------------------------------
+   STEP: PATIENT DETAILS (Step 3 of 5)
+   Mobile only for now — desktop composition follows once that Figma export
+   is shared. Values match the Figma spec exactly (Male/Female pill toggle
+   styling, input borders/radius/padding).
+----------------------------------------- */
+
+.kal-step-patient-details__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-patient-details__mobile {
+    display: none;
+  }
+}
+
+.kal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 24px;
+}
+
+.kal-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kal-form-label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #4b4b4b;
+  margin: 0;
+}
+
+.kal-form-label__optional {
+  font-size: 12px;
+  font-weight: 350;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #4b4b4b;
+}
+
+.kal-form-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #e6e6e8;
+  border-radius: 12px;
+  background: var(--kal-color-white);
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--kal-color-heading);
+}
+
+.kal-form-input::placeholder {
+  color: #a8a8a8;
+}
+
+.kal-form-input:focus {
+  outline: none;
+  border-color: var(--kal-color-primary);
+}
+
+.kal-gender-group {
+  display: flex;
+  gap: 8px;
+}
+
+.kal-gender-btn {
+  box-sizing: border-box;
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e6e6e8;
+  border-radius: 12px;
+  background: var(--kal-color-white);
+  color: #7d7d7d;
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.kal-gender-btn--active {
+  border-color: #191919;
+  color: #0b0b0c;
+}

@@ -1,0 +1,116 @@
+{% comment %}
+  Step 4 (labeled "Step 3 of 5" — see kal-booking-flow.js comment for why)
+  — collects who the visit is for: full name, gender, WhatsApp number, and
+  an optional email.
+
+  MOBILE ONLY for now — desktop composition is coming in a follow-up (the
+  user is sharing that Figma export separately). No desktop wrapper exists
+  yet, so this step will only render correctly below 750px until then.
+
+  Gender is Male/Female only, not Male/Female/Other — explicit instruction,
+  even though the Figma export showed three pill options (Female/Male/Other).
+  patients.gender in the database accepts 'male'/'female'/'other', so this
+  is a UI choice, not a backend constraint.
+
+  NOT WIRED TO THE BACKEND YET (explicit instruction — "build the backend
+  too but dont integrate it"). The backend already exists and needs no new
+  code:
+    1. POST /api/public/availability/holds { doctor_id, date, time } -> holdId
+       (already called nowhere yet — would need to happen when a slot is
+       picked, i.e. on the Slot Picker step's Continue, not here)
+    2. POST /api/public/appointments { holdId, facilityId, doctorId,
+       appointmentDate, appointmentTime, consultationMode, patientName,
+       patientMobile, patientGender } -> books it and fires the WhatsApp
+       confirmation
+  This step's job when that's wired up: collect patientName/patientGender/
+  patientMobile/patientEmail into slotPicker.patientDetails (see JS) so
+  they're ready to send in step 2 above once the next step (booking
+  confirmation) actually triggers it.
+
+  Left column / header pattern matches the other steps (chevron-left back
+  button + progress dots, then eyebrow + heading via the same reused
+  kal-step-doctor-select__intro classes as Slot Picker).
+{% endcomment %}
+
+<div class="kal-step-patient-details">
+
+  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
+  <div class="kal-step-patient-details__mobile">
+
+    <div class="kal-step-slot-picker__header">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-back="slot-picker" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+      </button>
+      <div class="kal-step-doctor-select__progress">
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-text">3/5</span>
+      </div>
+    </div>
+
+    <div class="kal-step-doctor-select__intro">
+      <p class="kal-step-doctor-select__eyebrow">Step 3 of 5</p>
+      <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
+    </div>
+
+    <div class="kal-form">
+      <div class="kal-form-field">
+        <label class="kal-form-label" for="kal-patient-name">Full Name*</label>
+        <input
+          type="text"
+          id="kal-patient-name"
+          class="kal-form-input"
+          data-kal-field="name"
+          placeholder="Enter full name"
+          autocomplete="name"
+        >
+      </div>
+
+      <div class="kal-form-field">
+        <p class="kal-form-label">Gender*</p>
+        <div class="kal-gender-group" data-kal-gender-group>
+          <button type="button" class="kal-gender-btn" data-kal-gender="female">Female</button>
+          <button type="button" class="kal-gender-btn" data-kal-gender="male">Male</button>
+        </div>
+      </div>
+
+      <div class="kal-form-field">
+        <label class="kal-form-label" for="kal-patient-whatsapp">WhatsApp Number*</label>
+        <input
+          type="tel"
+          id="kal-patient-whatsapp"
+          class="kal-form-input"
+          data-kal-field="whatsapp"
+          placeholder="10-digit mobile number"
+          autocomplete="tel"
+          inputmode="numeric"
+        >
+      </div>
+
+      <div class="kal-form-field">
+        <label class="kal-form-label" for="kal-patient-email">
+          Email <span class="kal-form-label__optional">Optional</span>
+        </label>
+        <input
+          type="email"
+          id="kal-patient-email"
+          class="kal-form-input"
+          data-kal-field="email"
+          placeholder="Enter email address"
+          autocomplete="email"
+        >
+      </div>
+    </div>
+
+    <div class="kal-step-slot-picker__footer">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="confirmation" data-kal-patient-continue disabled>
+        Continue
+      </button>
+    </div>
+
+  </div>
+
+</div>
