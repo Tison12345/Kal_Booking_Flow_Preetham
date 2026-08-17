@@ -89,21 +89,18 @@
 @media screen and (min-width: 750px) {
   .kal-booking-flow__content {
     padding: 0;
-    /* Reinstated as a safety net: on a browser window short enough that the
-       dialog's max-height:90vh clamps it below 500px, the inner panel's
-       content (plus the now-absolutely-positioned footer) can genuinely
-       need more room than the clamped dialog has. Without any way to
-       scroll here, the Continue button became unreachable in that case —
-       reported as "can't move to the next page" on a real (non-DevTools-
-       squeezed) short window.
-       This was previously "hidden" to stop the left column from drifting
-       when scrolled — but that drift was actually caused by
-       grid-template-rows never being set (fixed separately, see
-       .kal-step-entry__desktop's comment), not by this being scrollable.
-       With that real fix in place, this container only needs to scroll at
-       all when content genuinely exceeds a clamped dialog height, and the
-       left column won't drift as a side effect anymore. */
-    overflow-y: auto;
+    /* Every desktop step is a fixed-height grid row (grid-template-rows:100%
+       on each .kal-step-*__desktop) whose right-hand panel already handles
+       its own overflow internally via .kal-step-*__scroll / __list--desktop
+       (flex:1; min-height:0; overflow-y:auto). That's the same pattern
+       Doctor Select always used, and it needs no scrolling here at all —
+       this must stay hidden, or this whole block (left column included)
+       becomes a second, redundant scroll container layered on top, which
+       is what let the left column scroll out of view. Do not change this
+       back to auto to "fix" a short-viewport footer-visibility issue —
+       that's what position:absolute + this auto scroll were for
+       previously, and both got reverted for exactly this reason. */
+    overflow-y: hidden;
   }
 }
 
@@ -201,7 +198,6 @@
   background: var(--kal-color-white);
   border-radius: 16px 0 0 16px;
   overflow: hidden;
-  position: relative; /* containing block for .kal-step-entry__location's absolute pin below */
 }
 
 .kal-step-entry__info-content {
@@ -266,15 +262,15 @@
   border-top: 1px solid var(--kal-color-border);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
-  /* Was relying on flex justify-content:space-between (on .kal-step-entry__info)
-     to land at the bottom, which depends on that parent's height resolving
-     correctly. Pinning it directly guarantees the bottom position regardless
-     of any height-cascade issue elsewhere. */
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  box-sizing: border-box;
+  /* Plain flex child again — .kal-step-entry__info's justify-content:
+     space-between + its own height:100% (now correctly resolving thanks to
+     grid-template-rows:100% on the desktop grid) already lands this at the
+     bottom reliably, matching how Doctor Select always worked. The earlier
+     position:absolute version was solving a symptom of the real bug
+     (missing grid-template-rows) rather than that bug itself, and it broke
+     the "left column never scrolls" behavior once the outer content
+     wrapper needed scrolling again. */
+  flex-shrink: 0;
 }
 
 /* Mobile: simple inline row, no bar/border/blur */
@@ -811,7 +807,6 @@
   min-height: 0; /* without this, flex/grid items default to min-height:auto and won't shrink below their content's natural size — the whole reason the list wasn't actually scrolling before */
   padding: 16px 16px 0;
   box-sizing: border-box;
-  position: relative; /* containing block for .kal-step-doctor-select__desktop-footer's absolute pin below */
 }
 
 .kal-step-doctor-select__progress--desktop {
@@ -824,10 +819,6 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* Clearance so the last card doesn't sit behind the now-absolutely-
-     positioned footer below (which includes the price banner here, taller
-     than Slot Picker/Patient Details' button-only footer). */
-  padding-bottom: 180px;
 }
 
 .kal-step-doctor-select__desktop .kal-doctor-card {
@@ -839,16 +830,14 @@
   flex-direction: column;
   gap: 12px;
   padding: 0 24px 24px;
-  /* Was relying on flex justify-content:space-between (on the panel) to
-     land at the bottom, which depends on the panel's height resolving
-     correctly. Pinning it directly guarantees it stays visible/clickable
-     regardless of any height-cascade issue elsewhere in the flex chain. */
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  box-sizing: border-box;
-  background: var(--kal-color-white);
+  /* Plain flex child (flex-shrink:0) — the panel's justify-content:
+     space-between + its own height:100% (now correctly resolving thanks to
+     grid-template-rows:100% on the desktop grid) reliably lands this at
+     the bottom, same as it always did on this step. Slot Picker/Patient
+     Details went through a position:absolute detour to work around a bug
+     that was actually the missing grid-template-rows — now reverted to
+     match this original, correct pattern. */
+  flex-shrink: 0;
 }
 
 /* ----------------------------------------
@@ -899,7 +888,6 @@
   min-width: 0;
   padding: 16px 16px 0;
   box-sizing: border-box;
-  position: relative; /* containing block for .kal-step-doctor-select__desktop-footer's absolute pin */
 }
 
 .kal-step-slot-picker__scroll {
@@ -910,7 +898,6 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding-bottom: 110px; /* clearance for the now-absolutely-positioned footer below */
 }
 
 .kal-step-slot-picker__footer {
@@ -1432,7 +1419,6 @@
   min-width: 0; /* same width-collapse issue as the Slot Picker panel — see that fix's comment */
   padding: 16px 16px 0;
   box-sizing: border-box;
-  position: relative; /* containing block for .kal-step-doctor-select__desktop-footer's absolute pin */
 }
 
 .kal-step-patient-details__scroll {
@@ -1440,7 +1426,6 @@
   min-height: 0;
   min-width: 0;
   overflow-y: auto;
-  padding-bottom: 110px; /* clearance for the now-absolutely-positioned footer below */
 }
 
 /* Desktop form: the base .kal-form (mobile) has its own 0 24px padding and
