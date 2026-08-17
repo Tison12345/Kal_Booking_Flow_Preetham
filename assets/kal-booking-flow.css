@@ -189,6 +189,7 @@
   background: var(--kal-color-white);
   border-radius: 16px 0 0 16px;
   overflow: hidden;
+  position: relative; /* containing block for .kal-step-entry__location's absolute pin below */
 }
 
 .kal-step-entry__info-content {
@@ -253,6 +254,15 @@
   border-top: 1px solid var(--kal-color-border);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
+  /* Was relying on flex justify-content:space-between (on .kal-step-entry__info)
+     to land at the bottom, which depends on that parent's height resolving
+     correctly. Pinning it directly guarantees the bottom position regardless
+     of any height-cascade issue elsewhere. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
 }
 
 /* Mobile: simple inline row, no bar/border/blur */
@@ -788,6 +798,7 @@
   min-height: 0; /* without this, flex/grid items default to min-height:auto and won't shrink below their content's natural size — the whole reason the list wasn't actually scrolling before */
   padding: 16px 16px 0;
   box-sizing: border-box;
+  position: relative; /* containing block for .kal-step-doctor-select__desktop-footer's absolute pin below */
 }
 
 .kal-step-doctor-select__progress--desktop {
@@ -800,6 +811,10 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Clearance so the last card doesn't sit behind the now-absolutely-
+     positioned footer below (which includes the price banner here, taller
+     than Slot Picker/Patient Details' button-only footer). */
+  padding-bottom: 180px;
 }
 
 .kal-step-doctor-select__desktop .kal-doctor-card {
@@ -811,7 +826,16 @@
   flex-direction: column;
   gap: 12px;
   padding: 0 24px 24px;
-  flex-shrink: 0;
+  /* Was relying on flex justify-content:space-between (on the panel) to
+     land at the bottom, which depends on the panel's height resolving
+     correctly. Pinning it directly guarantees it stays visible/clickable
+     regardless of any height-cascade issue elsewhere in the flex chain. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  background: var(--kal-color-white);
 }
 
 /* ----------------------------------------
@@ -861,6 +885,7 @@
   min-width: 0;
   padding: 16px 16px 0;
   box-sizing: border-box;
+  position: relative; /* containing block for .kal-step-doctor-select__desktop-footer's absolute pin */
 }
 
 .kal-step-slot-picker__scroll {
@@ -871,6 +896,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  padding-bottom: 110px; /* clearance for the now-absolutely-positioned footer below */
 }
 
 .kal-step-slot-picker__footer {
@@ -1391,6 +1417,7 @@
   min-width: 0; /* same width-collapse issue as the Slot Picker panel — see that fix's comment */
   padding: 16px 16px 0;
   box-sizing: border-box;
+  position: relative; /* containing block for .kal-step-doctor-select__desktop-footer's absolute pin */
 }
 
 .kal-step-patient-details__scroll {
@@ -1398,6 +1425,7 @@
   min-height: 0;
   min-width: 0;
   overflow-y: auto;
+  padding-bottom: 110px; /* clearance for the now-absolutely-positioned footer below */
 }
 
 /* Desktop form: the base .kal-form (mobile) has its own 0 24px padding and
