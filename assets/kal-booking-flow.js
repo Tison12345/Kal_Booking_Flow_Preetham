@@ -73,6 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // at the top of kal-booking-flow-step-slot-picker.liquid for the mapping).
   // ----------------------------------------------------------------------
 
+  // TEMPORARY: backend isn't reachable from this storefront yet (theme's
+  // kal_booking_api_base_url setting is still empty, and the day-summaries
+  // endpoint isn't deployed). Flip this to false once both are wired up —
+  // everything downstream (fetchSlotsForDate, fetchDaySummaries) already
+  // has the real request built, this flag just short-circuits it.
+  const USE_MOCK_DATA = true;
+
   const CONSULT_DURATION_MINUTES = 45; // confirmed decision, see shopify-booking-api-reference.md §4.5
   const STRIP_DAYS = 10; // matches SlotPicker.tsx's STRIP_DAYS
   const MAX_FUTURE_DAYS = 90; // matches SlotPicker.tsx's MAX_FUTURE_DAYS
@@ -202,10 +209,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return slotPicker.daySummariesCache.get(mode);
     }
 
-    const doctorId = slotPickerEl.dataset.doctorId;
-    const facilityId = slotPickerEl.dataset.facilityId;
     const startKey = toDateKey(todayStart());
     const endKey = toDateKey(addDays(todayStart(), STRIP_DAYS - 1));
+
+    if (USE_MOCK_DATA) {
+      const summaries = generateMockDaySummaries(startKey, endKey);
+      slotPicker.daySummariesCache.set(mode, summaries);
+      return summaries;
+    }
+
+    const doctorId = slotPickerEl.dataset.doctorId;
+    const facilityId = slotPickerEl.dataset.facilityId;
     // Mirrors the mode logic in fetchSlotsForDate: video sends online_only
     // instead of facility_id; in-clinic sends facility_id and no online_only.
     const modeParam = mode === 'video' ? '&online_only=true' : `&facility_id=${encodeURIComponent(facilityId)}`;
@@ -283,10 +297,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // Mock slots: 9:00 AM to 6:00 PM in CONSULT_DURATION_MINUTES steps, every
+  // 3rd slot marked unavailable so the disabled/struck-through state is
+  // visible while testing. slot_type "both" so it shows under either mode.
+  const generateMockSlots = () => {
+    const slots = [];
+    const startMins = 9 * 60;
+    const endMins = 18 * 60;
+    let index = 0;
+    for (let mins = startMins; mins + CONSULT_DURATION_MINUTES <= endMins; mins += CONSULT_DURATION_MINUTES) {
+      const toTimeStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+      slots.push({
+        start_time: toTimeStr(mins),
+        end_time: toTimeStr(mins + CONSULT_DURATION_MINUTES),
+        slot_type: 'both',
+        facility_id: null,
+        is_available: index % 3 !== 1,
+      });
+      index++;
+    }
+    return slots;
+  };
+
+  // Mock day summaries: a fixed repeating pattern across the strip so the
+  // green/amber/grey badge states are all visible while testing.
+  const generateMockDaySummaries = (startKey, endKey) => {
+    const pattern = [5, 4, 0, 2, 1, 6, 3];
+    const summaries = [];
+    let cursor = new Date(`${startKey}T00:00:00`);
+    const end = new Date(`${endKey}T00:00:00`);
+    let i = 0;
+    while (cursor <= end) {
+      summaries.push({ summary_date: toDateKey(cursor), total_slots: pattern[i % pattern.length], booked_slots: 0 });
+      cursor = addDays(cursor, 1);
+      i++;
+    }
+    return summaries;
+  };
+
   const fetchSlotsForDate = async (mode, dateKey) => {
     const cacheKey = `${mode}::${dateKey}`;
     if (slotPicker.slotsCache.has(cacheKey)) {
       return slotPicker.slotsCache.get(cacheKey);
+    }
+
+    if (USE_MOCK_DATA) {
+      const slots = generateMockSlots();
+      slotPicker.slotsCache.set(cacheKey, slots);
+      return slots;
     }
 
     const doctorId = slotPickerEl.dataset.doctorId;
