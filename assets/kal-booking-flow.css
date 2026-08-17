@@ -166,6 +166,16 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  /* Reused as the left column across Doctor Select, Slot Picker, and
+     Patient Details' desktop compositions. Without an explicit height, this
+     was relying on the parent grid's default stretch behavior to reach the
+     full 500px dialog height — which doesn't reliably happen once the
+     content (heading/body text length) differs by step, so the location
+     bar at the bottom quietly landed at a different Y position on each
+     screen. Same class of bug as the min-height:0 fixes elsewhere in this
+     file: make the size explicit instead of trusting implicit stretch. */
+  height: 100%;
+  box-sizing: border-box;
   background: var(--kal-color-white);
   border-radius: 16px 0 0 16px;
   overflow: hidden;
