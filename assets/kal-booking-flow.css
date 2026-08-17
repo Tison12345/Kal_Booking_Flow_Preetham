@@ -1558,3 +1558,25 @@
   font-weight: 350;
   color: var(--kal-color-body);
 }
+
+/* Desktop — reuses .kal-step-doctor-select__desktop/__panel (see the
+   Liquid file's comment). Only the scroll area is Confirmation-specific. */
+
+.kal-step-confirmation__scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 24px;
+}
+
+/* Figma spec gives the doctor-summary card 48px of horizontal inset vs.
+   the details card's 24px — .kal-step-confirmation__scroll's own 24px
+   padding above already accounts for the details card, so the summary
+   card just needs 24px more on top of that to reach 48px total. */
+.kal-step-confirmation__scroll .kal-doctor-summary {
+  margin: 0 24px;
+}

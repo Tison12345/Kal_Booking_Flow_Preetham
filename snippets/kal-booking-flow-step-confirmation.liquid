@@ -100,4 +100,83 @@
 
   </div>
 
+  {%- comment -%}
+    ============ DESKTOP (750px and up) ============
+    Reuses .kal-step-doctor-select__desktop/__panel directly, same as Slot
+    Picker and Patient Details — one shared CSS rule for the grid/panel
+    shape, no separate kal-step-confirmation__desktop/__panel copy to drift
+    out of sync.
+
+    No "pay at the clinic" notice here — unlike mobile, this Figma export
+    doesn't include it at all (goes straight from the details card to the
+    button, confirmed in both the screenshot and the Copy-as-CSS export).
+  {%- endcomment -%}
+  <div class="kal-step-doctor-select__desktop">
+    <div class="kal-step-entry__info">
+      <div class="kal-step-entry__info-content">
+        <h2 class="kal-step-entry__heading">Confirm your slot</h2>
+        <p class="kal-step-entry__body-text">Check the details before we hold it for you.</p>
+      </div>
+      <div class="kal-step-entry__location">
+        <span class="kal-icon kal-icon--location">
+          <!-- ICON: location-pin (not received yet) -->
+        </span>
+        <span class="kal-step-entry__location-text">
+          Kerala Ayurveda Wellness Center, Kormangala &middot; Opens 8 AM
+        </span>
+      </div>
+    </div>
+
+    <div class="kal-step-doctor-select__panel">
+      <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-text">5/5</span>
+      </div>
+
+      <div class="kal-step-confirmation__scroll">
+        <div class="kal-doctor-summary" data-kal-doctor-summary>
+          <span class="kal-doctor-summary__avatar"></span>
+          <span class="kal-doctor-summary__info">
+            <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Neethu</span>
+            <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
+          </span>
+          <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
+        </div>
+
+        <div class="kal-confirmation-details">
+          <p class="kal-confirmation-details__label">Consultation Details</p>
+          <div class="kal-confirmation-details__divider"></div>
+          <div class="kal-confirmation-details__rows">
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-details__key">Patient Name</span>
+              <span class="kal-confirmation-details__value" data-kal-confirm-name>—</span>
+            </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-details__key">Mode</span>
+              <span class="kal-confirmation-details__value" data-kal-confirm-mode>—</span>
+            </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-details__key">Day &amp; Time</span>
+              <span class="kal-confirmation-details__value" data-kal-confirm-datetime>—</span>
+            </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-details__key">Fee</span>
+              <span class="kal-confirmation-details__value">&#8377;800</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kal-step-doctor-select__desktop-footer">
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking>
+          Confirm Booking
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
