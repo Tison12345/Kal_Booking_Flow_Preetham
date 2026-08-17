@@ -169,6 +169,13 @@
        and keeps this fluid down to tablet widths instead of overflowing. 3fr/5fr
        preserves the original 300px/500px (3:5) ratio from the Figma spec. */
     grid-template-columns: 3fr 5fr;
+    /* Without this, the single row defaults to grid-auto-rows:auto (sized to
+       its content) rather than stretching to fill this container's own
+       height:100% — meaning any child's height:100% below doesn't actually
+       resolve against a definite 500px, it resolves against auto instead.
+       That's what let the absolutely-positioned footer end up positioned
+       against the wrong (content-sized, too-short) box. */
+    grid-template-rows: 100%;
   }
 }
 
@@ -786,6 +793,7 @@
     display: grid;
     height: 100%;
     grid-template-columns: 3fr 5fr;
+    grid-template-rows: 100%; /* see .kal-step-entry__desktop's comment on this same property */
   }
 }
 
@@ -866,6 +874,7 @@
     display: grid;
     height: 100%;
     grid-template-columns: 3fr 5fr;
+    grid-template-rows: 100%; /* see .kal-step-entry__desktop's comment on this same property */
   }
 }
 
@@ -1404,6 +1413,7 @@
     display: grid;
     height: 100%;
     grid-template-columns: 3fr 5fr;
+    grid-template-rows: 100%; /* see .kal-step-entry__desktop's comment on this same property */
   }
 }
 
