@@ -89,6 +89,16 @@
 @media screen and (min-width: 750px) {
   .kal-booking-flow__content {
     padding: 0;
+    /* Mobile needs this container itself to scroll (a step's content can
+       genuinely be taller than the viewport there). Desktop doesn't — every
+       desktop composition is a fixed 500px row where the right-hand panel
+       already handles its own scrolling internally (.kal-step-*__scroll).
+       Leaving this auto meant the whole content block, left column
+       included, was itself a second scroll container layered on top of
+       that — so any wheel/trackpad scroll near the dialog could shift the
+       entire thing (including the left column, which should never move)
+       instead of just scrolling the intended inner panel. */
+    overflow-y: hidden;
   }
 }
 
