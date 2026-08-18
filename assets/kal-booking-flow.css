@@ -104,18 +104,20 @@
   }
 }
 
-/* Slim scrollbar for the four per-step internal scroll containers
+/* Slim scrollbar for the five per-step internal scroll containers
    referenced in the comment above (.kal-step-doctor-select__list--desktop,
    .kal-step-slot-picker__scroll, .kal-step-patient-details__scroll,
-   .kal-step-confirmation__scroll). Without this they use the browser's
-   default scrollbar, which on Windows/Chrome reserves ~15-17px and doesn't
-   overlay — wide enough to crowd content sitting near the right edge (e.g.
-   the calendar-icon button on Slot Picker). Firefox and WebKit need
-   separate properties; there's no single standard way to do this yet. */
+   .kal-step-confirmation__scroll, .kal-step-booking-confirmed__scroll).
+   Without this they use the browser's default scrollbar, which on
+   Windows/Chrome reserves ~15-17px and doesn't overlay — wide enough to
+   crowd content sitting near the right edge (e.g. the calendar-icon button
+   on Slot Picker). Firefox and WebKit need separate properties; there's no
+   single standard way to do this yet. */
 .kal-step-doctor-select__list--desktop,
 .kal-step-slot-picker__scroll,
 .kal-step-patient-details__scroll,
-.kal-step-confirmation__scroll {
+.kal-step-confirmation__scroll,
+.kal-step-booking-confirmed__scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--kal-color-border) transparent;
 }
@@ -123,21 +125,24 @@
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar,
 .kal-step-slot-picker__scroll::-webkit-scrollbar,
 .kal-step-patient-details__scroll::-webkit-scrollbar,
-.kal-step-confirmation__scroll::-webkit-scrollbar {
+.kal-step-confirmation__scroll::-webkit-scrollbar,
+.kal-step-booking-confirmed__scroll::-webkit-scrollbar {
   width: 6px;
 }
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar-track,
 .kal-step-slot-picker__scroll::-webkit-scrollbar-track,
 .kal-step-patient-details__scroll::-webkit-scrollbar-track,
-.kal-step-confirmation__scroll::-webkit-scrollbar-track {
+.kal-step-confirmation__scroll::-webkit-scrollbar-track,
+.kal-step-booking-confirmed__scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar-thumb,
 .kal-step-slot-picker__scroll::-webkit-scrollbar-thumb,
 .kal-step-patient-details__scroll::-webkit-scrollbar-thumb,
-.kal-step-confirmation__scroll::-webkit-scrollbar-thumb {
+.kal-step-confirmation__scroll::-webkit-scrollbar-thumb,
+.kal-step-booking-confirmed__scroll::-webkit-scrollbar-thumb {
   background: var(--kal-color-border);
   border-radius: 999px;
 }
@@ -1841,4 +1846,21 @@
   font-size: 14px;
   color: var(--kal-color-primary);
   cursor: pointer;
+}
+
+/* Desktop — reuses .kal-step-doctor-select__desktop/__panel, same as every
+   other step. .kal-confirmation-success-icon and
+   .kal-step-booking-confirmed__intro are reused as-is from mobile
+   (align-self:center / text-align:center work the same regardless of the
+   parent's own alignment), so only the scroll wrapper is new here. */
+
+.kal-step-booking-confirmed__scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 24px;
 }
