@@ -1588,25 +1588,15 @@
   margin-right: 16px;
 }
 
-.kal-confirmation-details {
-  border: 1px solid var(--kal-color-border);
-  border-radius: 14px;
-  padding: 14px 0;
-  box-sizing: border-box;
-}
-
-/* Desktop (Figma reference) has no bordered card around this block — just
-   the label and rows with divider lines between them, flush with the rest
-   of the panel. Mobile keeps its bordered-card treatment as-is. */
-.kal-step-confirmation__scroll .kal-confirmation-details {
-  border: none;
-  border-radius: 0;
-  padding: 0;
-}
-
-.kal-step-confirmation__scroll .kal-confirmation-details__rows {
-  padding: 0;
-}
+/* Figma reference (both mobile and desktop) shows no bordered card around
+   this block (.kal-confirmation-details, the outer wrapper div) — just
+   the label and rows, flush with the rest of the panel, separated only by
+   the per-row divider lines below. An earlier version had a border here
+   for both breakpoints, then a desktop-only override to remove it, on the
+   wrong assumption mobile wanted to keep it — the mobile reference
+   doesn't either, so removed for both instead of maintaining two
+   versions. Nothing else styles that wrapper div directly anymore, so no
+   rule for it remains here. */
 
 .kal-confirmation-details__label {
   font-size: 14px;
@@ -1615,7 +1605,6 @@
   text-transform: uppercase;
   color: #4b4b4b;
   margin: 0 0 12px;
-  padding: 0 14px;
 }
 
 .kal-confirmation-details__divider {
@@ -1626,7 +1615,6 @@
 .kal-confirmation-details__rows {
   display: flex;
   flex-direction: column;
-  padding: 0 14px;
 }
 
 .kal-confirmation-details__row {
