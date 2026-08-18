@@ -1719,6 +1719,10 @@
 .kal-step-booking-confirmed__mobile {
   display: flex;
   flex-direction: column;
+  /* min-height:100% is what gives margin-top:auto on .kal-before-visit
+     (below) real free space to push into — same pattern as every other
+     step. Content above stays top-anchored in normal flow. */
+  min-height: 100%;
   gap: 16px;
   padding-top: 24px;
 }
@@ -1773,7 +1777,12 @@
 }
 
 .kal-before-visit {
-  margin: 0 24px;
+  /* margin-top:auto pulls this block down together with the reschedule
+     button right after it (fixed gap via the flex container's gap:16px),
+     so the pair sits pinned at the bottom instead of the reschedule
+     button alone reaching down and leaving this stranded up with the
+     rest of the content — same pattern as Confirmation's pay-notice. */
+  margin: auto 24px 0;
   padding: 14px 16px;
   border: 1px solid var(--kal-color-border);
   border-radius: 16px;
