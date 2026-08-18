@@ -1571,7 +1571,11 @@
   gap: 16px;
 }
 
-.kal-step-confirmation__mobile .kal-step-slot-picker__footer {
+/* margin-top:auto goes on the pay-notice, not the footer below it — this
+   pulls the notice+button down together as a pair with a fixed gap
+   between them, instead of just the button reaching the bottom and
+   leaving the notice stranded up with the rest of the content. */
+.kal-step-confirmation__mobile .kal-confirmation-pay-notice {
   margin-top: auto;
 }
 
