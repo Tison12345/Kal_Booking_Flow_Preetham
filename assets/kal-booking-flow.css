@@ -884,29 +884,18 @@
 .kal-step-slot-picker__mobile {
   display: flex;
   flex-direction: column;
-  /* min-height:100% (not height) is what lets the footer CTA reach the
-     bottom of the viewport even when there's little content (e.g. few
-     slots) — without it, the flex column is only as tall as its content.
-     The header stays pinned at the top (default flow); the content group
-     between it and the footer is centered via margin-top:auto on the
-     intro block + margin-bottom:auto on the last slot section below —
-     see those two rules. justify-content:space-between was tried first
-     but spreads space between *every* sibling pair, which visually reads
-     as "content glued to the top, one big gap before the button" rather
-     than a centered block — not what we want. */
+  /* Same pattern as .kal-step-confirmation__mobile: content stays
+     top-anchored in normal flow, min-height:100% + margin-top:auto on the
+     footer (below) is what pushes just the button to the bottom. An
+     earlier version centered the content block via margin-top/bottom:auto
+     on the intro/last slot section instead — reverted to match the
+     simpler top-anchored look used on the other steps. */
   min-height: 100%;
   gap: 16px;
 }
 
-/* Centers the intro+doctor-summary+slot-sections block vertically between
-   the pinned header above and the pinned footer below — see comment on
-   .kal-step-slot-picker__mobile. */
-.kal-step-slot-picker__mobile .kal-step-doctor-select__intro {
+.kal-step-slot-picker__mobile .kal-step-slot-picker__footer {
   margin-top: auto;
-}
-
-.kal-step-slot-picker__mobile .kal-slot-section:last-of-type {
-  margin-bottom: auto;
 }
 
 @media screen and (min-width: 750px) {
@@ -1349,19 +1338,17 @@
 .kal-step-patient-details__mobile {
   display: flex;
   flex-direction: column;
-  /* See .kal-step-slot-picker__mobile's comment for the reasoning — same
-     pattern: header pinned top, footer pinned bottom via min-height:100%,
-     content block centered between them via margin-top/bottom:auto below. */
+  /* Same pattern as .kal-step-confirmation__mobile: content stays
+     top-anchored in normal flow, min-height:100% + margin-top:auto on the
+     footer (below) is what pushes just the button to the bottom. An
+     earlier version centered the content block via margin-top/bottom:auto
+     on the intro/form instead — reverted, that's not the look wanted here. */
   min-height: 100%;
   gap: 16px;
 }
 
-.kal-step-patient-details__mobile .kal-step-doctor-select__intro {
+.kal-step-patient-details__mobile .kal-step-slot-picker__footer {
   margin-top: auto;
-}
-
-.kal-step-patient-details__mobile .kal-form {
-  margin-bottom: auto;
 }
 
 @media screen and (min-width: 750px) {
