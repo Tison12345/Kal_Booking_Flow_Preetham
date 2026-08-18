@@ -458,9 +458,20 @@
 .kal-step-doctor-select__mobile {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  /* Same pattern as every other step's mobile view (Slot Picker, Patient
+     Details, Confirmation): content stays top-anchored in normal flow,
+     min-height:100% + margin-top:auto on the footer alone (below) pushes
+     just the button to the bottom. justify-content:space-between used to
+     be here — worked fine while the doctor list was long enough to fill
+     the screen, but spreads space between every sibling once it's short
+     (e.g. a filtered list), which is the same bug fixed on the other
+     steps. */
   gap: 24px;
   min-height: 100%;
+}
+
+.kal-step-doctor-select__mobile .kal-step-doctor-select__footer {
+  margin-top: auto;
 }
 
 .kal-step-doctor-select__header {
