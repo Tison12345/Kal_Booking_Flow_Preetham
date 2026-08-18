@@ -1702,3 +1702,134 @@
 .kal-step-confirmation__scroll .kal-doctor-summary {
   margin: 0 24px;
 }
+
+/* ----------------------------------------
+   STEP: BOOKING CONFIRMED
+   Post-booking success screen. Mobile only for now. No progress dots, no
+   back button — booking is done, nothing to navigate back to. Content
+   flows top-down naturally (no min-height:100% + bottom-pinning trick
+   like other steps use) — the Figma reference shows normal stacked
+   content, not anything pinned to the viewport's bottom edge.
+----------------------------------------- */
+
+.kal-step-booking-confirmed {
+  height: 100%;
+}
+
+.kal-step-booking-confirmed__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 24px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-booking-confirmed__mobile {
+    display: none;
+  }
+}
+
+.kal-confirmation-success-icon {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 999px;
+  background: #e4f2eb;
+}
+
+.kal-confirmation-success-icon__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--kal-color-primary);
+  color: var(--kal-color-white);
+}
+
+.kal-confirmation-success-icon__inner svg {
+  width: 28px;
+  height: 28px;
+}
+
+.kal-step-booking-confirmed__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 24px;
+}
+
+.kal-step-booking-confirmed__intro .kal-step-doctor-select__heading,
+.kal-step-booking-confirmed__intro .kal-step-doctor-select__subtext {
+  text-align: center;
+}
+
+.kal-step-booking-confirmed__mobile .kal-confirmation-details {
+  margin: 0 16px;
+}
+
+.kal-before-visit {
+  margin: 0 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--kal-color-border);
+  border-radius: 16px;
+  background: var(--kal-color-white);
+  box-sizing: border-box;
+}
+
+.kal-before-visit__label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--kal-color-body);
+  margin: 0 0 10px;
+}
+
+.kal-before-visit__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kal-before-visit__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 138%;
+  color: var(--kal-color-body);
+}
+
+.kal-before-visit__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--kal-color-primary);
+  flex-shrink: 0;
+}
+
+.kal-before-visit__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.kal-step-booking-confirmed__reschedule {
+  margin: 0 24px 24px;
+  padding: 14px 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--kal-color-primary);
+  cursor: pointer;
+}

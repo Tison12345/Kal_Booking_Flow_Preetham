@@ -22,7 +22,12 @@
   a hook with no click handler yet; when backend integration happens, this
   is where the two-call sequence documented in
   kal-booking-flow-step-patient-details.liquid (create hold, then POST
-  /api/public/appointments) should fire.
+  /api/public/appointments) should fire. It also carries
+  data-kal-goto="booking-confirmed" so the button navigates to the
+  post-booking success screen for demo purposes in the meantime — once a
+  real click handler is added for the API calls, that handler should only
+  call goToStep('booking-confirmed') after a successful booking, not
+  unconditionally like the plain data-kal-goto does today.
 {% endcomment %}
 
 <div class="kal-step-confirmation">
@@ -90,7 +95,7 @@
     </div>
 
     <div class="kal-step-slot-picker__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
         Confirm Booking
       </button>
     </div>

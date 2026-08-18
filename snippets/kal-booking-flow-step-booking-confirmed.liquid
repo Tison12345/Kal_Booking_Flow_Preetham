@@ -1,0 +1,101 @@
+{% comment %}
+  Step 6 — post-booking success screen, shown after "Confirm Booking" is
+  tapped on the Confirmation step. No progress dots and no back button
+  here on purpose (matches the Figma reference) — booking is done, there's
+  nothing to go back to.
+
+  MOBILE ONLY for now — desktop composition to follow once that Figma
+  export is shared, same as every other step so far.
+
+  Patient Name, Mode, and Day & Time reuse the EXACT SAME data-kal-confirm-*
+  hooks as the Confirmation (review) step — renderConfirmationSummary() in
+  kal-booking-flow.js already does flow.querySelectorAll() for each of
+  those, so this step's matching elements get populated for free with zero
+  JS changes.
+
+  Reference No. is a static placeholder (data-kal-confirm-ref, currently
+  just dashes) — becomes the real appointment ID once backend integration
+  happens and an actual booking exists to reference. Payment is static
+  "At the Clinic" regardless of mode, matching the "pay at reception"
+  notice already shown on the Confirmation step for both modes.
+
+  "Reschedule or cancel" is a hook (data-kal-reschedule-cancel) with no
+  click handler yet — that's a separate, already-designed feature
+  (localStorage token + minimal-info lookup) documented elsewhere, not
+  part of this screen's build.
+
+  The Confirmation step's "Confirm Booking" button now also carries
+  data-kal-goto="booking-confirmed" (alongside its existing
+  data-kal-confirm-booking hook) so the full flow is clickable through to
+  this screen for demo purposes, even though nothing is actually booked
+  yet on the backend.
+{% endcomment %}
+
+<div class="kal-step-booking-confirmed">
+
+  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
+  <div class="kal-step-booking-confirmed__mobile">
+
+    <div class="kal-confirmation-success-icon">
+      <span class="kal-confirmation-success-icon__inner">
+        {%- render 'kal-booking-icons', icon_name: 'check' -%}
+      </span>
+    </div>
+
+    <div class="kal-step-booking-confirmed__intro">
+      <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
+      <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
+    </div>
+
+    <div class="kal-confirmation-details">
+      <p class="kal-confirmation-details__label">Consultation Details</p>
+      <div class="kal-confirmation-details__divider"></div>
+      <div class="kal-confirmation-details__rows">
+        <div class="kal-confirmation-details__row">
+          <span class="kal-confirmation-details__key">Reference No.</span>
+          <span class="kal-confirmation-details__value" data-kal-confirm-ref>&mdash;</span>
+        </div>
+        <div class="kal-confirmation-details__row">
+          <span class="kal-confirmation-details__key">Patient Name</span>
+          <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
+        </div>
+        <div class="kal-confirmation-details__row">
+          <span class="kal-confirmation-details__key">Mode</span>
+          <span class="kal-confirmation-details__value" data-kal-confirm-mode>&mdash;</span>
+        </div>
+        <div class="kal-confirmation-details__row">
+          <span class="kal-confirmation-details__key">Day &amp; Time</span>
+          <span class="kal-confirmation-details__value" data-kal-confirm-datetime>&mdash;</span>
+        </div>
+        <div class="kal-confirmation-details__row">
+          <span class="kal-confirmation-details__key">Payment</span>
+          <span class="kal-confirmation-details__value">At the Clinic</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kal-before-visit">
+      <p class="kal-before-visit__label">Before your visit</p>
+      <ul class="kal-before-visit__list">
+        <li class="kal-before-visit__item">
+          <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+          <span>Pay at reception cash or card.</span>
+        </li>
+        <li class="kal-before-visit__item">
+          <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+          <span>Arrive 10 minutes early for check-in.</span>
+        </li>
+        <li class="kal-before-visit__item">
+          <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+          <span>Bring an ID and your referral letter if you have one.</span>
+        </li>
+      </ul>
+    </div>
+
+    <button type="button" class="kal-step-booking-confirmed__reschedule" data-kal-reschedule-cancel>
+      Reschedule or cancel
+    </button>
+
+  </div>
+
+</div>
