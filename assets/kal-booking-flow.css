@@ -129,30 +129,29 @@
 .kal-step-entry__mobile {
   display: flex;
   flex-direction: column;
-  /* min-height (not height) so short content still reaches the bottom of
-     the viewport, leaving the natural trailing space below the location
-     line instead of the whole block getting cut off short — matches the
-     Figma reference, where the location line keeps its exact 56px gap
-     (see the margin-top:40px rule below) and doesn't get glued to the
-     very bottom edge; it just isn't starved of a real container height
-     to lay out against. */
+  /* min-height (not height) is what lets the location line reach the
+     bottom of the viewport via margin-top:auto below, same pattern as
+     every other step's footer — without it the flex column is only as
+     tall as its content. */
   min-height: 100%;
   gap: 16px;
 }
 
-/* These two spots get 56px total gap (the exact value from Frame 3's own
-   gap property in the Figma spec — the outer wrapper holding [banner+text
-   block, label+cards block, location line] uses gap:56 uniformly between
-   all three). Base flex gap above is 16px, so we add 40px more here to
-   reach 56px total. Everywhere else (banner→text, label→cards, card→card)
-   stays at the tighter 16px, since those are nested inside their own
-   sub-frames with their own smaller gap values, not this outer one. */
+/* 40px extra on top of the base 16px flex gap = 56px, the exact gap value
+   from Frame 3 in the Figma spec, between the label+cards block and
+   whatever follows it. */
 .kal-step-entry__mobile .kal-step-entry__label {
   margin-top: 40px;
 }
 
+/* margin-top:auto (not the 40px used above) pins this to the bottom of
+   the viewport, same pattern as every other step's footer — see
+   .kal-step-entry__mobile's comment. Since auto margins take at least as
+   much space as the flex gap provides, this never comes closer than the
+   base 16px to the cards above it, but will normally sit much further
+   down, flush with the bottom edge, rather than at a fixed 56px gap. */
 .kal-step-entry__mobile .kal-step-entry__location--mobile {
-  margin-top: 40px;
+  margin-top: auto;
 }
 
 /* Only the banner goes flush edge-to-edge — everything else in the mobile
