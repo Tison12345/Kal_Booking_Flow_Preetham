@@ -115,9 +115,28 @@
    heading vs. the standalone one).
 ----------------------------------------- */
 
+/* Same missing-link bug found on every other step's outer wrapper
+   (.kal-step-slot-picker, .kal-step-patient-details, .kal-step-confirmation):
+   without this, .kal-step-entry falls back to height:auto instead of
+   filling the dialog, which breaks both compositions below it —
+   .kal-step-entry__mobile's min-height:100% (next rule) has nothing
+   definite to resolve against, and on desktop the grid/panel chain
+   degrades the same way it did on those other steps before their fix. */
+.kal-step-entry {
+  height: 100%;
+}
+
 .kal-step-entry__mobile {
   display: flex;
   flex-direction: column;
+  /* min-height (not height) so short content still reaches the bottom of
+     the viewport, leaving the natural trailing space below the location
+     line instead of the whole block getting cut off short — matches the
+     Figma reference, where the location line keeps its exact 56px gap
+     (see the margin-top:40px rule below) and doesn't get glued to the
+     very bottom edge; it just isn't starved of a real container height
+     to lay out against. */
+  min-height: 100%;
   gap: 16px;
 }
 
