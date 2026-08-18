@@ -1618,7 +1618,11 @@
 
 .kal-confirmation-details__divider {
   height: 1px;
-  background: #f2f2f2;
+  /* Figma's own spec value here is #f2f2f2 — almost indistinguishable from
+     the white background it sits on, which read as "no line at all" in
+     practice. Matched to the same grey the row dividers below already use
+     instead, for actual visibility and consistency. */
+  background: var(--kal-color-border);
 }
 
 .kal-confirmation-details__rows {
