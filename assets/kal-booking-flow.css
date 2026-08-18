@@ -884,6 +884,14 @@
 .kal-step-slot-picker__mobile {
   display: flex;
   flex-direction: column;
+  /* Same pattern as .kal-step-doctor-select__mobile: justify-content:
+     space-between + min-height:100% is what pins the footer CTA to the
+     bottom of the viewport even when there's little content (e.g. few
+     slots) — without it, the flex column is only as tall as its content
+     and the button ends up wherever the content happens to stop instead
+     of at the bottom of the screen. */
+  justify-content: space-between;
+  min-height: 100%;
   gap: 16px;
 }
 
@@ -1327,6 +1335,9 @@
 .kal-step-patient-details__mobile {
   display: flex;
   flex-direction: column;
+  /* Same fix as .kal-step-slot-picker__mobile — see that rule's comment. */
+  justify-content: space-between;
+  min-height: 100%;
   gap: 16px;
 }
 
