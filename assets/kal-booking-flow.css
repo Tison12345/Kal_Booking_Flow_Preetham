@@ -104,6 +104,44 @@
   }
 }
 
+/* Slim scrollbar for the four per-step internal scroll containers
+   referenced in the comment above (.kal-step-doctor-select__list--desktop,
+   .kal-step-slot-picker__scroll, .kal-step-patient-details__scroll,
+   .kal-step-confirmation__scroll). Without this they use the browser's
+   default scrollbar, which on Windows/Chrome reserves ~15-17px and doesn't
+   overlay — wide enough to crowd content sitting near the right edge (e.g.
+   the calendar-icon button on Slot Picker). Firefox and WebKit need
+   separate properties; there's no single standard way to do this yet. */
+.kal-step-doctor-select__list--desktop,
+.kal-step-slot-picker__scroll,
+.kal-step-patient-details__scroll,
+.kal-step-confirmation__scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--kal-color-border) transparent;
+}
+
+.kal-step-doctor-select__list--desktop::-webkit-scrollbar,
+.kal-step-slot-picker__scroll::-webkit-scrollbar,
+.kal-step-patient-details__scroll::-webkit-scrollbar,
+.kal-step-confirmation__scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.kal-step-doctor-select__list--desktop::-webkit-scrollbar-track,
+.kal-step-slot-picker__scroll::-webkit-scrollbar-track,
+.kal-step-patient-details__scroll::-webkit-scrollbar-track,
+.kal-step-confirmation__scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kal-step-doctor-select__list--desktop::-webkit-scrollbar-thumb,
+.kal-step-slot-picker__scroll::-webkit-scrollbar-thumb,
+.kal-step-patient-details__scroll::-webkit-scrollbar-thumb,
+.kal-step-confirmation__scroll::-webkit-scrollbar-thumb {
+  background: var(--kal-color-border);
+  border-radius: 999px;
+}
+
 /* ----------------------------------------
    ENTRY STEP
    Mobile and desktop are genuinely different compositions (see comment at the
@@ -969,7 +1007,12 @@
   margin: 0 16px;
 }
 
-.kal-step-slot-picker__desktop .kal-doctor-summary {
+/* Was scoped to .kal-step-slot-picker__desktop, a class removed from the
+   markup when this composition was consolidated onto .kal-step-doctor-
+   select__desktop — rescoped to the actual desktop scroll wrapper so it
+   applies again. Without it, this had zero horizontal margin on desktop,
+   sitting flush against the scroll container's edge. */
+.kal-step-slot-picker__scroll .kal-doctor-summary {
   margin: 0 24px;
 }
 
@@ -1024,7 +1067,12 @@
   padding: 0 16px;
 }
 
-.kal-step-slot-picker__desktop .kal-slot-section {
+/* Same rescoping as .kal-doctor-summary above — .kal-step-slot-picker__desktop
+   no longer exists in the markup. Restoring this padding is also the fix
+   for the calendar-icon button (inside .kal-slot-section__head) getting
+   covered by the scrollbar: with zero right padding, that icon sat flush
+   against the scroll container's edge, right where the scrollbar renders. */
+.kal-step-slot-picker__scroll .kal-slot-section {
   padding: 0 24px;
 }
 
