@@ -270,6 +270,11 @@
   box-sizing: border-box;
   background: var(--kal-color-white);
   border-radius: 16px 0 0 16px;
+  /* Divider line between the left info column and the right panel — matches
+     the Figma reference. Reused across every desktop screen (Entry, Doctor
+     Select, Slot Picker, Patient Details, Confirmation, Booking Confirmed),
+     so adding it here once covers all of them. */
+  border-right: 1px solid var(--kal-color-border);
   overflow: hidden;
 }
 
