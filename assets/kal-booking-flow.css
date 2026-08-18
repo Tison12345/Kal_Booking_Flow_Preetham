@@ -1595,6 +1595,19 @@
   box-sizing: border-box;
 }
 
+/* Desktop (Figma reference) has no bordered card around this block — just
+   the label and rows with divider lines between them, flush with the rest
+   of the panel. Mobile keeps its bordered-card treatment as-is. */
+.kal-step-confirmation__scroll .kal-confirmation-details {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.kal-step-confirmation__scroll .kal-confirmation-details__rows {
+  padding: 0;
+}
+
 .kal-confirmation-details__label {
   font-size: 14px;
   font-weight: 800;
