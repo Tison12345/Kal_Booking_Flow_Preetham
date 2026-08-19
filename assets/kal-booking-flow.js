@@ -24,6 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
       step.hidden = step.dataset.kalStep !== stepName;
     });
 
+    // Entry has no back button, so it's the only step that still relies on
+    // the global, absolutely-positioned .kal-booking-flow__close. Every
+    // other step now renders its own close button as a flex sibling of
+    // back/progress in its header row (so it stays aligned when the header
+    // gets padding) — the global one would otherwise float on top of it.
+    const globalCloseBtn = flow.querySelector('.kal-booking-flow__close');
+    if (globalCloseBtn) {
+      globalCloseBtn.hidden = stepName !== 'entry';
+    }
+
     // First time the visitor reaches the slot picker, load today's slots
     // and the day-strip's slot-count badges. After that, whatever day/time
     // they'd picked just stays as-is.

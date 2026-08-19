@@ -27,6 +27,17 @@
         <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-text">1/5</span>
       </div>
+      {%- comment -%}
+        Own close button, matching Therapy Slot's pattern — a real flex
+        sibling of back/progress in this same row, not the separate,
+        absolutely-positioned .kal-booking-flow__close. That one is
+        positioned independently (top:12px, fixed) from wherever this
+        header row actually sits, so once the header got its own top
+        padding, the two drifted out of alignment. kal-booking-flow.js
+        hides the global close button whenever a step other than "entry"
+        is active, since every step but Entry now has its own.
+      {%- endcomment -%}
+      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
     </div>
 
     {%- comment -%}
