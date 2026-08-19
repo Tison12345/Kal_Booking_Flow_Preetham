@@ -497,8 +497,14 @@
 }
 
 /* Calendar/monitor icons already include their own rounded background
-   in the exported SVG, so they render at full size with no extra wrapper styling */
-.kal-icon--calendar svg,
+   in the exported SVG, so they render at full size with no extra wrapper styling.
+   Calendar (stethoscope) is a 48x48 translucent overlay per Figma; monitor
+   (leaf) is a 36x36 solid square — the two aren't the same native size. */
+.kal-icon--calendar svg {
+  width: 48px;
+  height: 48px;
+}
+
 .kal-icon--monitor svg {
   width: 36px;
   height: 36px;
