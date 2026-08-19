@@ -13,26 +13,32 @@
 
 {% case icon_name %}
   {% when 'calendar' %}
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
-      <path d="M0 12C0 5.37258 5.37258 0 12 0H36C42.6274 0 48 5.37258 48 12V36C48 42.6274 42.6274 48 36 48H12C5.37258 48 0 42.6274 0 36V12Z" fill="#FAFAF9" fill-opacity="0.15"/>
-      <path d="M20 14V18" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M28 14V18" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M31 16H17C15.8954 16 15 16.8954 15 18V32C15 33.1046 15.8954 34 17 34H31C32.1046 34 33 33.1046 33 32V18C33 16.8954 32.1046 16 31 16Z" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M15 22H33" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M20 26H20.01" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M24 26H24.01" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M28 26H28.01" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M20 30H20.01" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M24 30H24.01" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M28 30H28.01" stroke="#FAFAF9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {%- comment -%}
+      Stethoscope glyph, used for the "Book a consultation" option card.
+      Own rounded background baked in (light grey square), same self-contained
+      pattern as the old calendar/monitor exports — no extra wrapper styling needed.
+    {%- endcomment -%}
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
+      <rect width="36" height="36" rx="8" fill="#F4F4F5"/>
+      <path d="M14.1042 11.9795H12.6875C12.2963 11.9795 11.9792 12.2966 11.9792 12.6878V15.167C11.9792 17.3186 13.7234 19.0628 15.875 19.0628C18.0266 19.0628 19.7708 17.3186 19.7708 15.167V12.6878C19.7708 12.2966 19.4537 11.9795 19.0625 11.9795H17.6458" stroke="#7D7D7D" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22.6042 20.4792V21.3646C22.6042 23.2228 21.0978 24.7292 19.2396 24.7292C17.3813 24.7292 15.875 23.2228 15.875 21.3646V19.0625" stroke="#7D7D7D" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17.6458 11.2705V12.6872" stroke="#7D7D7D" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14.1042 11.2705V12.6872" stroke="#7D7D7D" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M24.0208 19.0622C24.0208 19.8446 23.3866 20.4788 22.6042 20.4788C21.8217 20.4788 21.1875 19.8446 21.1875 19.0622C21.1875 18.2797 21.8217 17.6455 22.6042 17.6455C23.3866 17.6455 24.0208 18.2797 24.0208 19.0622Z" stroke="#7D7D7D" stroke-width="1.25"/>
     </svg>
 
   {% when 'monitor' %}
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
-      <path d="M0 12C0 5.37258 5.37258 0 12 0H36C42.6274 0 48 5.37258 48 12V36C48 42.6274 42.6274 48 36 48H12C5.37258 48 0 42.6274 0 36V12Z" fill="#E4F2EB"/>
-      <path d="M32 15H16C14.8954 15 14 15.8954 14 17V27C14 28.1046 14.8954 29 16 29H32C33.1046 29 34 28.1046 34 27V17C34 15.8954 33.1046 15 32 15Z" stroke="#00503A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M20 33H28" stroke="#00503A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M24 29V33" stroke="#00503A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    {%- comment -%}
+      Leaf/plant glyph, used for the "Request a therapy session" option card.
+      Own rounded background baked in (dark green square). Original Figma
+      export used an alpha mask to bound the path to its 24x24 icon area;
+      dropped here since the path already sits fully inside that area on its
+      own — a plain filled path avoids introducing a mask id that would be
+      duplicated in the DOM (this icon renders twice: mobile + desktop).
+    {%- endcomment -%}
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
+      <rect width="36" height="36" rx="8" fill="#183C30"/>
+      <path d="M17.373 27.3554C16.3025 27.1516 15.2493 26.8039 14.2135 26.3122C13.1777 25.8205 12.253 25.1365 11.4395 24.2602C10.626 23.384 9.96799 22.302 9.46549 21.0142C8.96282 19.7264 8.71149 18.1895 8.71149 16.4037V16.2227C8.71149 16.015 8.7769 15.8459 8.90774 15.7152C9.03857 15.5844 9.20782 15.5189 9.41549 15.5189H9.57699C10.35 15.5189 11.2009 15.6561 12.1297 15.9304C13.0586 16.2048 13.8858 16.5714 14.6115 17.0304C14.7437 15.8548 15.0527 14.6378 15.5385 13.3794C16.0243 12.1213 16.625 10.9896 17.3405 9.98444C17.5148 9.7396 17.7347 9.61719 18 9.61719C18.2653 9.61719 18.4852 9.7396 18.6595 9.98444C19.375 10.9896 19.9757 12.1245 20.4615 13.3892C20.9473 14.6539 21.2563 15.874 21.3885 17.0497C22.0948 16.61 22.906 16.2498 23.822 15.9689C24.738 15.6881 25.5986 15.5381 26.4037 15.5189L26.5422 15.5094C26.7537 15.5029 26.9342 15.5744 27.0835 15.7237C27.233 15.873 27.3045 16.0535 27.298 16.2652L27.2885 16.4227C27.2435 18.042 27.0034 19.4651 26.5682 20.6919C26.1329 21.9189 25.547 22.9738 24.8105 23.8564C24.074 24.7391 23.207 25.4599 22.2095 26.0189C21.2122 26.5779 20.1269 27.0074 18.9537 27.3074C18.7371 27.3599 18.4737 27.3894 18.1635 27.3957C17.8532 27.4022 17.5897 27.3888 17.373 27.3554ZM18.1422 25.9497C17.9589 23.1997 17.1297 21.1122 15.6547 19.6872C14.1797 18.2622 12.3756 17.383 10.2422 17.0497C10.2089 17.0497 10.2089 17.0497 10.2422 17.0497C10.4256 19.8664 11.2797 21.983 12.8047 23.3997C14.3297 24.8164 16.1089 25.6664 18.1422 25.9497C18.1756 25.9664 18.1756 25.9705 18.1422 25.9622C18.1089 25.9539 18.1089 25.9497 18.1422 25.9497ZM16.05 17.9497C16.4025 18.2459 16.7573 18.6058 17.1145 19.0294C17.4715 19.4533 17.7667 19.8614 18 20.2537C18.2372 19.8614 18.5333 19.4533 18.8885 19.0294C19.2437 18.6058 19.5975 18.2459 19.95 17.9497C19.9295 16.9677 19.7484 15.9376 19.4067 14.8594C19.0651 13.7811 18.5962 12.7407 18 11.7382C17.4038 12.7407 16.9349 13.7794 16.5932 14.8544C16.2516 15.9294 16.0705 16.9612 16.05 17.9497ZM18.8115 21.8919C19.0115 22.4253 19.1792 22.9862 19.3145 23.5747C19.4497 24.1632 19.5589 24.8241 19.6422 25.5574C20.3256 25.3253 21.0134 24.998 21.7057 24.5757C22.3981 24.1532 23.026 23.6039 23.5895 22.9277C24.1528 22.2514 24.6332 21.4321 25.0307 20.4699C25.4282 19.5078 25.6706 18.3677 25.7577 17.0497C25.7577 17.0164 25.7577 17.0164 25.7577 17.0497C24.1654 17.283 22.7583 17.8279 21.5365 18.6842C20.3147 19.5407 19.4063 20.6099 18.8115 21.8919Z" fill="white"/>
     </svg>
 
   {% when 'arrow-right' %}

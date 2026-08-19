@@ -500,8 +500,8 @@
    in the exported SVG, so they render at full size with no extra wrapper styling */
 .kal-icon--calendar svg,
 .kal-icon--monitor svg {
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
 }
 
 .kal-icon--arrow {
