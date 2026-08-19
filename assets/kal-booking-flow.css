@@ -1889,7 +1889,16 @@
 .kal-step-therapy-slot__mobile {
   display: flex;
   flex-direction: column;
+  /* Same pattern as every other step: content stays top-anchored in normal
+     flow, min-height:100% + margin-top:auto on the footer (below) is what
+     pushes just the Continue button to the bottom of the frame instead of
+     it just sitting wherever the content happens to end. */
+  min-height: 100%;
   gap: 16px;
+}
+
+.kal-step-therapy-slot__mobile .kal-step-slot-picker__footer {
+  margin-top: auto;
 }
 
 @media screen and (min-width: 750px) {
