@@ -668,19 +668,26 @@
   padding: 0 24px;
 }
 
+/* Redesigned doctor card: photo, languages, experience, specialty tags,
+   and a "Next Slot" bar — replaces the earlier simpler avatar+rating card.
+   Structure is stacked (column), not a single row, since the tags and
+   next-slot bar are full-width sections of their own below the photo+info
+   row, not part of it. */
+
 .kal-doctor-card {
+  position: relative; /* containing block for the absolutely-positioned selection indicator */
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
   width: 100%;
-  padding: 16px 12px;
-  border-radius: 16px;
-  border: 1px solid var(--kal-color-border);
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
   background: var(--kal-color-white);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
   box-sizing: border-box;
+  overflow: hidden; /* keeps the next-slot bar's own background inside the rounded corners */
 }
 
 .kal-doctor-card[hidden] {
@@ -692,41 +699,27 @@
   box-shadow: 0px 10px 24px -12px rgba(30, 75, 60, 0.55);
 }
 
-.kal-doctor-card__avatar {
-  position: relative;
-  flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--kal-color-border);
-  box-shadow: 0 0 0 1px var(--kal-color-border);
+.kal-doctor-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 14px 8px;
 }
 
-.kal-doctor-card__avatar img {
+.kal-doctor-card__photo {
+  flex-shrink: 0;
+  width: 76px;
+  height: 124px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #d8d4c9, #aab89d);
+  box-shadow: 0 0 0 1px rgba(220, 220, 220, 0.6);
+  overflow: hidden;
+}
+
+.kal-doctor-card__photo img {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
-}
-
-.kal-doctor-card__rating {
-  position: absolute;
-  left: 50%;
-  bottom: -8.5px;
-  transform: translateX(-50%);
-  padding: 2px 6px;
-  border: 2px solid var(--kal-color-white);
-  border-radius: 99px;
-  background: #e4f2eb;
-  color: var(--kal-color-primary);
-  font-size: 9.5px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.kal-doctor-card--selected .kal-doctor-card__rating {
-  background: var(--kal-color-primary);
-  color: var(--kal-color-on-primary);
 }
 
 .kal-doctor-card__info {
@@ -735,70 +728,102 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-}
-
-.kal-doctor-card__top-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  padding-right: 28px; /* clearance for the selection indicator overlaying the top-right corner */
+  box-sizing: border-box;
 }
 
 .kal-doctor-card__name {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 130%;
   color: var(--kal-color-heading);
 }
 
-.kal-doctor-card__experience {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  border-radius: 12px;
-  background: #e4f2eb;
-  color: var(--kal-color-primary);
-  font-size: 11px;
-  font-weight: 800;
-}
-
 .kal-doctor-card__specialization {
-  font-size: 12px;
-  color: var(--kal-color-body);
+  font-size: 14px;
+  color: #4b4b4b;
 }
 
-.kal-doctor-card__availability {
+.kal-doctor-card__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #4b4b4b;
+}
+
+.kal-doctor-card__meta-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(0, 80, 58, 0.08);
+  color: var(--kal-color-primary);
+  flex-shrink: 0;
+}
+
+.kal-doctor-card__meta-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.kal-doctor-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px 14px;
+}
+
+.kal-doctor-card__tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(30, 75, 60, 0.3);
+  background: rgba(0, 80, 58, 0.06);
+  color: var(--kal-color-primary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.kal-doctor-card__next-slot {
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 4px 14px;
+  background: linear-gradient(90deg, rgba(228, 242, 235, 0.5) 0%, rgba(255, 255, 255, 0.5) 100%);
   font-size: 12px;
-  color: var(--kal-color-body);
-}
-
-.kal-doctor-card__availability .kal-icon--clock svg {
-  width: 12px;
-  height: 12px;
+  font-weight: 500;
   color: var(--kal-color-primary);
 }
 
+.kal-doctor-card__next-slot-label {
+  font-weight: 500;
+}
+
 .kal-doctor-card__indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  border: 1px solid #e6e6e8;
+  background: var(--kal-color-white);
+  border: 1px solid #e5e5e5;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
 .kal-doctor-card--selected .kal-doctor-card__indicator {
-  width: 20px;
-  height: 20px;
-  border: none;
   background: var(--kal-color-primary);
+  border-color: var(--kal-color-primary);
   color: var(--kal-color-white);
 }
 
-.kal-doctor-card--selected .kal-doctor-card__indicator svg {
+.kal-doctor-card__indicator svg {
   width: 12px;
   height: 12px;
 }

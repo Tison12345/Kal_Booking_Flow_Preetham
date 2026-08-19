@@ -1,27 +1,42 @@
 {% comment %}
-  One doctor card in the doctor-selection step.
+  One doctor card in the doctor-selection step. Redesigned to match a
+  newer, richer Figma spec — photo, languages, experience, specialty tags,
+  and a "Next Slot" bar, replacing the earlier simpler avatar+rating card.
 
   Accepts:
-  - name: {String} e.g. "Dr. Meera Pillai"
+  - name: {String} e.g. "Dr. Neethu Jayachandran"
   - specialization: {String} e.g. "General Physician"
-  - experience: {String} e.g. "12 yrs"
-  - rating: {String} e.g. "4.9"
-  - availability: {String} e.g. "Next available · Today, 3:30 pm"
+  - experience: {String} e.g. "12 yrs experience" — full phrase, not just the number,
+    since the Figma copy isn't a fixed template ("12 yrs experience")
+  - languages: {String} e.g. "English &middot; Hindi &middot; Malayalam" — pre-joined,
+    not a list, since the separator (&middot;) is part of the visual design
+  - tags: {String} comma-separated specialty tags, e.g. "Anxiety,Stress Management,Diabetes Care"
+    — split into individual pill chips
+  - next_slot: {String} e.g. "Today &bull; 10:30 AM" — pre-joined, same reasoning as languages
   - selected: {Boolean} true for the currently-selected doctor
-  - avatar_url: {String} doctor photo URL — DUMMY/placeholder for now, no real
-    doctor photos exist yet, falls back to a plain colored circle
+  - photo_url: {String} doctor photo URL — DUMMY/placeholder for now, no real
+    doctor photos exist yet, falls back to a plain gradient block
   - modes: {String} space-separated consultation modes this doctor is available
     for, e.g. "in-clinic video". Defaults to both if not passed. Used by the JS
     toggle to show/hide doctors when switching In-clinic / Video consult.
-    DUMMY for now — real per-doctor mode availability needs backend data;
-    right now all doctors default to both modes since we can't yet tell them apart.
+    DUMMY for now — real per-doctor mode availability needs backend data.
 
   Usage:
-  {% render 'kal-booking-flow-doctor-card', name: 'Dr. Meera Pillai', specialization: 'General Physician', experience: '12 yrs', rating: '4.9', availability: 'Next available · Today, 3:30 pm', selected: true, modes: 'in-clinic video' %}
+  {% render 'kal-booking-flow-doctor-card',
+    name: 'Dr. Neethu Jayachandran',
+    specialization: 'General Physician',
+    experience: '12 yrs experience',
+    languages: 'English &middot; Hindi &middot; Malayalam',
+    tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
+    next_slot: 'Today &bull; 10:30 AM',
+    selected: true,
+    modes: 'in-clinic video'
+  %}
 {% endcomment %}
 
 {%- liquid
   assign modes = modes | default: 'in-clinic video'
+  assign tag_list = tags | default: '' | split: ','
 -%}
 
 <button
@@ -30,25 +45,43 @@
   data-kal-doctor-name="{{ name }}"
   data-kal-modes="{{ modes }}"
 >
-  <span class="kal-doctor-card__avatar">
-    {%- if avatar_url != blank -%}
-      <img src="{{ avatar_url }}" alt="{{ name }}" loading="lazy">
-    {%- endif -%}
-    <span class="kal-doctor-card__rating">{{ rating }}</span>
-  </span>
-  <span class="kal-doctor-card__info">
-    <span class="kal-doctor-card__top-row">
+  <span class="kal-doctor-card__top">
+    <span class="kal-doctor-card__photo">
+      {%- if photo_url != blank -%}
+        <img src="{{ photo_url }}" alt="{{ name }}" loading="lazy">
+      {%- endif -%}
+    </span>
+    <span class="kal-doctor-card__info">
       <span class="kal-doctor-card__name">{{ name }}</span>
-      <span class="kal-doctor-card__experience">{{ experience }}</span>
-    </span>
-    <span class="kal-doctor-card__specialization">{{ specialization }}</span>
-    <span class="kal-doctor-card__availability">
-      <span class="kal-icon kal-icon--clock">
-        {%- render 'kal-booking-icons', icon_name: 'clock' -%}
+      <span class="kal-doctor-card__specialization">{{ specialization }}</span>
+      <span class="kal-doctor-card__meta-row">
+        <span class="kal-doctor-card__meta-icon">
+          {%- render 'kal-booking-icons', icon_name: 'globe' -%}
+        </span>
+        {{ languages }}
       </span>
-      {{ availability }}
+      <span class="kal-doctor-card__meta-row">
+        <span class="kal-doctor-card__meta-icon">
+          {%- render 'kal-booking-icons', icon_name: 'briefcase' -%}
+        </span>
+        {{ experience }}
+      </span>
     </span>
   </span>
+
+  {%- if tag_list.size > 0 -%}
+    <span class="kal-doctor-card__tags">
+      {%- for tag in tag_list -%}
+        <span class="kal-doctor-card__tag">{{ tag | strip }}</span>
+      {%- endfor -%}
+    </span>
+  {%- endif -%}
+
+  <span class="kal-doctor-card__next-slot">
+    <span class="kal-doctor-card__next-slot-label">Next Slot :</span>
+    {{ next_slot }}
+  </span>
+
   <span class="kal-doctor-card__indicator" aria-hidden="true">
     {%- if selected -%}
       {%- render 'kal-booking-icons', icon_name: 'check' -%}
