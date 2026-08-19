@@ -558,7 +558,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  /* Shared by every step's mobile header (Doctor Select, Slot Picker,
+     Patient Details, Confirmation, Booking Confirmed) — had zero top
+     padding, so the back/close row sat completely flush against the
+     dialog's top edge with no breathing room, unlike the Figma spec which
+     shows a clear gap above it. Fixed here so every step using this
+     header gets the same spacing, not just one. */
+  padding: 24px 24px 0;
 }
 
 .kal-step-doctor-select__back {
