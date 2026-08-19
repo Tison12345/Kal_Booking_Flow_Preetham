@@ -39,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stepName === 'confirmation') {
       renderConfirmationSummary();
     }
+
+    // Same "load once" pattern as the Consultation slot picker, but for
+    // the Therapy screen's own independent state.
+    if (stepName === 'therapy-slot' && !therapySlotLoaded) {
+      therapySlotLoaded = true;
+      loadTherapySlotDay(todayStart());
+    }
   };
 
   // In-clinic / Video consult toggle: switches the active button (within
@@ -403,19 +410,28 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Calendar modal — month grid, chevron nav clamped to [today, today+90 days]
+  // The calendar modal is one shared DOM element used by both the
+  // Consultation Slot Picker and the Therapy slot screen, each with their
+  // own independent date state (slotPicker / therapySlot). These two
+  // variables say which one the modal is currently operating on —
+  // openCalendarModal() sets them, everything else here reads them instead
+  // of hardcoding slotPicker like this used to.
+  let calendarActiveTarget = null; // slotPicker or therapySlot
+  let calendarActiveLoader = null; // loadSlotPickerDay or loadTherapySlotDay
+
   const renderCalendarMonth = () => {
     const monthLabel = flow.querySelector('[data-kal-calendar-month]');
     const grid = flow.querySelector('[data-kal-calendar-grid]');
     const prevBtn = flow.querySelector('[data-kal-calendar-prev]');
     const nextBtn = flow.querySelector('[data-kal-calendar-next]');
 
-    const viewYear = slotPicker.calendarMonth.getFullYear();
-    const viewMonth = slotPicker.calendarMonth.getMonth();
+    const viewYear = calendarActiveTarget.calendarMonth.getFullYear();
+    const viewMonth = calendarActiveTarget.calendarMonth.getMonth();
     monthLabel.textContent = `${MONTH_LABELS[viewMonth]} ${viewYear}`;
 
     const todayKey = toDateKey(todayStart());
     const maxKey = toDateKey(maxFutureDate());
-    const selectedKey = toDateKey(slotPicker.selectedDate);
+    const selectedKey = toDateKey(calendarActiveTarget.selectedDate);
 
     const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -449,18 +465,20 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const navigateCalendarMonth = (delta) => {
-    slotPicker.calendarMonth = new Date(
-      slotPicker.calendarMonth.getFullYear(),
-      slotPicker.calendarMonth.getMonth() + delta,
+    calendarActiveTarget.calendarMonth = new Date(
+      calendarActiveTarget.calendarMonth.getFullYear(),
+      calendarActiveTarget.calendarMonth.getMonth() + delta,
       1
     );
     renderCalendarMonth();
   };
 
-  const openCalendarModal = () => {
-    slotPicker.calendarMonth = new Date(
-      slotPicker.selectedDate.getFullYear(),
-      slotPicker.selectedDate.getMonth(),
+  const openCalendarModal = (targetState, loaderFn) => {
+    calendarActiveTarget = targetState;
+    calendarActiveLoader = loaderFn;
+    targetState.calendarMonth = new Date(
+      targetState.selectedDate.getFullYear(),
+      targetState.selectedDate.getMonth(),
       1
     );
     renderCalendarMonth();
@@ -533,6 +551,155 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // ----------------------------------------------------------------------
+  // THERAPY SLOT — single-doctor variant of the slot picker, own state.
+  // Deliberately separate from slotPicker/renderDayStrip/etc. — see
+  // kal-booking-flow-step-therapy-slot.liquid's comment for why (that JS is
+  // bound to one specific element via querySelector, first-match only, so
+  // two screens sharing it would fight over whose doctor/facility data
+  // wins). Reuses the pure helpers above (formatTime12h, toDateKey,
+  // addDays, todayStart, periodForHour, generateMockSlots, STRIP_DAYS,
+  // SLOT_PERIODS) since those don't depend on which element is "the" slot
+  // picker. Always in-clinic — no mode axis, no day-summaries/badges.
+  // ----------------------------------------------------------------------
+
+  const therapySlotEl = flow.querySelector('.kal-step-therapy-slot');
+
+  let therapySlotLoaded = false;
+  const therapySlot = {
+    selectedDate: new Date(),
+    selectedSlot: null,
+    calendarMonth: new Date(),
+    slotsCache: new Map(), // "YYYY-MM-DD" -> slots array
+  };
+
+  const renderTherapyDayStrip = () => {
+    const selectedKey = toDateKey(therapySlot.selectedDate);
+    const chips = [];
+    for (let i = 0; i < STRIP_DAYS; i++) {
+      chips.push(addDays(todayStart(), i));
+    }
+
+    flow.querySelectorAll('[data-kal-therapy-day-strip]').forEach((strip) => {
+      strip.innerHTML = '';
+      chips.forEach((date) => {
+        const dateKey = toDateKey(date);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'kal-day-chip' + (dateKey === selectedKey ? ' kal-day-chip--active' : '');
+        btn.dataset.kalTherapyDate = dateKey;
+        btn.innerHTML =
+          `<span class="kal-day-chip__label">${formatDayChipLabel(date)}</span>` +
+          `<span class="kal-day-chip__date">${date.getDate()}</span>`;
+        strip.appendChild(btn);
+      });
+    });
+  };
+
+  const renderTherapySlotPeriods = (allSlots) => {
+    // Always in-clinic — no client-side slot_type filter needed, same as
+    // the Consultation slot picker's in-clinic branch (server's
+    // facility_id join already scopes results).
+    const buckets = { Morning: [], Afternoon: [], Evening: [] };
+    allSlots.forEach((slot) => {
+      const period = periodForHour(parseInt(slot.start_time.split(':')[0], 10));
+      if (period) buckets[period].push(slot);
+    });
+
+    const selectedStart = therapySlot.selectedSlot ? therapySlot.selectedSlot.start_time : null;
+    let html = '';
+    SLOT_PERIODS.forEach(({ key }) => {
+      if (buckets[key].length === 0) return;
+      html += `<div class="kal-slot-period"><p class="kal-slot-period__label">${key}</p><div class="kal-slot-grid">`;
+      buckets[key].forEach((slot) => {
+        if (slot.is_available) {
+          const isActive = slot.start_time === selectedStart;
+          html +=
+            `<button type="button" class="kal-slot-chip${isActive ? ' kal-slot-chip--active' : ''}" ` +
+            `data-kal-therapy-slot-start="${slot.start_time}" data-kal-therapy-slot-end="${slot.end_time}">` +
+            `${formatTime12h(slot.start_time)}</button>`;
+        } else {
+          html += `<button type="button" class="kal-slot-chip" disabled>${formatTime12h(slot.start_time)}</button>`;
+        }
+      });
+      html += '</div></div>';
+    });
+
+    if (!html) {
+      html = '<p class="kal-slot-periods__empty">No slots available on this day. Try another date.</p>';
+    }
+
+    flow.querySelectorAll('[data-kal-therapy-slot-periods]').forEach((el) => {
+      el.innerHTML = html;
+    });
+  };
+
+  const updateTherapyContinueButton = () => {
+    flow.querySelectorAll('[data-kal-therapy-continue]').forEach((btn) => {
+      if (therapySlot.selectedSlot) {
+        btn.disabled = false;
+        // "7 Aug" — formatConfirmationDate gives "Friday 7 Aug", drop the
+        // leading weekday word to match the Figma's "Continue • 7 Aug, ..." format.
+        const dateLabel = formatConfirmationDate(therapySlot.selectedDate).replace(/^\S+\s/, '');
+        btn.innerHTML =
+          `Continue <span class="kal-therapy-continue__datetime">&bull; ${dateLabel}, ${formatTime12h(therapySlot.selectedSlot.start_time)}</span>`;
+      } else {
+        btn.disabled = true;
+        btn.textContent = 'Select a date and time';
+      }
+    });
+  };
+
+  const fetchTherapySlotsForDate = async (dateKey) => {
+    if (therapySlot.slotsCache.has(dateKey)) {
+      return therapySlot.slotsCache.get(dateKey);
+    }
+
+    if (USE_MOCK_DATA) {
+      const slots = generateMockSlots();
+      therapySlot.slotsCache.set(dateKey, slots);
+      return slots;
+    }
+
+    const doctorId = therapySlotEl.dataset.doctorId;
+    const facilityId = therapySlotEl.dataset.facilityId;
+    const url =
+      `${apiBaseUrl}/api/public/availability/slots?doctor_id=${encodeURIComponent(doctorId)}` +
+      `&date=${dateKey}&facility_id=${encodeURIComponent(facilityId)}&duration_minutes=${CONSULT_DURATION_MINUTES}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Slot fetch failed: ${response.status}`);
+    }
+    const data = await response.json();
+    const slots = data.slots || [];
+    therapySlot.slotsCache.set(dateKey, slots);
+    return slots;
+  };
+
+  const loadTherapySlotDay = async (date) => {
+    therapySlot.selectedDate = date;
+    therapySlot.selectedSlot = null;
+    renderTherapyDayStrip();
+    updateTherapyContinueButton();
+
+    const dateKey = toDateKey(date);
+    flow.querySelectorAll('[data-kal-therapy-slot-periods]').forEach((el) => {
+      el.innerHTML = '<p class="kal-slot-periods__empty">Loading available times&hellip;</p>';
+    });
+
+    try {
+      const slots = await fetchTherapySlotsForDate(dateKey);
+      if (toDateKey(therapySlot.selectedDate) !== dateKey) return;
+      renderTherapySlotPeriods(slots);
+    } catch (err) {
+      if (toDateKey(therapySlot.selectedDate) !== dateKey) return;
+      flow.querySelectorAll('[data-kal-therapy-slot-periods]').forEach((el) => {
+        el.innerHTML = '<p class="kal-slot-periods__empty">Could not load times. Please try again.</p>';
+      });
+    }
+  };
+
   // Any CTA anywhere on the site with this class opens the flow
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
@@ -560,8 +727,12 @@ document.addEventListener('DOMContentLoaded', () => {
       setGender(genderTrigger.dataset.kalGender);
     }
 
+    // Guarded on dataset.kalDate existing — the Therapy screen's day chips
+    // use a different attribute (data-kal-therapy-date, handled below), so
+    // without this guard this block would also fire for them with an
+    // undefined date and throw/no-op incorrectly.
     const dayChipTrigger = e.target.closest('.kal-day-chip');
-    if (dayChipTrigger) {
+    if (dayChipTrigger && dayChipTrigger.dataset.kalDate) {
       loadSlotPickerDay(new Date(`${dayChipTrigger.dataset.kalDate}T00:00:00`));
     }
 
@@ -571,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         start_time: slotChipTrigger.dataset.kalSlotStart,
         end_time: slotChipTrigger.dataset.kalSlotEnd,
       };
-      flow.querySelectorAll('.kal-slot-chip').forEach((chip) => {
+      flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
         chip.classList.toggle(
           'kal-slot-chip--active',
           chip.dataset.kalSlotStart === slotChipTrigger.dataset.kalSlotStart
@@ -580,8 +751,36 @@ document.addEventListener('DOMContentLoaded', () => {
       updateContinueButton();
     }
 
-    if (e.target.closest('[data-kal-open-calendar]')) {
-      openCalendarModal();
+    const therapyDayChipTrigger = e.target.closest('.kal-day-chip[data-kal-therapy-date]');
+    if (therapyDayChipTrigger) {
+      loadTherapySlotDay(new Date(`${therapyDayChipTrigger.dataset.kalTherapyDate}T00:00:00`));
+    }
+
+    const therapySlotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');
+    if (therapySlotChipTrigger && therapySlotChipTrigger.dataset.kalTherapySlotStart) {
+      therapySlot.selectedSlot = {
+        start_time: therapySlotChipTrigger.dataset.kalTherapySlotStart,
+        end_time: therapySlotChipTrigger.dataset.kalTherapySlotEnd,
+      };
+      flow.querySelectorAll('[data-kal-therapy-slot-periods] .kal-slot-chip').forEach((chip) => {
+        chip.classList.toggle(
+          'kal-slot-chip--active',
+          chip.dataset.kalTherapySlotStart === therapySlotChipTrigger.dataset.kalTherapySlotStart
+        );
+      });
+      updateTherapyContinueButton();
+    }
+
+    // Calendar modal is shared — which date-state it operates on depends on
+    // which step's calendar-icon button was actually clicked.
+    const openCalendarTrigger = e.target.closest('[data-kal-open-calendar]');
+    if (openCalendarTrigger) {
+      const stepName = openCalendarTrigger.closest('[data-kal-step]')?.dataset.kalStep;
+      if (stepName === 'therapy-slot') {
+        openCalendarModal(therapySlot, loadTherapySlotDay);
+      } else {
+        openCalendarModal(slotPicker, loadSlotPickerDay);
+      }
     }
     if (e.target.closest('[data-kal-close-calendar]')) {
       closeCalendarModal();
@@ -594,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const calendarDateTrigger = e.target.closest('[data-kal-calendar-date]:not(:disabled)');
     if (calendarDateTrigger) {
-      loadSlotPickerDay(new Date(`${calendarDateTrigger.dataset.kalCalendarDate}T00:00:00`));
+      calendarActiveLoader(new Date(`${calendarDateTrigger.dataset.kalCalendarDate}T00:00:00`));
       closeCalendarModal();
     }
   });

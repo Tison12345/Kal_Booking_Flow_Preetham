@@ -1,0 +1,96 @@
+{% comment %}
+  Therapy booking — doctor + slot picker combined into ONE screen, no
+  separate Doctor Select step. Per the user: for therapy/offline bookings
+  there's normally only one doctor at a facility, so the doctor is just
+  shown directly rather than picked from a list. Multi-doctor handling is
+  an explicitly OPEN question, deferred — do not build a picker/fallback
+  for it without being asked; this screen only needs to handle the
+  single-doctor case for now.
+
+  Always offline/in-clinic — no In-clinic/Video toggle here at all (the
+  Figma export includes one, but marked display:none; omitted from this
+  markup entirely rather than building a permanently-hidden dead toggle).
+
+  Not yet wired into the main flow's navigation — there's no preceding
+  "which facility" step and no defined next step after Continue yet.
+  data-kal-back defaults to "entry" as a reasonable placeholder until the
+  actual preceding screen is defined. Registered as its own step
+  (data-kal-step="therapy-slot") so it's directly reachable for review/demo
+  in the meantime.
+
+  Deliberately NOT reusing .kal-step-slot-picker's class or JS state
+  (slotPicker/renderDayStrip/etc.) — that JS is bound to a single specific
+  element (flow.querySelector('.kal-step-slot-picker'), first-match only),
+  so two screens sharing that class would fight over whose doctor/facility
+  data actually gets used. This screen has its own small, separate state
+  object (therapySlot) and render functions in kal-booking-flow.js, reusing
+  only the pure date/formatting helpers (formatTime12h, toDateKey, etc.)
+  that don't depend on which element is "the" slot picker.
+
+  No day-strip slot-count badges here (unlike the Consultation Slot Picker)
+  — the Figma export doesn't show them, and this screen skips the
+  day-summaries fetch entirely rather than mimicking that UI.
+
+  Doctor card uses real placeholder data matching the same doctor already
+  used elsewhere as a placeholder (Neethu Jayachandran, Koramangala) — the
+  Figma's own example doctor happens to match.
+{% endcomment %}
+
+<div class="kal-step-therapy-slot" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
+
+  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
+  <div class="kal-step-therapy-slot__mobile">
+
+    <div class="kal-therapy-slot__appbar">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-back="entry" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+      </button>
+      <button type="button" class="kal-therapy-slot__location">
+        {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+        <span>Indiranagar Clinic</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
+    </div>
+
+    <div class="kal-step-doctor-select__intro">
+      <h2 class="kal-step-doctor-select__heading">Book your consultation</h2>
+      <p class="kal-step-doctor-select__subtext">Here&rsquo;s the doctor you&rsquo;ll see &mdash; just pick a time.</p>
+    </div>
+
+    <div class="kal-therapy-doctor-card">
+      <span class="kal-therapy-doctor-card__avatar">NJ</span>
+      <span class="kal-therapy-doctor-card__info">
+        <span class="kal-therapy-doctor-card__name">Dr. Neethu Jayachandran</span>
+        <span class="kal-therapy-doctor-card__qualification">BAMS &middot; 9+ yrs</span>
+        <span class="kal-therapy-doctor-card__specialization">Skin &amp; hair, infertility &amp; lifestyle</span>
+      </span>
+    </div>
+
+    <div class="kal-slot-section">
+      <div class="kal-slot-section__head">
+        <p class="kal-slot-section__label">Date</p>
+        <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
+          {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+        </button>
+      </div>
+      {%- comment -%} Populated client-side by renderTherapyDayStrip() in kal-booking-flow.js — no slot-count badges {%- endcomment -%}
+      <div class="kal-day-strip" data-kal-therapy-day-strip></div>
+    </div>
+
+    <div class="kal-slot-section">
+      <p class="kal-slot-section__label">Available time</p>
+      {%- comment -%} Populated client-side by renderTherapySlotPeriods() in kal-booking-flow.js {%- endcomment -%}
+      <div class="kal-slot-periods" data-kal-therapy-slot-periods>
+        <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
+      </div>
+    </div>
+
+    <div class="kal-step-slot-picker__footer">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-continue disabled>
+        Select a date and time
+      </button>
+    </div>
+
+  </div>
+
+</div>

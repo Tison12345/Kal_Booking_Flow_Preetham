@@ -1873,3 +1873,114 @@
   gap: 24px;
   padding: 0 24px;
 }
+
+/* ----------------------------------------
+   THERAPY SLOT — single-doctor variant of the slot picker. Mobile only —
+   no desktop spec given yet. Reuses .kal-slot-section/.kal-day-chip/
+   .kal-slot-chip/.kal-slot-periods/.kal-slot-grid as-is from the
+   Consultation Slot Picker (same visual language, just different data
+   source/attributes feeding them — see kal-booking-flow.js).
+----------------------------------------- */
+
+.kal-step-therapy-slot {
+  height: 100%;
+}
+
+.kal-step-therapy-slot__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-slot__mobile {
+    display: none;
+  }
+}
+
+.kal-therapy-slot__appbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+}
+
+.kal-therapy-slot__location {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e6e6e8;
+  border-radius: 999px;
+  background: var(--kal-color-white);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--kal-color-heading);
+  cursor: pointer;
+}
+
+.kal-therapy-slot__location svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.kal-therapy-doctor-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 24px;
+  padding: 12px 16px;
+  border: 1px solid #234b37;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+  box-sizing: border-box;
+}
+
+.kal-therapy-doctor-card__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid #122d24;
+  border-radius: 999px;
+  font-size: 20px;
+  color: #4b4b4b;
+  flex-shrink: 0;
+}
+
+.kal-therapy-doctor-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kal-therapy-doctor-card__name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #0b0b0c;
+}
+
+.kal-therapy-doctor-card__qualification {
+  font-size: 14px;
+  color: #6c6c70;
+}
+
+.kal-therapy-doctor-card__specialization {
+  font-size: 14px;
+  color: #0b0b0c;
+}
+
+.kal-step-therapy-slot__mobile .kal-slot-section {
+  padding: 0 16px;
+}
+
+/* Two-tone Continue button text, matching the Figma spec exactly — the
+   static "Continue" label stays solid white, the date/time part that
+   follows it renders at 80% opacity white. */
+.kal-therapy-continue__datetime {
+  color: rgba(255, 255, 255, 0.8);
+}
