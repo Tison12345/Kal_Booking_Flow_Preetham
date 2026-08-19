@@ -104,16 +104,18 @@
   }
 }
 
-/* Slim scrollbar for the five per-step internal scroll containers
-   referenced in the comment above (.kal-step-doctor-select__list--desktop,
-   .kal-step-slot-picker__scroll, .kal-step-patient-details__scroll,
-   .kal-step-confirmation__scroll, .kal-step-booking-confirmed__scroll).
-   Without this they use the browser's default scrollbar, which on
-   Windows/Chrome reserves ~15-17px and doesn't overlay — wide enough to
-   crowd content sitting near the right edge (e.g. the calendar-icon button
-   on Slot Picker). Firefox and WebKit need separate properties; there's no
-   single standard way to do this yet. */
+/* Slim scrollbar for the per-step internal scroll containers referenced in
+   the comment above (.kal-step-doctor-select__list--desktop,
+   .kal-step-doctor-select__scroll, .kal-step-slot-picker__scroll,
+   .kal-step-patient-details__scroll, .kal-step-confirmation__scroll,
+   .kal-step-booking-confirmed__scroll). Without this they use the
+   browser's default scrollbar, which on Windows/Chrome reserves ~15-17px
+   and doesn't overlay — wide enough to crowd content sitting near the
+   right edge (e.g. the calendar-icon button on Slot Picker). Firefox and
+   WebKit need separate properties; there's no single standard way to do
+   this yet. */
 .kal-step-doctor-select__list--desktop,
+.kal-step-doctor-select__scroll,
 .kal-step-slot-picker__scroll,
 .kal-step-patient-details__scroll,
 .kal-step-confirmation__scroll,
@@ -123,6 +125,7 @@
 }
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar,
+.kal-step-doctor-select__scroll::-webkit-scrollbar,
 .kal-step-slot-picker__scroll::-webkit-scrollbar,
 .kal-step-patient-details__scroll::-webkit-scrollbar,
 .kal-step-confirmation__scroll::-webkit-scrollbar,
@@ -131,6 +134,7 @@
 }
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar-track,
+.kal-step-doctor-select__scroll::-webkit-scrollbar-track,
 .kal-step-slot-picker__scroll::-webkit-scrollbar-track,
 .kal-step-patient-details__scroll::-webkit-scrollbar-track,
 .kal-step-confirmation__scroll::-webkit-scrollbar-track,
@@ -139,6 +143,7 @@
 }
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar-thumb,
+.kal-step-doctor-select__scroll::-webkit-scrollbar-thumb,
 .kal-step-slot-picker__scroll::-webkit-scrollbar-thumb,
 .kal-step-patient-details__scroll::-webkit-scrollbar-thumb,
 .kal-step-confirmation__scroll::-webkit-scrollbar-thumb,
@@ -523,22 +528,30 @@
 .kal-step-doctor-select__mobile {
   display: flex;
   flex-direction: column;
-  /* gap:16px (not 24px) to match every other step's mobile wrapper — the
-     header→intro gap needs to be a constant value across all steps, not
-     specific to this one. Content stays top-anchored in normal flow;
-     min-height:100% + margin-top:auto on the footer alone (below) pushes
-     just the button to the bottom, same pattern as Slot Picker/Patient
-     Details/Confirmation. justify-content:space-between used to be here —
-     distributes leftover space between *every* sibling pair, which made
-     the header→intro gap grow/shrink with the doctor list's length
-     instead of staying constant, and was inconsistent with every other
-     step already using the fixed-gap + pinned-footer pattern. */
   gap: 16px;
-  min-height: 100%;
+  /* height (not min-height) — this now needs a hard boundary, since its
+     middle child (.kal-step-doctor-select__scroll, below) is flex:1 and
+     needs a definite space to fill/be constrained within, the same way
+     every step's desktop __panel already works. Header and footer stay
+     fixed; only the scroll child in between moves. */
+  height: 100%;
 }
 
-.kal-step-doctor-select__mobile .kal-step-doctor-select__footer {
-  margin-top: auto;
+/* Everything between the header and footer, scrolling internally — added
+   once the redesigned doctor cards (photo + tags + next-slot bar each)
+   got tall enough that three of them could exceed the mobile viewport.
+   Without this, #kal-booking-flow-content itself was the only scroll
+   container on mobile (unlike desktop, its overflow-y:auto is never
+   turned off below 750px), so the whole page scrolled as one block and
+   the Continue button only appeared once scrolled all the way down,
+   instead of staying pinned to the bottom of the frame. */
+.kal-step-doctor-select__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .kal-step-doctor-select__header {
