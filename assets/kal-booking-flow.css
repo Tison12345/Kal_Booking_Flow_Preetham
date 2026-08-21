@@ -698,6 +698,14 @@
   position: relative; /* containing block for the absolutely-positioned selection indicator */
   display: flex;
   flex-direction: column;
+  flex-shrink: 0; /* without this, cards inside the scrollable desktop list
+    (.kal-step-doctor-select__list--desktop, a flex column with overflow-y:auto)
+    get squeezed instead of the list scrolling: flex items shrink by default
+    when content exceeds the container, so each card's own height collapsed
+    below its natural size, and this card's own overflow:hidden then clipped
+    everything past the top row — photo, name, and selection dot survived
+    (they render first) but specialization/languages/tags/next-slot below
+    them got cut off. flex-shrink:0 forces the list to scroll instead. */
   width: 100%;
   padding: 0;
   border-radius: 12px;
