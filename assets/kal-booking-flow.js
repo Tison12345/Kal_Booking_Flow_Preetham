@@ -115,12 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // at the top of kal-booking-flow-step-slot-picker.liquid for the mapping).
   // ----------------------------------------------------------------------
 
-  // TEMPORARY: backend isn't reachable from this storefront yet (theme's
-  // kal_booking_api_base_url setting is still empty, and the day-summaries
-  // endpoint isn't deployed). Flip this to false once both are wired up —
-  // everything downstream (fetchSlotsForDate, fetchDaySummaries) already
-  // has the real request built, this flag just short-circuits it.
-  const USE_MOCK_DATA = true;
+  // Backend testing (2026-08): kal_booking_api_base_url is now set to
+  // http://localhost:3000 in the theme (CMS backend running via `npm run dev`
+  // on the same machine as whoever's testing this — see the demo-store test
+  // notes for why it's localhost and not a deployed URL). CORS is scoped to
+  // https://arise-jin.myshopify.com specifically (app/lib/cors.ts in the CMS
+  // repo), so this only actually reaches the backend when opened from that
+  // domain, not from any other origin. Flip back to true if the local CMS
+  // dev server isn't running — every fetch below will otherwise just fail.
+  const USE_MOCK_DATA = false;
 
   const CONSULT_DURATION_MINUTES = 45; // confirmed decision, see shopify-booking-api-reference.md §4.5
   const STRIP_DAYS = 10; // matches SlotPicker.tsx's STRIP_DAYS
