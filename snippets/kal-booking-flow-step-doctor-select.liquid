@@ -1,13 +1,12 @@
 {% comment %}
-  Step 2 (shown as "Step 1 of 5") — doctor selection.
-  Visitor picks in-clinic or video consult, then a doctor from a list.
+  Step 3 (shown as "Step 2 of 5") — doctor selection. Now reached from the
+  new Concern Select step, not directly from Entry — see that step's own
+  comment for why. Visitor picks in-clinic or video consult, then a doctor
+  from a list.
 
   Doctor data is DUMMY/hardcoded for now (3 doctors, matching the design) —
   no backend connected yet. Once real data exists, this should loop over
   actual doctor records instead of the three explicit renders below.
-
-  Desktop composition not built yet — waiting on the rest of the Figma CSS
-  spec (it was cut off partway through). Mobile only for now.
 {% endcomment %}
 
 <div class="kal-step-doctor-select">
@@ -16,16 +15,16 @@
   <div class="kal-step-doctor-select__mobile">
 
     <div class="kal-step-doctor-select__header">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-back="entry" aria-label="Back">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-back="concern-select" aria-label="Back">
         {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
       </button>
       <div class="kal-step-doctor-select__progress">
+        <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
         <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-text">1/5</span>
+        <span class="kal-step-doctor-select__progress-text">2/5</span>
       </div>
       {%- comment -%}
         Own close button, matching Therapy Slot's pattern — a real flex
@@ -52,7 +51,7 @@
     {%- endcomment -%}
     <div class="kal-step-doctor-select__scroll">
       <div class="kal-step-doctor-select__intro">
-        <p class="kal-step-doctor-select__eyebrow">Step 1 of 5</p>
+        <p class="kal-step-doctor-select__eyebrow">Step 2 of 5</p>
         <h2 class="kal-step-doctor-select__heading">Who would you like to see?</h2>
         <p class="kal-step-doctor-select__subtext">Choose a doctor or browse by specialty.</p>
       </div>
@@ -138,12 +137,12 @@
 
     <div class="kal-step-doctor-select__panel">
       <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
+        <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
         <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot"></span>
         <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-text">1/5</span>
+        <span class="kal-step-doctor-select__progress-text">2/5</span>
       </div>
 
       <div class="kal-toggle-group">

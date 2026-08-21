@@ -1,0 +1,36 @@
+{% comment %}
+  One selectable row in the Concern Select step's specialization list.
+
+  Accepts:
+  - icon_name: {String} passed to kal-booking-icons (one of the 'concern-*' icons)
+  - name: {String} e.g. "General Medicine"
+  - doctor_count: {Number} e.g. 15 — used to render "N Doctors Available"
+  - concern_key: {String} value for data-kal-concern, e.g. "general-medicine" —
+    matched against the concernSelect JS state to drive the radio state
+  - selected: {Boolean} true for the default-selected specialization
+
+  Usage:
+  {% render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Medicine', doctor_count: 15, concern_key: 'general-medicine', selected: true %}
+{% endcomment %}
+
+<button
+  type="button"
+  class="kal-concern-row {% if selected %}kal-concern-row--selected{% endif %}"
+  data-kal-concern="{{ concern_key }}"
+>
+  <span class="kal-concern-row__left">
+    <span class="kal-concern-row__icon">
+      {%- render 'kal-booking-icons', icon_name: icon_name -%}
+    </span>
+    <span class="kal-concern-row__text">
+      <span class="kal-concern-row__name">{{ name }}</span>
+      <span class="kal-concern-row__count">
+        <span class="kal-concern-row__count-icon">
+          {%- render 'kal-booking-icons', icon_name: 'users' -%}
+        </span>
+        {{ doctor_count }} Doctors Available
+      </span>
+    </span>
+  </span>
+  <span class="kal-concern-row__radio" aria-hidden="true"></span>
+</button>

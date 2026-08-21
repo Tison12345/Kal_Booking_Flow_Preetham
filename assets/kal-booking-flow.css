@@ -519,7 +519,166 @@
 }
 
 /* ----------------------------------------
-   STEP: DOCTOR SELECT (Step 1 of 5)
+   STEP: CONCERN SELECT (Step 1 of 5)
+   Inserted between Entry and Doctor Select — see that step's own liquid
+   comment for why. Mobile only for now, same starting point Doctor Select
+   had before its desktop composition existed (no desktop spec given yet).
+----------------------------------------- */
+
+.kal-step-concern-select {
+  height: 100%;
+}
+
+.kal-step-concern-select__mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%; /* same reasoning as .kal-step-doctor-select__mobile below —
+    the middle scroll child needs a definite height to be constrained within */
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-concern-select__mobile {
+    display: none;
+  }
+}
+
+.kal-concern-select__list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* matches the Figma export's Concerns container exactly —
+    7 rows x their own height + 6 gaps of 24px = the container's own
+    recorded height, so this isn't a guess */
+  padding: 0 24px;
+}
+
+.kal-concern-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kal-concern-row__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.kal-concern-row__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(228, 242, 235, 0.5);
+}
+
+.kal-concern-row__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.kal-concern-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kal-concern-row__name {
+  font-size: 18px;
+  line-height: 140%;
+  color: var(--kal-color-heading);
+}
+
+.kal-concern-row__count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #4b4b4b;
+}
+
+.kal-concern-row__count-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.kal-concern-row__count-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.kal-concern-row__radio {
+  flex-shrink: 0;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #e6e6e8;
+  box-sizing: border-box;
+}
+
+.kal-concern-row__radio::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kal-color-primary);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.1s ease;
+}
+
+.kal-concern-row--selected .kal-concern-row__radio {
+  border-color: var(--kal-color-primary);
+}
+
+.kal-concern-row--selected .kal-concern-row__radio::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.kal-concern-select__banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(228, 242, 235, 0.5);
+  border: 1px solid #e5e5e5;
+  box-sizing: border-box;
+}
+
+.kal-concern-select__banner .kal-icon--info svg {
+  width: 20px;
+  height: 20px;
+  color: var(--kal-color-primary);
+  flex-shrink: 0;
+}
+
+.kal-concern-select__banner-text {
+  font-size: 12.5px;
+  line-height: 138%;
+  color: var(--kal-color-primary);
+}
+
+/* ----------------------------------------
+   STEP: DOCTOR SELECT (Step 2 of 5)
 ----------------------------------------- */
 
 .kal-step-doctor-select {
@@ -992,7 +1151,7 @@
 }
 
 /* ----------------------------------------
-   STEP: SLOT PICKER (Step 2 of 5)
+   STEP: SLOT PICKER (Step 3 of 5)
    Desktop values match the Figma spec exactly. Mobile is extrapolated from
    the same conventions used by the other steps — no mobile spec was given
    for this screen yet, so treat mobile spacing as best-effort, not exact.
@@ -1461,7 +1620,7 @@
 }
 
 /* ----------------------------------------
-   STEP: PATIENT DETAILS (Step 3 of 5)
+   STEP: PATIENT DETAILS (Step 4 of 5)
    Values match the Figma spec exactly (Male/Female pill toggle styling,
    input borders/radius/padding).
 ----------------------------------------- */

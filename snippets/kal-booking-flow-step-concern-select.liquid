@@ -1,0 +1,88 @@
+{% comment %}
+  Step 1 of 5 — "Choose your concern". New step inserted between Entry and
+  Doctor Select: after choosing "Book a consultation" on Entry, the visitor
+  picks a specialization here first, THEN moves on to picking a doctor.
+  Explicit instruction: this only applies to the consultation path — Therapy
+  Slot's flow is untouched.
+
+  Inserting this as the new step 1 pushed every downstream step's progress
+  dots/label down by one (Doctor Select 1/5->2/5, Slot Picker 2/5->3/5,
+  Patient Details 3/5->4/5) — Confirmation was already 5/5 (last of 5) so it
+  needed no change. See kal-booking-flow.js's goToStep comment / each step's
+  own header for the renumbering.
+
+  Doctor counts are DUMMY/hardcoded for now, read directly off the Figma
+  screenshot (no backend concept of "doctors per specialization" exists yet).
+  Selecting a specialization doesn't currently filter the Doctor Select list
+  that follows — that's a real gap, but no instruction was given yet on how
+  specialization should narrow the doctor list, so Doctor Select still shows
+  its same static 3 doctors regardless of what's picked here.
+
+  General Medicine is pre-selected by default, matching the banner copy
+  below it ("Not sure? General Medicine will guide you from there.").
+
+  Icons are the 7 'concern-*' entries in kal-booking-icons.liquid, extracted
+  from a sprite-sheet export — see that file's comment for how.
+
+  Desktop composition not built yet — no desktop spec was given for this
+  screen (mobile-only export), same starting point Doctor Select had.
+{% endcomment %}
+
+<div class="kal-step-concern-select">
+
+  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
+  <div class="kal-step-concern-select__mobile">
+
+    <div class="kal-step-doctor-select__header">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-back="entry" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+      </button>
+      <div class="kal-step-doctor-select__progress">
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-text">1/5</span>
+      </div>
+      {%- comment -%} Own close button — see Doctor Select's header comment for why {%- endcomment -%}
+      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
+    </div>
+
+    {%- comment -%}
+      Same flex:1 scroll-wrapper pattern Doctor Select uses — with 7 rows
+      this list is tall enough to risk pushing the Continue button off-frame
+      on shorter viewports, same reason that fix was needed there.
+    {%- endcomment -%}
+    <div class="kal-step-doctor-select__scroll">
+      <div class="kal-step-doctor-select__intro">
+        <h2 class="kal-step-doctor-select__heading">Choose your concern</h2>
+        <p class="kal-step-doctor-select__subtext">We&rsquo;ll match you with available doctors.</p>
+      </div>
+
+      <div class="kal-concern-select__list">
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Medicine', doctor_count: 15, concern_key: 'general-medicine', selected: true -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-orthopedics', name: 'Orthopedics', doctor_count: 6, concern_key: 'orthopedics', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gastroenterology', name: 'Gastroenterology', doctor_count: 4, concern_key: 'gastroenterology', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gynecology', name: 'Gynecology', doctor_count: 9, concern_key: 'gynecology', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-cardiology', name: 'Cardiology', doctor_count: 5, concern_key: 'cardiology', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-pediatrics', name: 'Pediatrics', doctor_count: 12, concern_key: 'pediatrics', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-neurology', name: 'Neurology', doctor_count: 4, concern_key: 'neurology', selected: false -%}
+      </div>
+    </div>
+
+    <div class="kal-step-doctor-select__footer">
+      <div class="kal-concern-select__banner">
+        <span class="kal-icon kal-icon--info">
+          {%- render 'kal-booking-icons', icon_name: 'info' -%}
+        </span>
+        <span class="kal-concern-select__banner-text">Not sure? General Medicine will guide you from there.</span>
+      </div>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="doctor-select">
+        Continue
+      </button>
+    </div>
+
+  </div>
+
+</div>

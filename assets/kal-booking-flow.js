@@ -58,6 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // ----------------------------------------------------------------------
+  // CONCERN SELECT — single-select radio list of specializations. Doesn't
+  // currently filter the Doctor Select list that follows (no instruction
+  // yet on how a specialization should narrow doctors down) — this only
+  // tracks which row is selected for the row's own visual state.
+  // ----------------------------------------------------------------------
+
+  const concernSelect = {
+    selected: 'general-medicine',
+  };
+
+  const setConcern = (concern) => {
+    concernSelect.selected = concern;
+    flow.querySelectorAll('[data-kal-concern]').forEach((row) => {
+      row.classList.toggle('kal-concern-row--selected', row.dataset.kalConcern === concern);
+    });
+  };
+
   // In-clinic / Video consult toggle: switches the active button (within
   // whichever toggle group was clicked — mobile and desktop each have their
   // own), swaps the price banner copy, and filters the doctor list down to
@@ -727,6 +745,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (backTrigger) {
       goToStep(backTrigger.dataset.kalBack);
     }
+    const concernTrigger = e.target.closest('[data-kal-concern]');
+    if (concernTrigger) {
+      setConcern(concernTrigger.dataset.kalConcern);
+    }
+
     const modeTrigger = e.target.closest('[data-kal-mode]');
     if (modeTrigger) {
       setMode(modeTrigger.dataset.kalMode);
