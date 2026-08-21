@@ -11,12 +11,11 @@
   needed no change. See kal-booking-flow.js's goToStep comment / each step's
   own header for the renumbering.
 
-  Doctor counts are DUMMY/hardcoded for now, read directly off the Figma
-  screenshot (no backend concept of "doctors per specialization" exists yet).
-  Selecting a specialization doesn't currently filter the Doctor Select list
-  that follows — that's a real gap, but no instruction was given yet on how
-  specialization should narrow the doctor list, so Doctor Select still shows
-  its same static 3 doctors regardless of what's picked here.
+  This step is a structured replacement for a free-text "what are you
+  coming in for" field, not a doctor filter/search — so each row is just an
+  icon + name + radio, no doctor count. Selecting a specialization doesn't
+  filter the Doctor Select list that follows; it still shows its same
+  static 3 doctors regardless of what's picked here.
 
   General Medicine is pre-selected by default, matching the banner copy
   below it ("Not sure? General Medicine will guide you from there.").
@@ -61,13 +60,13 @@
       </div>
 
       <div class="kal-concern-select__list">
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Medicine', doctor_count: 15, concern_key: 'general-medicine', selected: true -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-orthopedics', name: 'Orthopedics', doctor_count: 6, concern_key: 'orthopedics', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gastroenterology', name: 'Gastroenterology', doctor_count: 4, concern_key: 'gastroenterology', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gynecology', name: 'Gynecology', doctor_count: 9, concern_key: 'gynecology', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-cardiology', name: 'Cardiology', doctor_count: 5, concern_key: 'cardiology', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-pediatrics', name: 'Pediatrics', doctor_count: 12, concern_key: 'pediatrics', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-neurology', name: 'Neurology', doctor_count: 4, concern_key: 'neurology', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Medicine', concern_key: 'general-medicine', selected: true -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-orthopedics', name: 'Orthopedics', concern_key: 'orthopedics', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gastroenterology', name: 'Gastroenterology', concern_key: 'gastroenterology', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gynecology', name: 'Gynecology', concern_key: 'gynecology', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-cardiology', name: 'Cardiology', concern_key: 'cardiology', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-pediatrics', name: 'Pediatrics', concern_key: 'pediatrics', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-neurology', name: 'Neurology', concern_key: 'neurology', selected: false -%}
       </div>
     </div>
 
