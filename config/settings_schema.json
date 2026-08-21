@@ -1482,10 +1482,10 @@
         "content": "Backend connection"
       },
       {
-        "type": "url",
+        "type": "text",
         "id": "kal_booking_api_base_url",
         "label": "CMS backend API base URL",
-        "info": "Every step (consultation, therapy, reschedule, cancel) calls this backend."
+        "info": "Every step (consultation, therapy, reschedule, cancel) calls this backend. Plain text field, not a link picker — paste the base URL directly (e.g. http://localhost:3000 or a deployed Vercel URL), no trailing slash."
       },
       {
         "type": "header",
