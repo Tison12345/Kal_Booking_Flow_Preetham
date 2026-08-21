@@ -106,16 +106,17 @@
 
 /* Slim scrollbar for the per-step internal scroll containers referenced in
    the comment above (.kal-step-doctor-select__list--desktop,
-   .kal-step-doctor-select__scroll, .kal-step-slot-picker__scroll,
-   .kal-step-patient-details__scroll, .kal-step-confirmation__scroll,
-   .kal-step-booking-confirmed__scroll). Without this they use the
-   browser's default scrollbar, which on Windows/Chrome reserves ~15-17px
-   and doesn't overlay — wide enough to crowd content sitting near the
-   right edge (e.g. the calendar-icon button on Slot Picker). Firefox and
-   WebKit need separate properties; there's no single standard way to do
-   this yet. */
+   .kal-step-doctor-select__scroll, .kal-step-concern-select__scroll,
+   .kal-step-slot-picker__scroll, .kal-step-patient-details__scroll,
+   .kal-step-confirmation__scroll, .kal-step-booking-confirmed__scroll).
+   Without this they use the browser's default scrollbar, which on
+   Windows/Chrome reserves ~15-17px and doesn't overlay — wide enough to
+   crowd content sitting near the right edge (e.g. the calendar-icon button
+   on Slot Picker). Firefox and WebKit need separate properties; there's no
+   single standard way to do this yet. */
 .kal-step-doctor-select__list--desktop,
 .kal-step-doctor-select__scroll,
+.kal-step-concern-select__scroll,
 .kal-step-slot-picker__scroll,
 .kal-step-patient-details__scroll,
 .kal-step-confirmation__scroll,
@@ -126,6 +127,7 @@
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar,
 .kal-step-doctor-select__scroll::-webkit-scrollbar,
+.kal-step-concern-select__scroll::-webkit-scrollbar,
 .kal-step-slot-picker__scroll::-webkit-scrollbar,
 .kal-step-patient-details__scroll::-webkit-scrollbar,
 .kal-step-confirmation__scroll::-webkit-scrollbar,
@@ -135,6 +137,7 @@
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar-track,
 .kal-step-doctor-select__scroll::-webkit-scrollbar-track,
+.kal-step-concern-select__scroll::-webkit-scrollbar-track,
 .kal-step-slot-picker__scroll::-webkit-scrollbar-track,
 .kal-step-patient-details__scroll::-webkit-scrollbar-track,
 .kal-step-confirmation__scroll::-webkit-scrollbar-track,
@@ -144,6 +147,7 @@
 
 .kal-step-doctor-select__list--desktop::-webkit-scrollbar-thumb,
 .kal-step-doctor-select__scroll::-webkit-scrollbar-thumb,
+.kal-step-concern-select__scroll::-webkit-scrollbar-thumb,
 .kal-step-slot-picker__scroll::-webkit-scrollbar-thumb,
 .kal-step-patient-details__scroll::-webkit-scrollbar-thumb,
 .kal-step-confirmation__scroll::-webkit-scrollbar-thumb,
@@ -541,6 +545,17 @@
   .kal-step-concern-select__mobile {
     display: none;
   }
+}
+
+/* Desktop composition reuses .kal-step-doctor-select__desktop/__panel
+   directly (see this step's own liquid comment for why) — this scroll
+   wrapper is the only Concern-Select-specific desktop rule needed, same
+   role as .kal-step-slot-picker__scroll/.kal-step-patient-details__scroll
+   on their own steps. */
+.kal-step-concern-select__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .kal-concern-select__list {

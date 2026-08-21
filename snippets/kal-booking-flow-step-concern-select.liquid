@@ -23,8 +23,13 @@
   Icons are the 7 'concern-*' entries in kal-booking-icons.liquid, extracted
   from a sprite-sheet export — see that file's comment for how.
 
-  Desktop composition not built yet — no desktop spec was given for this
-  screen (mobile-only export), same starting point Doctor Select had.
+  Desktop composition: no Figma spec was given for this screen (mobile-only
+  export), so it's built to match the other steps' desktop treatment exactly
+  — reuses .kal-step-doctor-select__desktop/__panel directly (same shared
+  grid/panel rule as Slot Picker/Patient Details/Confirmation, not a
+  separate kal-step-concern-select__desktop/__panel copy) and
+  .kal-step-entry__info for the left column, same convention as every other
+  step's desktop composition in this build.
 {% endcomment %}
 
 <div class="kal-step-concern-select">
@@ -82,6 +87,62 @@
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%} ============ DESKTOP (750px and up) ============ {%- endcomment -%}
+  <div class="kal-step-doctor-select__desktop">
+    <div class="kal-step-entry__info">
+      <div class="kal-step-entry__info-content">
+        <h2 class="kal-step-entry__heading">Choose your concern</h2>
+        <p class="kal-step-entry__body-text">
+          We&rsquo;ll match you with available doctors. Book a consultation
+          in under a minute in-clinic or video.
+        </p>
+      </div>
+      <div class="kal-step-entry__location">
+        <span class="kal-icon kal-icon--location">
+          <!-- ICON: location-pin (not received yet) -->
+        </span>
+        <span class="kal-step-entry__location-text">
+          Kerala Ayurveda Wellness Center, Kormangala &middot; Opens 8 AM
+        </span>
+      </div>
+    </div>
+
+    <div class="kal-step-doctor-select__panel">
+      <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
+        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-dot"></span>
+        <span class="kal-step-doctor-select__progress-text">1/5</span>
+      </div>
+
+      <div class="kal-step-concern-select__scroll">
+        <div class="kal-concern-select__list">
+          {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Medicine', concern_key: 'general-medicine', selected: true -%}
+          {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-orthopedics', name: 'Orthopedics', concern_key: 'orthopedics', selected: false -%}
+          {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gastroenterology', name: 'Gastroenterology', concern_key: 'gastroenterology', selected: false -%}
+          {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gynecology', name: 'Gynecology', concern_key: 'gynecology', selected: false -%}
+          {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-cardiology', name: 'Cardiology', concern_key: 'cardiology', selected: false -%}
+          {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-pediatrics', name: 'Pediatrics', concern_key: 'pediatrics', selected: false -%}
+          {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-neurology', name: 'Neurology', concern_key: 'neurology', selected: false -%}
+        </div>
+      </div>
+
+      <div class="kal-step-doctor-select__desktop-footer">
+        <div class="kal-concern-select__banner">
+          <span class="kal-icon kal-icon--info">
+            {%- render 'kal-booking-icons', icon_name: 'info' -%}
+          </span>
+          <span class="kal-concern-select__banner-text">Not sure? General Medicine will guide you from there.</span>
+        </div>
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="doctor-select">
+          Continue
+        </button>
+      </div>
+    </div>
   </div>
 
 </div>
