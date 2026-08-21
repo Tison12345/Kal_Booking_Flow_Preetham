@@ -829,12 +829,49 @@
   box-shadow: 0px 4px 10px -4px rgba(30, 75, 60, 0.35);
 }
 
+/* Facility strip — same horizontal-scroll pill pattern as .kal-day-strip/
+   .kal-day-chip (Slot Picker), just without the two-line date stack. */
+.kal-facility-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.kal-facility-chip {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid #e6e6e8;
+  background: var(--kal-color-white);
+  font-family: inherit;
+  font-size: 14px;
+  color: #4b4b4b;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kal-facility-chip--active {
+  background: #122d24;
+  border-color: #122d24;
+  color: var(--kal-color-white);
+}
+
 /* Doctor list */
 .kal-step-doctor-select__list {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 0 24px;
+}
+
+.kal-doctor-list__loading,
+.kal-doctor-list__empty {
+  padding: 24px 0;
+  font-size: 14px;
+  color: #7d7d7d;
+  text-align: center;
 }
 
 /* Redesigned doctor card: photo, languages, experience, specialty tags,

@@ -1,12 +1,25 @@
 {% comment %}
   Step 3 (shown as "Step 2 of 5") — doctor selection. Now reached from the
   new Concern Select step, not directly from Entry — see that step's own
-  comment for why. Visitor picks in-clinic or video consult, then a doctor
-  from a list.
+  comment for why.
 
-  Doctor data is DUMMY/hardcoded for now (3 doctors, matching the design) —
-  no backend connected yet. Once real data exists, this should loop over
-  actual doctor records instead of the three explicit renders below.
+  Clinic + doctor list are now REAL, fetched from the CMS (2026-08 backend
+  test): a facility strip (data-kal-facility-strip, 4 clinics — Indiranagar,
+  Koramangala, JP Nagar, Ernakulam, picked because each one actually has real
+  doctors assigned, confirmed live against GET /api/public/doctors before
+  hardcoding them here) drives which facility's doctors get fetched from
+  GET /api/public/doctors?facility_id=X. The doctor cards themselves
+  (data-kal-doctor-list, one per breakpoint) are empty placeholders in this
+  markup — kal-booking-flow.js's loadDoctorsForFacility() replaces their
+  contents with real cards built from the API response (id + name only —
+  that endpoint doesn't return specialization/photo/languages/tags yet, so
+  the dynamic cards show name only, not the richer static mockup they
+  replaced).
+
+  In-clinic/video mode toggle no longer filters the doctor list (the old
+  data-kal-modes attribute doesn't exist on API doctors — we have no
+  per-doctor mode-availability data from the backend yet), it only still
+  drives the price banner and the summary badge on later steps.
 {% endcomment %}
 
 <div class="kal-step-doctor-select">
@@ -56,6 +69,17 @@
         <p class="kal-step-doctor-select__subtext">Choose a doctor or browse by specialty.</p>
       </div>
 
+      <div class="kal-slot-section__head">
+        <p class="kal-slot-section__label">Choose a clinic</p>
+      </div>
+      {%- comment -%} Populated statically below (4 real, hand-picked facilities — see the top comment for why). Selecting one re-fetches the doctor list via loadDoctorsForFacility() in kal-booking-flow.js. {%- endcomment -%}
+      <div class="kal-facility-strip" data-kal-facility-strip>
+        <button type="button" class="kal-facility-chip kal-facility-chip--active" data-kal-facility="bfa7bd70-428b-4fd3-80c3-2c7f0106497d" data-kal-facility-name="Indiranagar">Indiranagar</button>
+        <button type="button" class="kal-facility-chip" data-kal-facility="185b85d7-fad2-405d-b8ea-13dc683fbde8" data-kal-facility-name="Koramangala">Koramangala</button>
+        <button type="button" class="kal-facility-chip" data-kal-facility="6cb82314-692b-44ad-87e1-86e147bc107d" data-kal-facility-name="JP Nagar">JP Nagar</button>
+        <button type="button" class="kal-facility-chip" data-kal-facility="98d24182-c035-425d-9284-56c59cc05056" data-kal-facility-name="Ernakulam">Ernakulam</button>
+      </div>
+
       <div class="kal-toggle-group">
         <button type="button" class="kal-toggle-btn" data-kal-mode="in-clinic">
           <span class="kal-icon kal-icon--location">
@@ -71,41 +95,15 @@
         </button>
       </div>
 
-      <div class="kal-step-doctor-select__list">
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Offline One',
-          specialization: 'General Physician',
-          experience: '12 yrs experience',
-          languages: 'English &middot; Hindi &middot; Malayalam',
-          tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
-          next_slot: 'Today &bull; 10:30 AM',
-          selected: true
-        -%}
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Rohan Nair',
-          specialization: 'Pediatrician',
-          experience: '18 yrs experience',
-          languages: 'English &middot; Hindi',
-          tags: 'Growth &amp; Nutrition,Immunity,Allergy Care',
-          next_slot: 'Today &bull; 5:00 PM',
-          selected: false
-        -%}
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Devika',
-          specialization: 'Dermatologist',
-          experience: '9 yrs experience',
-          languages: 'English &middot; Malayalam',
-          tags: 'Skin &amp; Hair,Anti-Ageing',
-          next_slot: '15 Aug &bull; 10:15 AM',
-          selected: false
-        -%}
+      <div class="kal-step-doctor-select__list" data-kal-doctor-list>
+        <p class="kal-doctor-list__loading">Loading doctors&hellip;</p>
       </div>
     </div>
 
     <div class="kal-step-doctor-select__footer">
       {%- render 'kal-booking-flow-price-banner' -%}
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker">
-        Continue with Dr. Offline One
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
+        Select a doctor
       </button>
     </div>
 
@@ -145,6 +143,16 @@
         <span class="kal-step-doctor-select__progress-text">2/5</span>
       </div>
 
+      <div class="kal-slot-section__head">
+        <p class="kal-slot-section__label">Choose a clinic</p>
+      </div>
+      <div class="kal-facility-strip" data-kal-facility-strip>
+        <button type="button" class="kal-facility-chip kal-facility-chip--active" data-kal-facility="bfa7bd70-428b-4fd3-80c3-2c7f0106497d" data-kal-facility-name="Indiranagar">Indiranagar</button>
+        <button type="button" class="kal-facility-chip" data-kal-facility="185b85d7-fad2-405d-b8ea-13dc683fbde8" data-kal-facility-name="Koramangala">Koramangala</button>
+        <button type="button" class="kal-facility-chip" data-kal-facility="6cb82314-692b-44ad-87e1-86e147bc107d" data-kal-facility-name="JP Nagar">JP Nagar</button>
+        <button type="button" class="kal-facility-chip" data-kal-facility="98d24182-c035-425d-9284-56c59cc05056" data-kal-facility-name="Ernakulam">Ernakulam</button>
+      </div>
+
       <div class="kal-toggle-group">
         <button type="button" class="kal-toggle-btn" data-kal-mode="in-clinic">
           <span class="kal-icon kal-icon--location">
@@ -160,40 +168,14 @@
         </button>
       </div>
 
-      <div class="kal-step-doctor-select__list kal-step-doctor-select__list--desktop">
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Offline One',
-          specialization: 'General Physician',
-          experience: '12 yrs experience',
-          languages: 'English &middot; Hindi &middot; Malayalam',
-          tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
-          next_slot: 'Today &bull; 10:30 AM',
-          selected: true
-        -%}
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Rohan Nair',
-          specialization: 'Pediatrician',
-          experience: '18 yrs experience',
-          languages: 'English &middot; Hindi',
-          tags: 'Growth &amp; Nutrition,Immunity,Allergy Care',
-          next_slot: 'Today &bull; 5:00 PM',
-          selected: false
-        -%}
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Devika',
-          specialization: 'Dermatologist',
-          experience: '9 yrs experience',
-          languages: 'English &middot; Malayalam',
-          tags: 'Skin &amp; Hair,Anti-Ageing',
-          next_slot: '15 Aug &bull; 10:15 AM',
-          selected: false
-        -%}
+      <div class="kal-step-doctor-select__list kal-step-doctor-select__list--desktop" data-kal-doctor-list>
+        <p class="kal-doctor-list__loading">Loading doctors&hellip;</p>
       </div>
 
       <div class="kal-step-doctor-select__desktop-footer">
         {%- render 'kal-booking-flow-price-banner' -%}
-        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker">
-          Continue with Dr. Offline One
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
+          Select a doctor
         </button>
       </div>
     </div>

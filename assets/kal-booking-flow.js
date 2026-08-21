@@ -34,6 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
       globalCloseBtn.hidden = stepName !== 'entry';
     }
 
+    // First time the visitor reaches doctor select, fetch the real doctor
+    // list for the default facility. After that, switching facilities
+    // re-fetches on demand (see setFacility), so this only needs to run once.
+    if (stepName === 'doctor-select' && !doctorSelectLoaded) {
+      doctorSelectLoaded = true;
+      loadDoctorsForFacility();
+    }
+
     // First time the visitor reaches the slot picker, load today's slots
     // and the day-strip's slot-count badges. After that, whatever day/time
     // they'd picked just stays as-is.
@@ -107,6 +115,148 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSlotPickerDay(slotPicker.selectedDate);
       loadDaySummaries(mode);
     }
+  };
+
+  // ----------------------------------------------------------------------
+  // DOCTOR SELECT — facility strip + real doctor list from the CMS
+  // (GET /api/public/doctors?facility_id=X). Added alongside the backend
+  // test that first wired real slot data — before this, doctor cards were
+  // three static, hardcoded Liquid renders with no connection to the CMS
+  // at all. That endpoint only returns { id, name } (no specialization,
+  // photo, languages, tags, or per-doctor mode-availability yet), so the
+  // cards built here are deliberately leaner than the old mockup — real
+  // name, generic subtitle, nothing fabricated to look more specific than
+  // the data actually is.
+  //
+  // The 4 facilities in the strip are hardcoded (not fetched from
+  // GET /api/public/facilities, even though that endpoint exists) —
+  // picked by hand after checking live which of the CMS's facilities
+  // actually have doctors assigned, so the demo never lands on a clinic
+  // with an empty doctor list.
+  // ----------------------------------------------------------------------
+
+  let doctorSelectLoaded = false;
+
+  const doctorSelect = {
+    facilityId: 'bfa7bd70-428b-4fd3-80c3-2c7f0106497d', // Indiranagar, matches the strip's default-active chip
+    facilityName: 'Indiranagar',
+    doctors: [],
+    selectedDoctorId: null,
+  };
+
+  const CHECK_ICON_SVG =
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  const renderDoctorCards = () => {
+    let listHtml;
+    if (doctorSelect.doctors.length === 0) {
+      listHtml = '<p class="kal-doctor-list__empty">No doctors available at this clinic right now.</p>';
+    } else {
+      listHtml = doctorSelect.doctors
+        .map((doctor) => {
+          const selected = doctor.id === doctorSelect.selectedDoctorId;
+          return `
+            <button type="button" class="kal-doctor-card${selected ? ' kal-doctor-card--selected' : ''}" data-kal-doctor-option="${doctor.id}" data-kal-modes="in-clinic video">
+              <span class="kal-doctor-card__top">
+                <span class="kal-doctor-card__photo"></span>
+                <span class="kal-doctor-card__info">
+                  <span class="kal-doctor-card__name">${doctor.name}</span>
+                  <span class="kal-doctor-card__specialization">Ayurveda Physician</span>
+                </span>
+              </span>
+              <span class="kal-doctor-card__indicator" aria-hidden="true">${selected ? CHECK_ICON_SVG : ''}</span>
+            </button>
+          `;
+        })
+        .join('');
+    }
+
+    flow.querySelectorAll('[data-kal-doctor-list]').forEach((el) => {
+      el.innerHTML = listHtml;
+    });
+  };
+
+  const updateDoctorContinueButton = () => {
+    const doctor = doctorSelect.doctors.find((d) => d.id === doctorSelect.selectedDoctorId);
+    flow.querySelectorAll('[data-kal-doctor-continue]').forEach((btn) => {
+      btn.disabled = !doctor;
+      btn.textContent = doctor ? `Continue with ${doctor.name}` : 'Select a doctor';
+    });
+  };
+
+  const selectDoctor = (doctorId) => {
+    doctorSelect.selectedDoctorId = doctorId;
+    renderDoctorCards();
+    updateDoctorContinueButton();
+
+    // Prime Slot Picker's facility/doctor before the visitor navigates
+    // there — that step reads these two attributes fresh on every fetch
+    // (see its own liquid comment), so overwriting them here is all the
+    // handoff needs.
+    if (slotPickerEl) {
+      slotPickerEl.dataset.kalDoctorId = doctorId;
+      slotPickerEl.dataset.kalFacilityId = doctorSelect.facilityId;
+    }
+
+    // Slot Picker's and Confirmation's own doctor-summary cards
+    // (data-kal-summary-name/-meta) are still static Liquid text otherwise
+    // — keep them in sync with whoever's actually selected here, same
+    // reasoning as the location-text fix in setFacility.
+    const doctor = doctorSelect.doctors.find((d) => d.id === doctorId);
+    if (doctor) {
+      flow.querySelectorAll('[data-kal-summary-name]').forEach((el) => {
+        el.textContent = doctor.name;
+      });
+      flow.querySelectorAll('[data-kal-summary-meta]').forEach((el) => {
+        el.textContent = 'Ayurveda Physician';
+      });
+    }
+  };
+
+  const loadDoctorsForFacility = async () => {
+    doctorSelect.doctors = [];
+    doctorSelect.selectedDoctorId = null;
+    flow.querySelectorAll('[data-kal-doctor-list]').forEach((el) => {
+      el.innerHTML = '<p class="kal-doctor-list__loading">Loading doctors&hellip;</p>';
+    });
+    updateDoctorContinueButton();
+
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/api/public/doctors?facility_id=${encodeURIComponent(doctorSelect.facilityId)}`,
+      );
+      if (!res.ok) throw new Error(`Doctors fetch failed: ${res.status}`);
+      const data = await res.json();
+      doctorSelect.doctors = data.doctors ?? [];
+      if (doctorSelect.doctors.length > 0) {
+        selectDoctor(doctorSelect.doctors[0].id);
+      } else {
+        renderDoctorCards();
+        updateDoctorContinueButton();
+      }
+    } catch (err) {
+      flow.querySelectorAll('[data-kal-doctor-list]').forEach((el) => {
+        el.innerHTML = '<p class="kal-doctor-list__empty">Could not load doctors. Please try again.</p>';
+      });
+    }
+  };
+
+  const setFacility = (facilityId, facilityName) => {
+    doctorSelect.facilityId = facilityId;
+    doctorSelect.facilityName = facilityName;
+
+    flow.querySelectorAll('[data-kal-facility]').forEach((chip) => {
+      chip.classList.toggle('kal-facility-chip--active', chip.dataset.kalFacility === facilityId);
+    });
+
+    // Every step's displayed clinic address follows whichever facility is
+    // currently selected here — see the "Kormangala was stale" fix earlier
+    // in this build for why this needs to actually stay in sync.
+    flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
+      el.textContent = `Kerala Ayurveda Wellness Center, ${facilityName} · Opens 8 AM`;
+    });
+
+    loadDoctorsForFacility();
   };
 
   // ----------------------------------------------------------------------
@@ -751,6 +901,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const concernTrigger = e.target.closest('[data-kal-concern]');
     if (concernTrigger) {
       setConcern(concernTrigger.dataset.kalConcern);
+    }
+
+    const facilityTrigger = e.target.closest('[data-kal-facility]');
+    if (facilityTrigger) {
+      setFacility(facilityTrigger.dataset.kalFacility, facilityTrigger.dataset.kalFacilityName);
+    }
+
+    const doctorOptionTrigger = e.target.closest('[data-kal-doctor-option]');
+    if (doctorOptionTrigger) {
+      selectDoctor(doctorOptionTrigger.dataset.kalDoctorOption);
     }
 
     const modeTrigger = e.target.closest('[data-kal-mode]');
