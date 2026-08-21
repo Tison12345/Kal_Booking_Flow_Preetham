@@ -33,14 +33,19 @@
 
 {%- comment -%}
   data-kal-doctor-id / data-kal-facility-id: PLACEHOLDER values (a real
-  doctor/facility pair from the CMS — Neethu Jayachandran at Kerala Ayurveda,
-  Koramangala — used so slot fetching hits real availability data). Once
-  doctor-selection is wired to real backend data, the doctor-card click
-  handler should just overwrite these two attributes before navigating here —
-  the slot-picker JS itself reads them fresh on every fetch and needs no
-  other change.
+  doctor/facility pair from the CMS, used so slot fetching hits real
+  availability data). Currently "Dr Offline One" (staff.id
+  2a3340b9-79d2-4d50-ba28-817f61ce327e) at the Indiranagar facility
+  (bfa7bd70-428b-4fd3-80c3-2c7f0106497d) — picked over the earlier
+  Neethu Jayachandran / Koramangala pairing specifically because this doctor
+  actually has real weekly_availability rows configured at Indiranagar
+  (confirmed live via the get_available_slots_for_date RPC — Neethu has none
+  there, only at Koramangala). Once doctor-selection is wired to real backend
+  data, the doctor-card click handler should just overwrite these two
+  attributes before navigating here — the slot-picker JS itself reads them
+  fresh on every fetch and needs no other change.
 {%- endcomment -%}
-<div class="kal-step-slot-picker" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
+<div class="kal-step-slot-picker" data-kal-doctor-id="2a3340b9-79d2-4d50-ba28-817f61ce327e" data-kal-facility-id="bfa7bd70-428b-4fd3-80c3-2c7f0106497d">
 
   {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
   <div class="kal-step-slot-picker__mobile">
@@ -75,7 +80,7 @@
     <div class="kal-doctor-summary" data-kal-doctor-summary>
       <span class="kal-doctor-summary__avatar"></span>
       <span class="kal-doctor-summary__info">
-        <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Meera Pillai</span>
+        <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Offline One</span>
         <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
       </span>
       <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
@@ -149,7 +154,7 @@
         <div class="kal-doctor-summary" data-kal-doctor-summary>
           <span class="kal-doctor-summary__avatar"></span>
           <span class="kal-doctor-summary__info">
-            <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Neethu</span>
+            <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Offline One</span>
             <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
           </span>
           <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
