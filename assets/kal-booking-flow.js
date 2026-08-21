@@ -267,8 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return summaries;
     }
 
-    const doctorId = slotPickerEl.dataset.doctorId;
-    const facilityId = slotPickerEl.dataset.facilityId;
+    const doctorId = slotPickerEl.dataset.kalDoctorId;
+    const facilityId = slotPickerEl.dataset.kalFacilityId;
     // Mirrors the mode logic in fetchSlotsForDate: video sends online_only
     // instead of facility_id; in-clinic sends facility_id and no online_only.
     const modeParam = mode === 'video' ? '&online_only=true' : `&facility_id=${encodeURIComponent(facilityId)}`;
@@ -396,8 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return slots;
     }
 
-    const doctorId = slotPickerEl.dataset.doctorId;
-    const facilityId = slotPickerEl.dataset.facilityId;
+    const doctorId = slotPickerEl.dataset.kalDoctorId;
+    const facilityId = slotPickerEl.dataset.kalFacilityId;
     // In-clinic mode scopes to the facility server-side; video mode doesn't
     // send facility_id at all, matching SlotPicker.tsx's isOnlineOnly branch.
     const facilityParam = mode === 'video' ? '' : `&facility_id=${encodeURIComponent(facilityId)}`;
@@ -692,8 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return slots;
     }
 
-    const doctorId = therapySlotEl.dataset.doctorId;
-    const facilityId = therapySlotEl.dataset.facilityId;
+    const doctorId = therapySlotEl.dataset.kalDoctorId;
+    const facilityId = therapySlotEl.dataset.kalFacilityId;
     const url =
       `${apiBaseUrl}/api/public/availability/slots?doctor_id=${encodeURIComponent(doctorId)}` +
       `&date=${dateKey}&facility_id=${encodeURIComponent(facilityId)}&duration_minutes=${CONSULT_DURATION_MINUTES}`;
