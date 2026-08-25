@@ -934,6 +934,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Shared placeholder photo (kal-doctor-photo-placeholder.jpg) isn't
+     centered on its subject — she sits left-of-center, upper third of the
+     frame — so a plain 50%/50% crop would land on the empty space between
+     her and the patient instead of her face. */
+  object-position: 30% 20%;
 }
 
 .kal-doctor-card__info {

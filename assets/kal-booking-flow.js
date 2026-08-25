@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const apiBaseUrl = flow.dataset.apiBaseUrl || '';
   const whatsappNumber = flow.dataset.whatsappNumber || '';
+  const doctorPhotoPlaceholder = flow.dataset.doctorPhotoPlaceholder || '';
 
   const openFlow = () => {
     flow.showModal();
@@ -147,6 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const CHECK_ICON_SVG =
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
+  // Same generic stock photo on every doctor card — the doctors API only
+  // returns { id, name }, no real per-doctor photo, so a shared placeholder
+  // reads more like "photo coming soon" than a gradient block does, without
+  // pretending to be any specific doctor's actual picture.
   const renderDoctorCards = () => {
     let listHtml;
     if (doctorSelect.doctors.length === 0) {
@@ -158,7 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
           return `
             <button type="button" class="kal-doctor-card${selected ? ' kal-doctor-card--selected' : ''}" data-kal-doctor-option="${doctor.id}" data-kal-modes="in-clinic video">
               <span class="kal-doctor-card__top">
-                <span class="kal-doctor-card__photo"></span>
+                <span class="kal-doctor-card__photo">${
+                  doctorPhotoPlaceholder
+                    ? `<img src="${doctorPhotoPlaceholder}" alt="" loading="lazy">`
+                    : ''
+                }</span>
                 <span class="kal-doctor-card__info">
                   <span class="kal-doctor-card__name">${doctor.name}</span>
                   <span class="kal-doctor-card__specialization">Ayurveda Physician</span>
