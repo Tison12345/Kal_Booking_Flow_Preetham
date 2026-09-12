@@ -24,7 +24,8 @@
     concernSelect Set)
   - A new, larger category list (General Wellness, Bone/Joint/Muscle Pain,
     Gut Health, PCOS/PCOD/Menopause, Skin/Hair, Diabetes/Thyroid/BP,
-    Reproductive Health/Infertility, Liver/Kidney Health) replacing the old
+    Reproductive Health/Infertility, Liver/Kidney Health, Sleep/General
+    Lifestyle, Respiratory/General Immunity, Other) replacing the old
     medical-specialty names
   - The "Not sure?" banner moved from the footer to right under the title
   - A location badge (facility name only, no working dropdown — explicit
@@ -41,16 +42,17 @@
   instead of removed. See kal-booking-flow.css's own comment on this
   step for exactly which classes do which.
 
-  ICON GAP, flagged rather than silently worked around: only 7 'concern-*'
-  icons exist (kal-booking-icons.liquid), all named after the OLD
-  specialty list. The new categories reuse the closest existing icon where
-  one genuinely fits (Bone/Joint/Muscle Pain -> orthopedics, Gut Health ->
-  gastroenterology, PCOS/PCOD/Menopause and Reproductive Health/Infertility
-  -> gynecology). Skin/Hair, Diabetes/Thyroid/BP, and Liver/Kidney Health
-  have no reasonable existing match — marked below with a REUSED ICON
-  comment each, using the nearest available icon as a placeholder. Real
-  icons for these three need to be added to kal-booking-icons.liquid before
-  this should be considered final.
+  ICONS (updated to match a later Figma pass): each of the 11 concerns now
+  has its own dedicated 'concern-*' icon in kal-booking-icons.liquid,
+  exported directly from that spec — the earlier pass's reused/placeholder
+  icons (orthopedics standing in for Bone/Joint/Muscle Pain, etc.) have
+  been replaced. The old sprite-sheet specialty icons ('concern-general-
+  medicine', 'concern-orthopedics', etc.) are left in kal-booking-icons.liquid
+  unused by this step in case another step still wants them.
+
+  Each row is also now a bordered card (border/radius/padding on
+  .kal-concern-row) per the updated spec, rather than a plain borderless
+  row — see kal-booking-flow.css's own comment on this step.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
@@ -79,59 +81,7 @@
 
   <div class="kal-step-shell__panel">
 
-    <div class="kal-step-doctor-select__header kal-step-shell__header">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-back="entry" aria-label="Back">
-        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
-      </button>
-
-      <div class="kal-concern-select__header-middle">
-        {%- comment -%}
-          Mobile: static facility badge. The chevron is shown per the
-          updated Figma spec (a plain rotated chevron-left, same trick the
-          spec itself uses — "chevron_left" rotated -90deg — rather than a
-          separate down-chevron icon), but it's purely visual: no
-          data-kal-facility hook, no click handler. Explicit instruction:
-          "dont need this dropdown [behavior] just the selected facility
-          should be shown" — the chevron stays for visual match, the
-          dropdown it implies doesn't actually open anything yet.
-        {%- endcomment -%}
-        <div class="kal-concern-select__location-badge">
-          <span class="kal-concern-select__location-badge-left">
-            <span class="kal-icon kal-icon--location">
-              {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
-            </span>
-            <span class="kal-concern-select__location-text">Indiranagar</span>
-          </span>
-          <span class="kal-concern-select__location-chevron" aria-hidden="true">
-            {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
-          </span>
-        </div>
-
-        {%- comment -%} Desktop: unchanged progress dots, hidden below 750px, see CSS {%- endcomment -%}
-        <div class="kal-step-doctor-select__progress">
-          <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
-          <span class="kal-step-doctor-select__progress-dot"></span>
-          <span class="kal-step-doctor-select__progress-dot"></span>
-          <span class="kal-step-doctor-select__progress-dot"></span>
-          <span class="kal-step-doctor-select__progress-dot"></span>
-          <span class="kal-step-doctor-select__progress-text">1/5</span>
-        </div>
-      </div>
-
-      {%- comment -%} Own close button — see Doctor Select's header comment for why {%- endcomment -%}
-      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
-    </div>
-
-    {%- comment -%} Mobile-only step-bar, replaces the header's progress dots visually at this width — see CSS {%- endcomment -%}
-    <div class="kal-concern-select__step-bar">
-      <div class="kal-concern-select__step-bar-labels">
-        <span class="kal-concern-select__step-bar-step">Step 1 of 5</span>
-        <span class="kal-concern-select__step-bar-next">Next : Mode &amp; Doctor</span>
-      </div>
-      <div class="kal-concern-select__step-bar-track">
-        <div class="kal-concern-select__step-bar-fill"></div>
-      </div>
-    </div>
+    {%- render 'kal-booking-flow-step-header', back_target: 'entry', step_number: 1, step_total: 5, next_label: 'Mode & Doctor' -%}
 
     <div class="kal-step-shell__scroll">
       <div class="kal-step-doctor-select__intro">
@@ -139,24 +89,24 @@
       </div>
 
       <div class="kal-concern-select__banner">
-        <span class="kal-icon kal-icon--info">
-          {%- render 'kal-booking-icons', icon_name: 'info' -%}
+        <span class="kal-icon kal-icon--search">
+          {%- render 'kal-booking-icons', icon_name: 'search' -%}
         </span>
         <span class="kal-concern-select__banner-text">Not sure? <strong>General Wellness</strong> will guide you from there.</span>
       </div>
 
       <div class="kal-concern-select__list">
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Wellness', concern_key: 'general-wellness', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-orthopedics', name: 'Bone, Joint, Muscle Pain', concern_key: 'bone-joint-muscle-pain', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gastroenterology', name: 'Gut Health', concern_key: 'gut-health', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gynecology', name: 'PCOS, PCOD, Menopause', concern_key: 'pcos-pcod-menopause', selected: false -%}
-        {%- comment -%} REUSED ICON — no dedicated skin/hair icon exists yet, using general-medicine as a placeholder {%- endcomment -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'Skin, Hair', concern_key: 'skin-hair', selected: false -%}
-        {%- comment -%} REUSED ICON — no dedicated diabetes/thyroid/BP icon exists yet, using cardiology as the closest placeholder (BP) {%- endcomment -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-cardiology', name: 'Diabetes, Thyroid, BP', concern_key: 'diabetes-thyroid-bp', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gynecology', name: 'Reproductive Health, Infertility', concern_key: 'reproductive-health-infertility', selected: false -%}
-        {%- comment -%} REUSED ICON — no dedicated liver/kidney icon exists yet, using gastroenterology as the closest placeholder {%- endcomment -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gastroenterology', name: 'Liver, Kidney Health', concern_key: 'liver-kidney-health', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-wellness', name: 'General Wellness', concern_key: 'general-wellness', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-bone-joint-muscle', name: 'Bone, Joint, Muscle Pain', concern_key: 'bone-joint-muscle-pain', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gut-health', name: 'Gut Health', concern_key: 'gut-health', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-pcos-pcod-menopause', name: 'PCOS, PCOD, Menopause', concern_key: 'pcos-pcod-menopause', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-skin-hair', name: 'Skin, Hair', concern_key: 'skin-hair', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-diabetes-thyroid-bp', name: 'Diabetes, Thyroid, BP', concern_key: 'diabetes-thyroid-bp', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-reproductive-health', name: 'Reproductive Health, Infertility', concern_key: 'reproductive-health-infertility', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-liver-kidney', name: 'Liver, Kidney Health', concern_key: 'liver-kidney-health', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-sleep-lifestyle', name: 'Sleep, General Lifestyle', concern_key: 'sleep-general-lifestyle', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-respiratory-immunity', name: 'Respiratory, General Immunity', concern_key: 'respiratory-general-immunity', selected: false -%}
+        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-other', name: 'Other', concern_key: 'other', selected: false -%}
       </div>
     </div>
 
@@ -170,8 +120,15 @@
       {%- render 'kal-booking-icons', icon_name: 'chevron-right' -%}
     </div>
 
-    <div class="kal-step-shell__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="doctor-select" data-kal-concern-continue disabled>
+    {%- comment -%}
+      Per the updated Figma spec, this footer isn't just a disabled button
+      sitting there from the start — it doesn't exist at all until the
+      visitor has picked at least one concern (see kal-booking-flow.js's
+      updateConcernContinueButton, which toggles the `hidden` attribute on
+      data-kal-concern-footer, not just the button's `disabled` state).
+    {%- endcomment -%}
+    <div class="kal-step-shell__footer" data-kal-concern-footer hidden>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="doctor-select" data-kal-concern-continue>
         Continue
       </button>
     </div>
