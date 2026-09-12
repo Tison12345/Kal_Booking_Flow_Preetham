@@ -73,10 +73,9 @@
   height: 100%;
   box-sizing: border-box;
   overflow-y: auto;
-  /* Matches Frame 3 in the Figma spec exactly: padding: 0px 0px 36px —
-     zero top, zero sides, so the banner sits flush with no gap around it.
-     Everything else that needs side spacing (body text, label, cards,
-     location) applies its own horizontal padding individually.
+  /* Zero side padding — everything that needs side spacing (body text,
+     label, cards, location) applies its own horizontal padding
+     individually.
 
      Top padding is the phone's real safe area (notch / Dynamic Island /
      status bar), not a hardcoded number — env(safe-area-inset-top) only
@@ -86,8 +85,17 @@
      supported at all, since it's given as a fallback default. This is
      mobile only — the desktop dialog (see the media query below) floats
      centered on the page, nowhere near the real device's status bar, so
-     it never needs this. */
-  padding: env(safe-area-inset-top, 0px) 0 36px;
+     it never needs this.
+
+     No bottom padding here — a flat 36px used to live on this shared
+     container (meant to match Entry's own Figma "Frame 3" spec, which
+     has no footer and wants that trailing breathing room), but since
+     EVERY step renders inside this same container, it also landed below
+     every other step's pinned-to-bottom footer button (Concern Select,
+     Doctor Select, Slot Picker, Patient Details, Confirmation), leaving
+     an unwanted gap between the button and the dialog's actual edge.
+     Moved to be scoped to the Entry step alone, below. */
+  padding: env(safe-area-inset-top, 0px) 0 0;
 }
 
 /* Each step wrapper (data-kal-step) needs to fill the content area for
@@ -96,9 +104,22 @@
   height: 100%;
 }
 
+/* Entry has no footer — its last element is just the location line, which
+   wants the same 36px trailing breathing room the Figma "Frame 3" spec
+   gives it. Every other step supplies its own bottom spacing via
+   .kal-step-shell__footer's own padding, so this is scoped to Entry only. */
+.kal-booking-flow__content > [data-kal-step="entry"] {
+  padding-bottom: 36px;
+  box-sizing: border-box;
+}
+
 @media screen and (min-width: 750px) {
   .kal-booking-flow__content {
     padding: 0;
+    /* falls through to [data-kal-step="entry"]'s own padding-bottom:36px
+       below unless zeroed here too — desktop Entry uses its own separate
+       .kal-step-entry__desktop layout and never wanted this mobile-only
+       breathing room. */
     /* Every desktop step is a fixed-height grid row (grid-template-rows:100%
        on each .kal-step-*__desktop / .kal-step-shell) whose right-hand
        panel already handles its own overflow internally via
@@ -113,6 +134,10 @@
        that's what position:absolute + this auto scroll were for
        previously, and both got reverted for exactly this reason. */
     overflow-y: hidden;
+  }
+
+  .kal-booking-flow__content > [data-kal-step="entry"] {
+    padding-bottom: 0;
   }
 }
 
@@ -416,7 +441,7 @@
   align-items: center;
   gap: 16px;
   width: 100%;
-  padding: 20px;
+  padding: 16px;
   border-radius: 16px;
   cursor: pointer;
   text-align: left;
@@ -505,6 +530,11 @@
   margin-left: auto;
 }
 
+.kal-icon--arrow svg {
+  width: 24px;
+  height: 24px;
+}
+
 .kal-option-card--primary .kal-icon--arrow {
   color: var(--kal-color-on-primary);
   opacity: 0.8;
@@ -530,11 +560,11 @@
    checking their old __mobile/__desktop blocks side by side — despite the
    original comment claiming "genuinely different compositions," the
    doctor summary card and detail rows were byte-for-byte identical in
-   both; only one or two small elements per step (Confirmation's
-   pay-notice, Booking Confirmed's "Before your visit" card and
-   reschedule link) are true content differences, now handled with a
-   plain display:none at 750px+ on just those elements (see each step's
-   own CSS section below) rather than duplicating everything else too.
+   both; only one small element per step (Confirmation's pay-notice,
+   Booking Confirmed's "Before your visit" card) is a true content
+   difference, now handled with a plain display:none at 750px+ on just
+   that element (see each step's own CSS section below) rather than
+   duplicating everything else too.
 
    .kal-step-shell__info (the desktop-only decorative left column, reusing
    .kal-step-entry__info) and .kal-step-shell__panel (mobile: the whole
@@ -632,6 +662,18 @@
   flex-shrink: 0;
 }
 
+/* Without this, the `display:flex` above (an author rule) overrides the
+   browser's own `[hidden] { display: none }` default regardless of the
+   `hidden` attribute being set, since author styles always win over
+   user-agent styles at equal specificity — so Concern Select's footer
+   (the only step that toggles `hidden` on this element, via
+   data-kal-concern-footer in kal-booking-flow.js) would have stayed
+   visible even while "hidden". Scoped to [hidden] so it can't affect any
+   other step's always-visible footer. */
+.kal-step-shell__footer[hidden] {
+  display: none;
+}
+
 /* ----------------------------------------
    STEP: CONCERN SELECT (Step 1 of 5)
    Inserted between Entry and Doctor Select — see that step's own liquid
@@ -670,81 +712,108 @@
   gap: 16px;
 }
 
-/* Header middle slot: holds both the mobile location badge and the
+/* Shared step-header pieces (the mobile facility badge + its mobile step
+   progress bar): originally built only for Concern Select as
+   .kal-concern-select__*, then Doctor Select's own Figma spec (node
+   544:3781) turned out to use the exact same header — same back/badge/
+   close row, same "STEP X OF 5 / Next: ..." bar underneath. Renamed to
+   this step-agnostic .kal-step-header__ / .kal-step-progress-bar__
+   prefix so every step that reuses this composition shares one CSS
+   definition instead of duplicating it per step, per the instruction to
+   keep this consistent across pages rather than re-styling it each time.
+
+   Header middle slot: holds both the mobile location badge and the
    desktop progress dots as siblings, so the header's own
    justify-content:space-between still sees exactly 3 children
    (back / this / close) regardless of which breakpoint is showing. */
-.kal-concern-select__header-middle {
+.kal-step-header__location-slot {
   display: flex;
   align-items: center;
   flex: 1;
-  justify-content: center;
+  min-width: 0;
 }
 
 /* Mobile-only static facility badge — explicitly NOT a working dropdown,
    see the liquid file's comment. The chevron is shown for visual match
-   with the spec, but nothing here is wired to a click handler. flex:1
-   fills the space between the header's back/close buttons, matching the
-   Figma spec's wide pill (257px of a 343px row) rather than a
-   tight-fitting badge. */
-.kal-concern-select__location-badge {
+   with the spec, but nothing here is wired to a click handler.
+
+   flex:1 (fills location-slot completely), not a fixed width — matches
+   Therapy Slot's own appbar pattern (.kal-therapy-slot__location), which
+   reads truer to the Figma spec than a fixed-width centered badge did: a
+   fixed width only produces a correct-looking gap on one specific
+   viewport width, shrinking to nothing on narrower phones and growing
+   too wide on wider ones. flex:1 plus the header's own real gap:12px
+   (see .kal-step-doctor-select__header) gives a deterministic gap on
+   both sides at every width instead. */
+.kal-step-header__location-badge {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex: 1;
+  min-width: 0;
+  /* Without this, the badge's height was purely content-driven (icon +
+     padding + border ~30px) — shorter than the back/close buttons' 32px,
+     so the three elements in this row didn't actually line up. */
+  min-height: 32px;
   gap: 4px;
   padding: 4px 8px;
   border: 1px solid var(--kal-color-border);
   border-radius: 999px;
   background: var(--kal-color-white);
+  box-sizing: border-box;
 }
 
-.kal-concern-select__location-badge-left {
+.kal-step-header__location-badge-left {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.kal-concern-select__location-badge .kal-icon svg {
+.kal-step-header__location-badge .kal-icon svg {
   width: 20px;
   height: 20px;
   color: var(--kal-color-location-text);
 }
 
-.kal-concern-select__location-text {
+.kal-step-header__location-text {
   font-size: 14px;
   color: var(--kal-color-location-text);
 }
 
-/* Reuses chevron-left, rotated to point down — same trick the Figma spec
-   itself uses instead of a dedicated down-chevron icon. */
-.kal-concern-select__location-chevron svg {
+/* A real chevron-down icon, not chevron-left rotated 90deg — the rotated
+   version relied on the transform's default center origin lining up with
+   the path's own bounding-box center exactly, and any mismatch there
+   (or the flex row's own baseline alignment) made it read as slightly
+   off-center next to the badge text. A dedicated down-pointing path
+   avoids that class of bug entirely. */
+.kal-step-header__location-chevron svg {
   width: 24px;
   height: 24px;
   color: var(--kal-color-location-text);
-  transform: rotate(-90deg);
 }
 
 /* Desktop's progress dots stay in the DOM (unchanged) but hidden below
-   750px, where the badge above takes their place instead. */
-.kal-step-concern-select .kal-step-doctor-select__progress {
+   750px, where the badge above takes their place instead. Scoped by
+   structure (any progress dots living inside this shared location-slot),
+   not by a specific step's class, so it applies to every step that uses
+   this header composition without needing a new rule each time. */
+.kal-step-header__location-slot .kal-step-doctor-select__progress {
   display: none;
 }
 
 @media screen and (min-width: 750px) {
-  .kal-concern-select__location-badge {
+  .kal-step-header__location-badge {
     display: none;
   }
 
-  .kal-step-concern-select .kal-step-doctor-select__progress {
+  .kal-step-header__location-slot .kal-step-doctor-select__progress {
     display: flex;
   }
 }
 
-/* New mobile-only step bar, directly below the header. Hidden entirely at
-   750px+ — desktop never had this element and isn't getting it in this
-   pass. */
-.kal-concern-select__step-bar {
+/* Mobile-only step progress bar, directly below the header. Hidden
+   entirely at 750px+ — desktop never had this element. */
+.kal-step-progress-bar {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -753,18 +822,18 @@
 }
 
 @media screen and (min-width: 750px) {
-  .kal-concern-select__step-bar {
+  .kal-step-progress-bar {
     display: none;
   }
 }
 
-.kal-concern-select__step-bar-labels {
+.kal-step-progress-bar__labels {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.kal-concern-select__step-bar-step {
+.kal-step-progress-bar__step {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.025em;
@@ -772,25 +841,33 @@
   color: var(--kal-color-body);
 }
 
-.kal-concern-select__step-bar-next {
+.kal-step-progress-bar__next {
   font-size: 14px;
   color: var(--kal-color-body);
 }
 
-.kal-concern-select__step-bar-track {
+.kal-step-progress-bar__track {
   width: 100%;
   height: 3px;
   border-radius: 999px;
   background: var(--kal-color-border);
+  overflow: hidden;
 }
 
-/* 1/5 of the track, matching this being step 1 of 5 — same proportion the
-   Figma export's own fixed-pixel fill (68.6px of 327px) works out to. */
-.kal-concern-select__step-bar-fill {
-  width: 20%;
+/* Width is set inline per step via a CSS custom property (--kal-step-
+   progress), e.g. style="--kal-step-progress: 40%" for step 2 of 5 —
+   same proportion the Figma export's own fixed-pixel fill works out to
+   for that step (68.6px of 327px for step 1, 137.2px of 327px for step
+   2, etc.), so every step reuses this one rule instead of a per-step
+   width class.
+   Was #d9cdba (tan) — ~1.12:1 contrast against the #dcdcdc track, so close
+   in lightness to its own background that it was effectively invisible at
+   this 3px height. Red gives real contrast instead. */
+.kal-step-progress-bar__fill {
+  width: var(--kal-step-progress, 20%);
   height: 100%;
   border-radius: 999px;
-  background: #d9cdba;
+  background: #e0483c;
 }
 
 /* Banner moved here from the footer (Figma: directly under the title,
@@ -846,12 +923,28 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  padding: 0;
-  border: none;
+  padding: 8px;
+  border: 1px solid #e5e1d9;
+  border-radius: 8px;
   background: none;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, border-radius 0.15s ease;
+}
+
+/* Selected state per the updated Figma spec: a tan border, a subtle cream
+   diagonal gradient, a soft drop-shadow, and a larger 12px radius (vs the
+   unselected row's plain #e5e1d9 border and 8px radius) — makes a picked
+   concern read as a lifted, highlighted card rather than just a ticked
+   checkbox. */
+.kal-concern-row--selected {
+  border-color: #d9cdba;
+  border-radius: 12px;
+  min-height: 58px;
+  background: linear-gradient(-83deg, #fbf9f4 49.541%, #f6f1e8 88.071%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 }
 
 .kal-concern-row__left {
@@ -869,8 +962,13 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: rgba(228, 242, 235, 0.5);
+  border-radius: 8px;
+  background: rgba(245, 241, 234, 0.5);
+}
+
+/* Selected rows swap the icon chip to solid white, per spec. */
+.kal-concern-row--selected .kal-concern-row__icon {
+  background: var(--kal-color-white);
 }
 
 .kal-concern-row__icon svg {
@@ -879,7 +977,7 @@
 }
 
 .kal-concern-row__name {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 140%;
   color: var(--kal-color-heading);
   min-width: 0;
@@ -894,25 +992,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
-  border: 1px solid #d9d9d9;
+  border: 1.5px solid #7d7d7d;
   box-sizing: border-box;
   background: var(--kal-color-white);
 }
 
 .kal-concern-row__checkbox svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   color: var(--kal-color-white);
   opacity: 0;
   transition: opacity 0.1s ease;
 }
 
+/* Near-black per the Figma export's own filled check_box glyph (#191919),
+   not the site's green --kal-color-primary — this component's checked
+   state is deliberately neutral/dark rather than brand-colored. */
 .kal-concern-row--selected .kal-concern-row__checkbox {
-  border-color: var(--kal-color-primary);
-  background: var(--kal-color-primary);
+  border-color: var(--kal-color-heading);
+  background: var(--kal-color-heading);
 }
 
 .kal-concern-row--selected .kal-concern-row__checkbox svg {
@@ -922,24 +1023,22 @@
 .kal-concern-select__banner {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  background: rgba(228, 242, 235, 0.5);
-  border: 1px solid #e5e5e5;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, rgba(235, 242, 239, 0.5) 30.288%, rgba(255, 255, 255, 0.5));
   box-sizing: border-box;
 }
 
-.kal-concern-select__banner .kal-icon--info svg {
-  width: 20px;
-  height: 20px;
-  color: var(--kal-color-primary);
+.kal-concern-select__banner .kal-icon--search svg {
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
 }
 
 .kal-concern-select__banner-text {
-  font-size: 12.5px;
-  line-height: 138%;
+  font-size: 12px;
+  line-height: 150%;
   color: var(--kal-color-primary);
 }
 
@@ -1000,6 +1099,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Fixed 12px gap, matching Therapy Slot's own appbar
+     (.kal-therapy-slot__appbar) — that screen's back/badge/close row
+     reads truer to the Figma spec than this one previously did, because
+     its badge is flex:1 (fills exactly the remaining space, deterministic
+     regardless of viewport width) with a real gap value, rather than a
+     fixed-width centered badge whose gap shrinks or grows with screen
+     width (see .kal-step-header__location-badge below, changed to match). */
+  gap: 12px;
   /* Shared by every step's mobile header (Doctor Select, Slot Picker,
      Patient Details, Confirmation, Booking Confirmed) — had zero top
      padding, so the back/close row sat completely flush against the
@@ -1015,6 +1122,11 @@
   justify-content: center;
   width: 32px;
   height: 32px;
+  /* Without this, the 1px border rendered OUTSIDE the 32px content-box
+     (default box-sizing), so this button was actually 34x34px — taller
+     than the facility badge next to it, despite both being meant to
+     match the design's 32px row height. */
+  box-sizing: border-box;
   border: 1px solid #e6e6e8;
   border-radius: 99px;
   background: none;
@@ -1088,66 +1200,43 @@
 .kal-toggle-group {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 16px;
-  padding: 0 24px;
+  padding: 8px 24px;
 }
 
+/* Per the updated Figma spec (node 544:3781), the active mode button is
+   NOT brand-colored (it used to fill solid green) — it's the same
+   tan-border/cream-gradient treatment used for Concern Select's selected
+   row and the selected doctor card, kept consistent across the flow. */
 .kal-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
-  padding: 12px 16px;
-  height: 47px;
-  border-radius: 12px;
-  border: 1px solid var(--kal-color-border);
+  height: 48px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e5e1d9;
   background: var(--kal-color-white);
-  color: var(--kal-color-heading);
+  color: var(--kal-color-body);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .kal-toggle-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
 }
 
 .kal-toggle-btn--active {
-  background: var(--kal-color-primary);
-  border-color: var(--kal-color-primary);
-  color: var(--kal-color-white);
-  box-shadow: 0px 4px 10px -4px rgba(30, 75, 60, 0.35);
-}
-
-/* Facility strip — same horizontal-scroll pill pattern as .kal-day-strip/
-   .kal-day-chip (Slot Picker), just without the two-line date stack. */
-.kal-facility-strip {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-
-.kal-facility-chip {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: 1px solid #e6e6e8;
-  background: var(--kal-color-white);
-  font-family: inherit;
-  font-size: 14px;
-  color: #4b4b4b;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.kal-facility-chip--active {
-  background: #122d24;
-  border-color: #122d24;
-  color: var(--kal-color-white);
+  border-radius: 12px;
+  border-color: #d9cdba;
+  background: linear-gradient(-86deg, #f6f1e8 11.877%, #fbf9f4 45.39%);
+  color: #302f2b;
 }
 
 /* Doctor list */
@@ -1158,43 +1247,32 @@
   padding: 0 24px;
 }
 
-.kal-doctor-list__loading,
-.kal-doctor-list__empty {
-  padding: 24px 0;
-  font-size: 14px;
-  color: #7d7d7d;
-  text-align: center;
-}
-
-/* Redesigned doctor card: photo, languages, experience, specialty tags,
-   and a "Next Slot" bar — replaces the earlier simpler avatar+rating card.
-   Structure is stacked (column), not a single row, since the tags and
-   next-slot bar are full-width sections of their own below the photo+info
-   row, not part of it. */
+/* Doctor card, rebuilt per the updated Figma spec (node 544:3781) — a
+   static mockup again (see kal-booking-flow-doctor-card.liquid's own
+   comment for why), with a photo+meta row, a tag-chip section, and a
+   separate white price/next-slot footer bar. The selected treatment
+   (tan border, cream gradient, drop-shadow) deliberately reuses the same
+   visual language as Concern Select's selected row
+   (.kal-concern-row--selected) for consistency across the flow, per
+   explicit instruction to keep shared patterns like this consistent. */
 
 .kal-doctor-card {
-  position: relative; /* containing block for the absolutely-positioned selection indicator */
   display: flex;
   flex-direction: column;
   flex-shrink: 0; /* without this, cards inside the scrollable desktop list
     (.kal-step-doctor-select__list, flex:1 + overflow-y:auto at 750px — see
     SHARED STEP SHELL) get squeezed instead of the list scrolling: flex
-    items shrink by default
-    when content exceeds the container, so each card's own height collapsed
-    below its natural size, and this card's own overflow:hidden then clipped
-    everything past the top row — photo, name, and selection dot survived
-    (they render first) but specialization/languages/tags/next-slot below
-    them got cut off. flex-shrink:0 forces the list to scroll instead. */
+    items shrink by default when content exceeds the container. */
   width: 100%;
   padding: 0;
   border-radius: 12px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid #e5e1d9;
   background: var(--kal-color-white);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
   box-sizing: border-box;
-  overflow: hidden; /* keeps the next-slot bar's own background inside the rounded corners */
+  overflow: hidden; /* keeps the footer bar's own background inside the rounded corners */
 }
 
 .kal-doctor-card[hidden] {
@@ -1202,21 +1280,34 @@
 }
 
 .kal-doctor-card--selected {
-  border: 1px solid rgba(30, 75, 60, 0.7);
-  box-shadow: 0px 10px 24px -12px rgba(30, 75, 60, 0.55);
+  border-color: #d9cdba;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
+/* Wraps the photo+meta row AND the tag chips — the gradient (selected
+   only) spans both, with just the price/next-slot footer bar staying
+   plain white below it. */
 .kal-doctor-card__top {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 14px 8px;
+  flex-direction: column;
+  width: 100%;
+}
+
+.kal-doctor-card--selected .kal-doctor-card__top {
+  background: linear-gradient(118deg, #fbf9f4 76.335%, #f6f1e8 100%);
+}
+
+.kal-doctor-card__body {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px;
 }
 
 .kal-doctor-card__photo {
   flex-shrink: 0;
   width: 76px;
-  height: 124px;
+  align-self: stretch;
   border-radius: 14px;
   background: linear-gradient(135deg, #d8d4c9, #aab89d);
   box-shadow: 0 0 0 1px rgba(220, 220, 220, 0.6);
@@ -1240,8 +1331,6 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  padding-right: 28px; /* clearance for the selection indicator overlaying the top-right corner */
-  box-sizing: border-box;
 }
 
 .kal-doctor-card__name {
@@ -1251,96 +1340,75 @@
   color: var(--kal-color-heading);
 }
 
-.kal-doctor-card__specialization {
-  font-size: 14px;
-  color: #4b4b4b;
-}
-
 .kal-doctor-card__meta-row {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
   color: #4b4b4b;
+  text-transform: capitalize;
 }
 
 .kal-doctor-card__meta-icon {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 20px;
   height: 20px;
   border-radius: 999px;
-  background: rgba(0, 80, 58, 0.08);
-  color: var(--kal-color-primary);
-  flex-shrink: 0;
+  background: var(--kal-color-white);
 }
 
 .kal-doctor-card__meta-icon svg {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
 .kal-doctor-card__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 8px 14px 14px;
+  padding: 0 12px 12px;
 }
 
 .kal-doctor-card__tag {
   padding: 2px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(30, 75, 60, 0.3);
-  background: rgba(0, 80, 58, 0.06);
-  color: var(--kal-color-primary);
-  font-size: 12px;
+  border: 1px solid #f1e9d8;
+  background: #fdfdfb;
+  color: #4b4b4b;
+  font-size: 14px;
+  line-height: 140%;
   white-space: nowrap;
 }
 
-.kal-doctor-card__next-slot {
+.kal-doctor-card__footer {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 14px;
-  background: linear-gradient(90deg, rgba(228, 242, 235, 0.5) 0%, rgba(255, 255, 255, 0.5) 100%);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--kal-color-primary);
-}
-
-.kal-doctor-card__next-slot-label {
-  font-weight: 500;
-}
-
-.kal-doctor-card__indicator {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+  justify-content: space-between;
+  padding: 8px 12px;
   background: var(--kal-color-white);
-  border: 1px solid #e5e5e5;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
-.kal-doctor-card--selected .kal-doctor-card__indicator {
-  background: var(--kal-color-primary);
-  border-color: var(--kal-color-primary);
-  color: var(--kal-color-white);
+.kal-doctor-card__next-slot {
+  font-size: 14px;
+  color: #4b4b4b;
 }
 
-.kal-doctor-card__indicator svg {
-  width: 12px;
-  height: 12px;
+.kal-doctor-card__next-slot strong {
+  font-weight: 400;
+  color: var(--kal-color-heading);
 }
 
-/* Footer: price banner + continue button */
+.kal-doctor-card__price {
+  font-size: 18px;
+  color: var(--kal-color-heading);
+}
+
+/* Footer: just the Continue button now — price moved into the doctor
+   card's own footer bar (.kal-doctor-card__price) per the updated spec,
+   see kal-booking-flow-step-doctor-select.liquid's own comment. */
 .kal-step-doctor-select__footer {
   display: flex;
   flex-direction: column;
@@ -1348,49 +1416,10 @@
   padding: 0 24px 24px;
 }
 
-.kal-step-doctor-select__price-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: rgba(228, 242, 235, 0.5);
-  border: 1px solid rgba(220, 220, 220, 0.8);
-}
-
-.kal-step-doctor-select__price-row {
+.kal-step-doctor-select__continue {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-.kal-step-doctor-select__price-row .kal-icon--currency svg {
-  width: 14px;
-  height: 14px;
-  color: var(--kal-color-primary);
-}
-
-.kal-step-doctor-select__price {
-  font-size: 14px;
-  color: var(--kal-color-primary);
-  font-weight: 400;
-}
-
-.kal-step-doctor-select__price-label {
-  font-size: 12px;
-  color: var(--kal-color-primary);
-  text-transform: capitalize;
-  margin-left: 4px;
-}
-
-.kal-step-doctor-select__price-note {
-  font-size: 12.5px;
-  line-height: 138%;
-  color: var(--kal-color-primary);
-  margin: 0;
-}
-
-.kal-step-doctor-select__continue {
+  justify-content: center;
   width: 100%;
   padding: 14px 24px;
   border: none;
@@ -1400,6 +1429,8 @@
   font-family: inherit;
   font-size: 16px;
   font-weight: 800;
+  text-align: center;
+  box-sizing: border-box;
   box-shadow: 0px 8px 16px -6px rgba(30, 75, 60, 0.35);
   cursor: pointer;
 }
@@ -1522,64 +1553,68 @@
 
 /* Doctor summary card */
 
-.kal-doctor-summary {
+/* Slot Picker's appointment card (node 438:7388) — deliberately separate
+   from the old .kal-doctor-summary component this replaced (removed
+   entirely once Confirmation's own later redesign pass dropped its last
+   remaining usage too — see this file's git history if you need the old
+   avatar-row styling back), since this is a visually richer static
+   mockup with a photo, gradient background, and a mode+price row. */
+.kal-appointment-card {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--kal-color-border);
-  border-radius: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(103deg, rgba(235, 242, 239, 0.5) 30.526%, rgba(255, 255, 255, 0.5) 94.033%);
 }
 
-/* Scoped to .kal-step-slot-picker specifically — Confirmation and Therapy
-   Slot also use .kal-doctor-summary but keep their own separate margin
-   rules untouched. */
-.kal-step-slot-picker .kal-doctor-summary {
-  margin: 0 16px;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-step-slot-picker .kal-doctor-summary {
-    margin: 0 24px;
-  }
-}
-
-.kal-doctor-summary__avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+.kal-appointment-card__photo {
   flex-shrink: 0;
-  background: linear-gradient(135deg, #d8d4c9, #aab89d);
+  width: 60px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.kal-doctor-summary__info {
-  flex: 1;
+.kal-appointment-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 30% 20%;
+}
+
+.kal-appointment-card__body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
   min-width: 0;
 }
 
-.kal-doctor-summary__name {
-  font-size: 14px;
-  font-weight: 700;
+.kal-appointment-card__eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--kal-color-primary);
+}
+
+.kal-appointment-card__name {
+  font-size: 20px;
   color: var(--kal-color-heading);
 }
 
-.kal-doctor-summary__meta {
-  font-size: 12px;
-  color: var(--kal-color-body);
+.kal-appointment-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-left: 4px;
+  font-size: 14px;
+  color: #4b4b4b;
 }
 
-.kal-doctor-summary__mode {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  border-radius: 99px;
-  background: #e4f2eb;
-  color: var(--kal-color-primary);
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: capitalize;
+.kal-appointment-card__divider {
+  width: 1px;
+  height: 10px;
+  background: #e5e5e5;
 }
 
 /* Choose a day / Available time sections */
@@ -1615,7 +1650,7 @@
 
 .kal-slot-section__label {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #646464;
@@ -1638,6 +1673,17 @@
 .kal-icon-button svg {
   width: 20px;
   height: 20px;
+}
+
+/* Round beige button variant — Slot Picker's "Choose a Slot" calendar
+   icon (node 438:7388). A modifier, not a change to the base rule above,
+   since that's shared with Therapy Slot's own plain calendar-icon
+   button and the calendar modal's prev/next arrows. */
+.kal-icon-button--round {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(245, 241, 234, 0.5);
 }
 
 /* Day strip */
@@ -1718,28 +1764,61 @@
   cursor: not-allowed;
 }
 
-/* Time slots, grouped by period */
-
-.kal-slot-periods {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* Slot Picker-only restyle of the day chip (node 438:7388) — a larger
+   64x83 card with a tan-gradient/border/shadow selected state, matching
+   the same "selected" visual language used elsewhere in this flow
+   (Concern Select's row, the doctor card, the mode toggle). Scoped to
+   .kal-step-slot-picker rather than changing the base .kal-day-chip
+   rules above, since those are shared with Therapy Slot's own
+   unchanged, smaller day chips. */
+.kal-step-slot-picker .kal-day-chip {
+  width: 64px;
+  height: 83px;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  border-color: #e5e1d9;
 }
 
-.kal-slot-period {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.kal-slot-period__label {
+.kal-step-slot-picker .kal-day-chip__label,
+.kal-step-slot-picker .kal-day-chip__date {
   font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: #4b4b4b;
-  margin: 0;
 }
+
+.kal-step-slot-picker .kal-day-chip--active {
+  background: linear-gradient(180deg, #fbf9f4 27.047%, #f6f1e8 71.937%);
+  border-color: #d9cdba;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.kal-step-slot-picker .kal-day-chip--active .kal-day-chip__label,
+.kal-step-slot-picker .kal-day-chip--active .kal-day-chip__date {
+  color: var(--kal-color-heading);
+}
+
+.kal-step-slot-picker .kal-day-chip__badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.kal-step-slot-picker .kal-day-chip--active .kal-day-chip__badge {
+  border: 0.5px solid rgba(30, 75, 60, 0.8);
+  box-sizing: border-box;
+}
+
+/* A third tier alongside the shared --high/--low/--none above — an
+   amber "busy" example day, matching the Figma spread (two different
+   5-slot days shown in different colors, not a strict count-based
+   rule). Scoped here since only this step's static mockup uses it. */
+.kal-step-slot-picker .kal-day-chip__badge--busy {
+  background: #fdf2b3;
+  color: #955609;
+}
+
+/* Time slots */
 
 .kal-slot-grid {
   display: grid;
@@ -1777,15 +1856,100 @@
   cursor: not-allowed;
 }
 
-.kal-slot-periods__empty {
-  font-size: 13px;
-  color: var(--kal-color-body);
-  margin: 0;
-  padding: 8px 0;
+/* Slot Picker's Morning/Afternoon/Evening tabs (node 438:7388) — new,
+   not shared with Therapy Slot (which has no tabs, no mode axis, just a
+   single flat list). Only one [data-kal-slot-panel] is visible at a
+   time, toggled by kal-booking-flow.js's setSlotTab. */
+.kal-slot-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px;
 }
 
+@media screen and (min-width: 750px) {
+  .kal-slot-tabs {
+    padding: 0 24px;
+  }
+}
+
+.kal-slot-tabs__bar {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.kal-slot-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #646464;
+  cursor: pointer;
+}
+
+.kal-slot-tab svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.kal-slot-tab--active {
+  background: rgba(245, 241, 234, 0.5);
+  border-bottom-color: #d9cdba;
+  border-radius: 4px 4px 0 0;
+  color: var(--kal-color-heading);
+}
+
+/* Slot Picker-only restyle of the slot grid/chips — 3 columns and a
+   larger tan-gradient/border/shadow selected state (same visual
+   language as the day chip above), scoped so Therapy Slot's own
+   .kal-slot-grid/.kal-slot-chip (4 columns, solid-green selected) stay
+   exactly as they were. */
+.kal-step-slot-picker .kal-slot-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Without this, the base rule's unconditional `display: grid` (an author
+   style) overrides the browser's own `[hidden] { display: none }`
+   default regardless of the attribute being set — same class of bug as
+   .kal-step-shell__footer[hidden] elsewhere in this file. The
+   Afternoon/Evening panels rely on this to actually stay hidden until
+   their tab is clicked. */
+.kal-step-slot-picker .kal-slot-grid[hidden] {
+  display: none;
+}
+
+.kal-step-slot-picker .kal-slot-chip {
+  height: 38px;
+  border-radius: 12px;
+  border-color: #e5e1d9;
+  font-size: 14px;
+}
+
+.kal-step-slot-picker .kal-slot-chip--active {
+  background: linear-gradient(180deg, #fbf9f4 27.047%, #f6f1e8 71.937%);
+  border-color: #d9cdba;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  color: var(--kal-color-heading);
+}
+
+/* Solid grey per the Figma spec's disabled token (var(--icons/disabled,
+   #7d7d7d)), not the dark green at reduced opacity this was before — that
+   opacity trick produced a dull, muddy green rather than a clean neutral
+   grey. */
 .kal-step-doctor-select__continue:disabled {
-  opacity: 0.45;
+  background: #7d7d7d;
+  opacity: 1;
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -1793,139 +1957,6 @@
 .kal-icon-button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
-}
-
-/* ----------------------------------------
-   CALENDAR MODAL
-   Shared overlay opened by the "Choose a day" calendar icon. A sheet on
-   mobile (slides up from the bottom), a centered card on desktop. Positioned
-   fixed + inset:0 rather than absolute: on desktop the dialog's own
-   transform (see .kal-booking-flow) already creates a containing block for
-   fixed descendants, so this still ends up scoped to the dialog's box, not
-   the full viewport — no need to touch any ancestor's position.
------------------------------------------ */
-
-.kal-calendar-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.kal-calendar-modal[hidden] {
-  display: none;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-calendar-modal {
-    align-items: center;
-  }
-}
-
-.kal-calendar-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: var(--kal-color-overlay);
-}
-
-.kal-calendar-modal__panel {
-  position: relative;
-  width: 100%;
-  max-width: 360px;
-  background: var(--kal-color-white);
-  border-radius: 20px 20px 0 0;
-  padding: 20px;
-  box-sizing: border-box;
-  box-shadow: 0px 24px 48px -16px rgba(25, 25, 25, 0.18);
-}
-
-@media screen and (min-width: 750px) {
-  .kal-calendar-modal__panel {
-    border-radius: 20px;
-    margin: 0 16px;
-  }
-}
-
-.kal-calendar-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.kal-calendar-modal__month {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--kal-color-heading);
-}
-
-.kal-calendar-modal__weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 8px;
-}
-
-.kal-calendar-modal__weekdays span {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--kal-color-body);
-}
-
-.kal-calendar-modal__grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.kal-calendar-modal__cell {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--kal-color-heading);
-  cursor: pointer;
-}
-
-.kal-calendar-modal__cell--empty {
-  cursor: default;
-}
-
-.kal-calendar-modal__cell--today {
-  font-weight: 800;
-  color: var(--kal-color-primary);
-}
-
-.kal-calendar-modal__cell--selected {
-  background: var(--kal-color-primary);
-  color: var(--kal-color-on-primary);
-}
-
-.kal-calendar-modal__cell--disabled,
-.kal-calendar-modal__cell:disabled {
-  color: #c4c4c4;
-  cursor: not-allowed;
-}
-
-.kal-calendar-modal__close {
-  width: 100%;
-  margin-top: 16px;
-  padding: 12px;
-  border: 1px solid var(--kal-color-border);
-  border-radius: 14px;
-  background: var(--kal-color-white);
-  color: var(--kal-color-heading);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 /* ----------------------------------------
@@ -1987,11 +2018,12 @@
   gap: 12px;
 }
 
+/* Sentence-case, medium-weight label per the updated Figma spec (node
+   438:7643) — was a bold uppercase eyebrow-style label (14px, 800
+   weight, letter-spacing). */
 .kal-form-label {
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 500;
   color: #4b4b4b;
   margin: 0;
 }
@@ -2009,7 +2041,7 @@
   width: 100%;
   height: 40px;
   padding: 8px 12px;
-  border: 1px solid #e6e6e8;
+  border: 1px solid #e5e1d9;
   border-radius: 12px;
   background: var(--kal-color-white);
   font-family: inherit;
@@ -2026,6 +2058,78 @@
   border-color: var(--kal-color-primary);
 }
 
+/* Phone Number field's decorative +91/India-flag prefix chip (node
+   438:7643) — see this step's own liquid comment for why it's
+   non-functional. Sits flush against the number input to read as one
+   combined pill. */
+.kal-phone-input {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.kal-phone-input__country {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 8px;
+  border: 1px solid #e5e1d9;
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  background: #faf8f4;
+  box-sizing: border-box;
+}
+
+.kal-phone-input__flag {
+  display: flex;
+  flex-direction: column;
+  width: 24px;
+  height: 16px;
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.kal-phone-input__flag-stripe {
+  flex: 1;
+}
+
+.kal-phone-input__flag-stripe--saffron {
+  background: #f93;
+}
+
+.kal-phone-input__flag-stripe--white {
+  background: #ffffff;
+}
+
+.kal-phone-input__flag-stripe--green {
+  background: #138808;
+}
+
+.kal-phone-input__code {
+  font-size: 16px;
+  color: #4b4b4b;
+  white-space: nowrap;
+}
+
+.kal-phone-input__chevron {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.kal-phone-input__chevron svg {
+  width: 20px;
+  height: 20px;
+  color: #4b4b4b;
+}
+
+.kal-phone-input__field {
+  flex: 1;
+  min-width: 0;
+  border-radius: 0 12px 12px 0;
+}
+
 .kal-gender-group {
   display: flex;
   gap: 8px;
@@ -2035,10 +2139,10 @@
   box-sizing: border-box;
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #e6e6e8;
+  border: 1px solid #e5e1d9;
   border-radius: 12px;
   background: var(--kal-color-white);
-  color: #7d7d7d;
+  color: #646464;
   font-family: inherit;
   font-size: 16px;
   cursor: pointer;
@@ -2094,14 +2198,14 @@
 /* ----------------------------------------
    STEP: CONFIRMATION (Step 5 of 5)
    Consolidated into the shared step shell (see SHARED STEP SHELL above) —
-   was a duplicated __mobile/__desktop pair; now the doctor summary card
-   and detail rows render exactly once. Only the pay-notice differs by
-   width (see this file's own top comment) — hidden entirely at 750px+
-   rather than kept as a second copy of everything around it.
-
-   Doctor summary card reuses .kal-doctor-summary exactly as-is from Slot
-   Picker — same 16px horizontal margin convention as this step's mobile
-   layout.
+   was a duplicated __mobile/__desktop pair; detail rows render exactly
+   once. Per a later Figma redesign pass (node 438:7468, see this step's
+   own liquid comment), the old doctor-summary avatar card and the
+   pay-at-clinic notice are both gone, replaced by a "Doctor" row in the
+   details list and a Payment Method section (.kal-payment-section /
+   .kal-payment-option below) — that pass affects both mobile and
+   desktop, since this step has no separate desktop block to leave
+   untouched.
 ----------------------------------------- */
 
 /* Same fix as every other consolidated step's outer wrapper: without
@@ -2129,44 +2233,19 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 16px;
+  /* Was 16px on mobile (an old value from before this step's Figma
+     redesign pass) vs. 24px on desktop and vs. .kal-step-shell__footer's
+     own 24px side padding — the 8px gap made the Continue button read as
+     shifted/indented relative to the details card and payment cards
+     above it. The redesign's own export insets everything at 24px on
+     mobile too (see this step's own liquid comment), so this now just
+     matches the footer instead of fighting it. */
+  padding: 0 24px;
 }
 
 @media screen and (min-width: 750px) {
   .kal-step-confirmation .kal-step-shell__scroll {
-    /* Figma's desktop inset is 24px, vs. 16px on mobile — matches the
-       original desktop-only .kal-step-confirmation__scroll padding. */
-    padding: 0 24px;
     gap: 24px;
-  }
-
-  /* The one genuine content difference between mobile and desktop for
-     this step — the desktop Figma export omits this notice entirely,
-     confirmed against both the screenshot and the Copy-as-CSS export
-     (see this file's top comment). */
-  .kal-step-confirmation .kal-confirmation-pay-notice {
-    display: none;
-  }
-}
-
-/* margin-top:auto goes on the pay-notice, not the footer below it — this
-   pulls the notice+button down together as a pair with a fixed gap
-   between them, instead of just the button reaching the bottom and
-   leaving the notice stranded up with the rest of the content. Harmless
-   at desktop width, where the notice is hidden and the panel's own
-   justify-content:space-between (from SHARED STEP SHELL) already lands
-   the footer at the bottom the same way. */
-.kal-step-confirmation .kal-confirmation-pay-notice {
-  margin-top: auto;
-}
-
-/* Figma spec gives the doctor-summary card 48px of horizontal inset vs.
-   the details card's 24px at desktop, and flush with it (16px, matching
-   the scroll region's own padding) on mobile — one extra margin layered
-   on top of the scroll region's own side padding, at both sizes. */
-@media screen and (min-width: 750px) {
-  .kal-step-confirmation .kal-doctor-summary {
-    margin: 0 24px;
   }
 }
 
@@ -2201,6 +2280,8 @@
 .kal-confirmation-details__rows {
   display: flex;
   flex-direction: column;
+  border-top: 1px solid var(--kal-color-border);
+
 }
 
 .kal-confirmation-details__row {
@@ -2227,40 +2308,99 @@
   text-align: right;
 }
 
-.kal-confirmation-pay-notice {
+/* Payment Method — Confirmation's two payment-choice cards (node
+   438:7468), replacing the old pay-at-clinic notice. Selection is purely
+   visual (setPaymentMethod() in kal-booking-flow.js just toggles
+   kal-payment-option--selected), same "selected" tan-gradient/border/
+   shadow language used throughout this flow (Concern Select's row, the
+   doctor card, the mode toggle, the day/slot chips). */
+.kal-payment-section {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.kal-payment-section__label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #4b4b4b;
+  margin: 0;
+}
+
+.kal-payment-options {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.kal-payment-option {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  border: 1px solid var(--kal-color-border);
+  gap: 8px;
+  padding: 24px 16px 16px;
+  border: 1px solid #e5e1d9;
   border-radius: 12px;
   background: var(--kal-color-white);
+  font-family: inherit;
+  cursor: pointer;
   box-sizing: border-box;
 }
 
-.kal-confirmation-pay-notice__icon {
+.kal-payment-option--selected {
+  border-color: #d9cdba;
+  background: linear-gradient(180deg, #fbf9f4 27.047%, #f6f1e8 71.937%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.kal-payment-option__badge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--kal-color-primary);
+  color: var(--kal-color-white);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.kal-payment-option__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 4px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
-  background: #e4f2eb;
-  color: #1e4b3c;
-  flex-shrink: 0;
-  box-sizing: border-box;
+  background: var(--kal-color-white);
 }
 
-.kal-confirmation-pay-notice__icon svg {
-  width: 24px;
-  height: 24px;
+.kal-payment-option__icon--tint {
+  background: rgba(245, 241, 234, 0.5);
 }
 
-.kal-confirmation-pay-notice__text {
-  font-size: 12px;
-  font-weight: 350;
-  color: var(--kal-color-body);
+.kal-payment-option__title {
+  font-size: 20px;
+  color: var(--kal-color-heading);
+  text-align: center;
+}
+
+.kal-payment-option__divider {
+  width: 100%;
+  height: 1px;
+  background: var(--kal-color-border);
+}
+
+.kal-payment-option__price {
+  font-size: 24px;
+  color: var(--kal-color-heading);
 }
 
 /* ----------------------------------------
@@ -2281,14 +2421,36 @@
 
 .kal-step-booking-confirmed .kal-step-shell__panel {
   height: 100%;
+  position: relative;
 }
 
+/* Same corner-close treatment as Therapy Confirmed's __header — absolutely
+   positioned instead of a normal-flow row, so it doesn't reserve its own
+   height above .kal-step-shell__scroll and unbalance the justify-content:
+   center above (that row-in-flow bug is exactly what made Therapy
+   Confirmed's content look top-heavy before it got the same fix). */
+.kal-step-booking-confirmed__header {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 1;
+}
+
+/* justify-content:center (mobile only) — matches the Figma frame, which
+   shows this fixed, short content block (icon/intro/card/details/before-
+   visit) sitting in the middle of the screen, not top-anchored. Safe here
+   specifically because this step's content is fixed and short (no
+   variable-length list that could ever grow past a real device's height,
+   unlike Doctor Select's list or Slot Picker's time grid) — centering a
+   flex column that could actually overflow would risk clipping its top
+   past what overflow-y:auto can scroll back to in some browsers. */
 .kal-step-booking-confirmed .kal-step-shell__scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 16px;
   padding-top: 24px;
 }
@@ -2299,12 +2461,11 @@
     gap: 24px;
   }
 
-  /* The two genuine content differences between mobile and desktop for
+  /* The one genuine content difference between mobile and desktop for
      this step — the desktop Figma export stops right after the
      Consultation Details card (confirmed in both the screenshot and the
      Copy-as-CSS dump), same technique as Confirmation's pay-notice. */
-  .kal-step-booking-confirmed .kal-before-visit,
-  .kal-step-booking-confirmed__reschedule {
+  .kal-step-booking-confirmed .kal-before-visit {
     display: none;
   }
 }
@@ -2355,25 +2516,38 @@
 @media screen and (min-width: 750px) {
   /* Matches the original desktop-only scroll wrapper's 24px side padding,
      which this card previously inherited by being the only element inside
-     it without its own margin — see the desktop notes on Confirmation's
-     equivalent .kal-doctor-summary rule for the same 16px/24px split. */
+     it without its own margin — same 16px/24px split Confirmation's own
+     .kal-step-shell__scroll padding uses. */
   .kal-step-booking-confirmed .kal-confirmation-details {
     margin: 0 24px;
   }
 }
 
+/* Restyled from a bordered, inset card to a full-bleed tinted band per
+   the updated Figma spec (node 438:7571) — edge-to-edge (negative margin
+   cancels .kal-step-shell__scroll's own side padding), top/bottom
+   border only, no corner radius. Was margin-top:auto, meant to pin this to
+   the bottom of the screen when content is shorter than the viewport —
+   but on this success screen the content (icon/intro/card/details) is
+   much shorter than a typical phone height, so that auto margin ate all
+   the leftover space and left a huge gap above this block instead, not
+   matching the Figma frame (which just flows it right after the details
+   card with normal spacing). Plain 0 follows the scroll region's own
+   gap like every other sibling here. */
 .kal-before-visit {
-  /* margin-top:auto pulls this block down together with the reschedule
-     button right after it (fixed gap via the flex container's gap:16px),
-     so the pair sits pinned at the bottom instead of the reschedule
-     button alone reaching down and leaving this stranded up with the
-     rest of the content — same pattern as Confirmation's pay-notice. */
-  margin: auto 24px 0;
-  padding: 14px 16px;
-  border: 1px solid var(--kal-color-border);
-  border-radius: 16px;
-  background: var(--kal-color-white);
+  margin: 0 -16px 0;
+  padding: 14px 40px;
+  border-top: 1px solid #d8e5de;
+  border-bottom: 1px solid #d8e5de;
+  background: rgba(235, 242, 239, 0.5);
   box-sizing: border-box;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-before-visit {
+    margin-left: -24px;
+    margin-right: -24px;
+  }
 }
 
 .kal-before-visit__label {
@@ -2418,133 +2592,620 @@
   height: 14px;
 }
 
-.kal-step-booking-confirmed__reschedule {
-  margin: 0 24px 24px;
-  padding: 14px 0;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--kal-color-primary);
-  cursor: pointer;
-}
-
 /* ----------------------------------------
-   THERAPY SLOT — single-doctor variant of the slot picker. Mobile only —
-   no desktop spec given yet. Reuses .kal-slot-section/.kal-day-chip/
-   .kal-slot-chip/.kal-slot-periods/.kal-slot-grid as-is from the
-   Consultation Slot Picker (same visual language, just different data
-   source/attributes feeding them — see kal-booking-flow.js).
+   THERAPY — FLOW CHANGE (node 539:2128): "Choose your therapy" replaced
+   the old single-doctor date/slot-picker screen entirely (see this
+   step's own liquid comment for what was removed and why). Mobile
+   only — no desktop spec given yet. Uses the same shared step-shell
+   pattern as the consultation steps (.kal-step-shell__panel/__scroll)
+   instead of its own __mobile block, and reuses Concern Select's row
+   styling (.kal-concern-row and friends) for the therapy-category
+   checkboxes.
 ----------------------------------------- */
 
 .kal-step-therapy-slot {
   height: 100%;
 }
 
-.kal-step-therapy-slot__mobile {
+.kal-step-therapy-slot .kal-step-shell__panel {
+  height: 100%;
+}
+
+.kal-step-therapy-slot .kal-step-shell__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  /* Same pattern as every other step: content stays top-anchored in normal
-     flow, min-height:100% + margin-top:auto on the footer (below) is what
-     pushes just the Continue button to the bottom of the frame instead of
-     it just sitting wherever the content happens to end. */
-  min-height: 100%;
   gap: 16px;
 }
 
-.kal-step-therapy-slot__mobile .kal-step-slot-picker__footer {
-  margin-top: auto;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-step-therapy-slot__mobile {
-    display: none;
-  }
-}
-
-.kal-therapy-slot__appbar {
+/* "Selected therapies" chip summary (node 623:7592) — shown above the
+   dropdown, hidden via [hidden] until >=1 therapy is selected (toggled by
+   renderTherapySelectedChips() in kal-booking-flow.js). Needs its own
+   [hidden] override, same class of bug as .kal-therapy-dropdown[hidden]
+   above: the unconditional `display: flex` below would otherwise beat the
+   browser's UA [hidden] rule. */
+.kal-therapy-selected {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
   padding: 0 24px;
 }
 
-.kal-therapy-slot__location {
-  flex: 1;
+.kal-therapy-selected[hidden] {
+  display: none;
+}
+
+.kal-therapy-selected__head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid #e6e6e8;
-  border-radius: 999px;
-  background: var(--kal-color-white);
-  font-family: inherit;
-  font-size: 14px;
+}
+
+.kal-therapy-selected__title {
+  margin: 0;
+  font-size: 20px;
   color: var(--kal-color-heading);
+}
+
+.kal-therapy-selected__clear {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--kal-color-primary);
+  text-decoration: underline;
   cursor: pointer;
 }
 
-.kal-therapy-slot__location svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
+.kal-therapy-selected__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.kal-therapy-doctor-card {
+.kal-therapy-chip {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin: 0 24px;
-  padding: 12px 16px;
-  border: 1px solid #234b37;
-  border-radius: 13px;
-  background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+  gap: 4px;
+  height: 32px;
+  padding: 8px;
+  border: 1px solid #d9cdba;
+  border-radius: 999px;
+  background: linear-gradient(-82deg, #fbf9f4 35.052%, #f6f1e8 88.351%);
   box-sizing: border-box;
 }
 
-.kal-therapy-doctor-card__avatar {
+.kal-therapy-chip__name {
+  font-size: 16px;
+  color: #302f2b;
+  white-space: nowrap;
+}
+
+.kal-therapy-chip__remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 54px;
-  border: 1px solid #122d24;
-  border-radius: 999px;
-  font-size: 20px;
-  color: #4b4b4b;
-  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #302f2b;
+  cursor: pointer;
 }
 
-.kal-therapy-doctor-card__info {
+.kal-therapy-chip__remove svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* position:relative so the dropdown panel below can anchor to this,
+   rather than the whole scroll region. */
+.kal-therapy-select-wrapper {
+  position: relative;
+  padding: 0 24px;
+}
+
+/* Real multi-select trigger now (node 623:7334) — see this step's own
+   liquid comment. */
+.kal-therapy-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: var(--kal-color-white);
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.kal-therapy-select__placeholder {
+  color: #646464;
+}
+
+/* Once at least one therapy is picked, the label reads "N selected"
+   instead of the placeholder — same heading-dark color the rest of this
+   flow uses for a filled-in value vs. a placeholder. */
+.kal-therapy-select__placeholder--filled {
+  color: var(--kal-color-heading);
+}
+
+.kal-therapy-select__chevron svg {
+  width: 24px;
+  height: 24px;
+  color: #4b4b4b;
+}
+
+/* Dropdown panel — absolutely positioned below the trigger, inside
+   .kal-therapy-select-wrapper (position:relative above), so it floats
+   over the category checkboxes below rather than pushing them down. */
+.kal-therapy-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 24px;
+  right: 24px;
+  z-index: 3;
+  max-height: 420px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--kal-color-white);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+/* Without this, the `display: flex` above (an author rule) overrides the
+   browser's own `[hidden] { display: none }` default regardless of the
+   attribute — same class of bug as .kal-step-shell__footer[hidden]
+   elsewhere in this file. */
+.kal-therapy-dropdown[hidden] {
+  display: none;
+}
+
+.kal-therapy-dropdown__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kal-therapy-dropdown__title {
+  font-size: 16px;
+  color: var(--kal-color-heading);
+}
+
+.kal-therapy-dropdown__summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--kal-color-primary);
+  white-space: nowrap;
+}
+
+/* Same [hidden]-override note as .kal-therapy-dropdown above — this is
+   toggled by updateTherapyDropdownSummary() in kal-booking-flow.js
+   whenever the selection count changes to/from zero. */
+.kal-therapy-dropdown__summary[hidden] {
+  display: none;
+}
+
+.kal-therapy-dropdown__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--kal-color-primary);
+}
+
+.kal-therapy-dropdown__clear {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.kal-therapy-dropdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kal-therapy-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 42px;
+  padding: 8px 4px 8px 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.kal-therapy-option--selected {
+  background: linear-gradient(-90deg, #fbf9f4 62.02%, #f6f1e8 87.266%);
+}
+
+.kal-therapy-option__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
-.kal-therapy-doctor-card__name {
+/* Same bordered-square + fade-in-check pattern as
+   .kal-concern-row__checkbox, just 20px here (matching this export)
+   instead of 24px. */
+.kal-therapy-option__checkbox {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1.5px solid #7d7d7d;
+  box-sizing: border-box;
+  background: var(--kal-color-white);
+}
+
+.kal-therapy-option__checkbox svg {
+  width: 14px;
+  height: 14px;
+  color: var(--kal-color-white);
+  opacity: 0;
+}
+
+.kal-therapy-option--selected .kal-therapy-option__checkbox {
+  border-color: var(--kal-color-heading);
+  background: var(--kal-color-heading);
+}
+
+.kal-therapy-option--selected .kal-therapy-option__checkbox svg {
+  opacity: 1;
+}
+
+.kal-therapy-option__name {
+  font-size: 16px;
+  color: #4b4b4b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kal-therapy-option--selected .kal-therapy-option__name {
+  color: var(--kal-color-heading);
+}
+
+.kal-therapy-option__tag {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #e4f2eb;
+  color: var(--kal-color-primary);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.kal-therapy-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px;
+}
+
+.kal-therapy-divider__line {
+  flex: 1;
+  height: 1px;
+  background: var(--kal-color-border);
+}
+
+.kal-therapy-divider__text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #646464;
+}
+
+.kal-therapy-category-label {
   font-size: 16px;
   font-weight: 500;
-  color: #0b0b0c;
+  color: #4b4b4b;
+  margin: 0;
 }
 
-.kal-therapy-doctor-card__qualification {
+/* Footer summary line above Confirm (node 623:7592's "3 therapies
+   selected") — conditional text set by updateTherapyConcernContinueButton()
+   in kal-booking-flow.js; see that file's comment for exactly when it
+   shows. Needs its own [hidden] override for the same reason as the other
+   author-`display`-vs-[hidden] rules in this file. */
+.kal-therapy-concern-summary {
+  margin: 0;
+  padding: 0 8px;
   font-size: 14px;
-  color: #6c6c70;
+  color: var(--kal-color-heading);
+  text-align: center;
 }
 
-.kal-therapy-doctor-card__specialization {
+.kal-therapy-concern-summary[hidden] {
+  display: none;
+}
+
+/* Therapy Details' own appointment card (node 543:1462) — NOT the shared
+   .kal-appointment-card* (that one shows a mode+price row); this one
+   shows degree/experience badges (matching Doctor Select's
+   .kal-doctor-card__meta-row visual language) plus a description line,
+   so it gets its own class rather than overloading the shared component
+   with slots only this one caller needs. See this step's own liquid
+   comment. */
+.kal-therapy-appointment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(103deg, rgba(235, 242, 239, 0.5) 30.526%, rgba(255, 255, 255, 0.5) 94.033%);
+}
+
+.kal-therapy-appointment-card__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kal-therapy-appointment-card__photo {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.kal-therapy-appointment-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 30% 20%;
+}
+
+.kal-therapy-appointment-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kal-therapy-appointment-card__name {
+  font-size: 20px;
+  color: var(--kal-color-heading);
+}
+
+.kal-therapy-appointment-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: #4b4b4b;
+}
+
+.kal-therapy-appointment-card__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kal-therapy-appointment-card__meta-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--kal-color-white);
+}
+
+.kal-therapy-appointment-card__meta-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.kal-therapy-appointment-card__divider {
+  width: 1px;
+  height: 15px;
+  background: #e5e5e5;
+}
+
+.kal-therapy-appointment-card__desc {
   font-size: 14px;
-  color: #0b0b0c;
+  line-height: 1.4;
+  color: #4b4b4b;
 }
 
-.kal-step-therapy-slot__mobile .kal-slot-section {
-  padding: 0 16px;
+/* Same fix as .kal-step-patient-details (see that rule's comment) —
+   without an explicit height:100% here this wrapper falls back to
+   height:auto, which is what let the panel grow to content size instead
+   of staying capped at the dialog height, pushing "Submit Request" up
+   into the content flow instead of pinning it to the bottom. */
+.kal-step-therapy-details {
+  height: 100%;
 }
 
-/* Two-tone Continue button text, matching the Figma spec exactly — the
-   static "Continue" label stays solid white, the date/time part that
-   follows it renders at 80% opacity white. */
-.kal-therapy-continue__datetime {
-  color: rgba(255, 255, 255, 0.8);
+/* Content stays top-anchored in normal flow on mobile; min-height:100% +
+   margin-top:auto on the footer pushes just the button to the bottom
+   without needing an internal scroll region. Desktop's height:100%/
+   justify-content:space-between come from the shared .kal-step-shell__panel
+   rule (see SHARED STEP SHELL above); this only needs the mobile-only
+   min-height override. */
+.kal-step-therapy-details .kal-step-shell__panel {
+  min-height: 100%;
+}
+
+.kal-step-therapy-details .kal-step-shell__footer {
+  margin-top: auto;
+}
+
+/* 24px between each stacked block (heading -> appointment card -> next
+   heading -> form), matching the Figma export's own gap between these
+   exact same sections — without this, the blocks had no gap at all on
+   mobile (no flex context, and none of .kal-step-doctor-select__intro /
+   .kal-therapy-appointment-card / .kal-form set their own margin), so
+   "Therapy Details"/the doctor card and "Who is this visit for?"/Full
+   name sat flush against each other instead of the 24px the design has.
+   Same gap value Slot Picker's own .kal-step-shell__scroll uses. */
+.kal-step-therapy-details .kal-step-shell__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Desktop needs its own scroll region since the dialog's own content
+   scroll is turned off at that width. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-details .kal-step-shell__scroll {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   THERAPY CONFIRMED — "Request sent" success screen (node 539:2222).
+   Reuses .kal-confirmation-success-icon/__inner and
+   .kal-confirmation-details__* from Booking Confirmed's screen (already
+   generic, not step-scoped) — only what's genuinely new to this screen
+   gets its own rules below. No .kal-step-shell__header here (no shared
+   back/badge/progress-bar header on this screen, just a close button),
+   so it needs its own minimal header row instead of rendering
+   kal-booking-flow-step-header.liquid.
+   ---------------------------------------------------------------------- */
+
+.kal-step-therapy-confirmed {
+  height: 100%;
+}
+
+.kal-step-therapy-confirmed .kal-step-shell__panel {
+  min-height: 100%;
+  position: relative;
+}
+
+/* Absolutely positioned instead of a normal flex row at the top of the
+   panel — it's just the close button in the corner, nothing else shares
+   this row. As a normal-flow row it reserved its own height above
+   .kal-step-shell__scroll, so the flex:1 + justify-content:center below
+   was only ever centering within the leftover space under the header,
+   not the panel's full height — meaning the header's height effectively
+   got added on top of that as extra, unbalanced space above the content,
+   instead of being split evenly between top and bottom. Taking it out of
+   flow lets .kal-step-shell__scroll claim the entire panel height, so the
+   centering is symmetric around the real vertical middle. */
+.kal-step-therapy-confirmed__header {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 1;
+}
+
+.kal-step-therapy-confirmed__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 24px;
+}
+
+.kal-step-therapy-confirmed__intro .kal-step-doctor-select__heading,
+.kal-step-therapy-confirmed__intro .kal-step-doctor-select__subtext {
+  text-align: center;
+}
+
+/* flex:1 + justify-content:center — the whole success screen (icon,
+   heading, details card, action buttons) sits vertically centered in the
+   panel per the Figma export, not top-anchored under the close button.
+   Needs flex:1 here (not just on the 750px+ override below) since this
+   screen has no .kal-step-shell__footer to pin anything via margin-top:
+   auto the way other steps do — the scroll region itself has to claim
+   the panel's leftover height (panel is already min-height:100% above)
+   before centering can do anything. */
+.kal-step-therapy-confirmed .kal-step-shell__scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  min-height: 0;
+}
+
+.kal-step-therapy-confirmed .kal-confirmation-details {
+  margin: 0 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-confirmed .kal-step-shell__scroll {
+    min-width: 0;
+    overflow-y: auto;
+  }
+
+  /* Same 16px/24px split as Booking Confirmed's own override of this. */
+  .kal-step-therapy-confirmed .kal-confirmation-details {
+    margin: 0 24px;
+  }
+}
+
+.kal-therapy-confirmed-actions {
+  display: flex;
+  gap: 24px;
+  padding: 0 24px;
+}
+
+.kal-therapy-confirmed-actions__btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--kal-color-border);
+  border-radius: 12px;
+  background: var(--kal-color-white);
+  font-family: inherit;
+  font-size: 16px;
+  color: #4b4b4b;
+  cursor: pointer;
+}
+
+.kal-therapy-confirmed-actions__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: #4b4b4b;
+}
+
+.kal-therapy-confirmed-actions__icon svg {
+  width: 24px;
+  height: 24px;
 }
