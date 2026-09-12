@@ -74,15 +74,34 @@ document.addEventListener('DOMContentLoaded', () => {
   // tracks which row is selected for the row's own visual state.
   // ----------------------------------------------------------------------
 
+  // Multi-select (checkbox), not single-select — updated to match the
+  // revised Figma spec, which shows a checkbox per row and no
+  // default-selected concern. `selected` is now a Set of concern_keys
+  // rather than a single string.
   const concernSelect = {
-    selected: 'general-medicine',
+    selected: new Set(),
   };
 
-  const setConcern = (concern) => {
-    concernSelect.selected = concern;
-    flow.querySelectorAll('[data-kal-concern]').forEach((row) => {
-      row.classList.toggle('kal-concern-row--selected', row.dataset.kalConcern === concern);
+  const updateConcernContinueButton = () => {
+    flow.querySelectorAll('[data-kal-concern-continue]').forEach((btn) => {
+      btn.disabled = concernSelect.selected.size === 0;
     });
+  };
+
+  // Toggles one concern on/off, rather than replacing the whole selection —
+  // the checkbox equivalent of the old radio's setConcern(concern).
+  const toggleConcern = (concern) => {
+    if (concernSelect.selected.has(concern)) {
+      concernSelect.selected.delete(concern);
+    } else {
+      concernSelect.selected.add(concern);
+    }
+    flow.querySelectorAll('[data-kal-concern]').forEach((row) => {
+      const isSelected = concernSelect.selected.has(row.dataset.kalConcern);
+      row.classList.toggle('kal-concern-row--selected', isSelected);
+      row.setAttribute('aria-pressed', String(isSelected));
+    });
+    updateConcernContinueButton();
   };
 
   // In-clinic / Video consult toggle: switches the active button (within
@@ -933,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const concernTrigger = e.target.closest('[data-kal-concern]');
     if (concernTrigger) {
-      setConcern(concernTrigger.dataset.kalConcern);
+      toggleConcern(concernTrigger.dataset.kalConcern);
     }
 
     const facilityTrigger = e.target.closest('[data-kal-facility]');

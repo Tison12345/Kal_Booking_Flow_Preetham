@@ -1,24 +1,33 @@
 {% comment %}
-  One selectable row in the Concern Select step's specialization list.
-  This step is a replacement for a free-text "what are you coming in for"
-  field, not a doctor filter/search — so a row is just an icon, the
-  specialization name, and a radio indicator. No doctor count.
+  One selectable row in the Concern Select step's list. This step is a
+  replacement for a free-text "what are you coming in for" field, not a
+  doctor filter/search — so a row is just an icon, the concern name, and a
+  checkbox. No doctor count.
+
+  Multi-select (checkbox), not single-select — updated to match the
+  revised Figma spec, which shows a checkbox per row and no
+  default-selected concern. Was previously a radio-style single select
+  with "General Medicine" pre-selected; see kal-booking-flow.js's
+  concernSelect state (now a Set, toggled per row) for the corresponding
+  JS change.
 
   Accepts:
   - icon_name: {String} passed to kal-booking-icons (one of the 'concern-*' icons)
-  - name: {String} e.g. "General Medicine"
-  - concern_key: {String} value for data-kal-concern, e.g. "general-medicine" —
-    matched against the concernSelect JS state to drive the radio state
-  - selected: {Boolean} true for the default-selected specialization
+  - name: {String} e.g. "General Wellness"
+  - concern_key: {String} value for data-kal-concern, e.g. "general-wellness" —
+    matched against the concernSelect JS state to drive the checkbox state
+  - selected: {Boolean} true if this concern should start checked (none do,
+    per the current spec — kept as a param in case that changes later)
 
   Usage:
-  {% render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Medicine', concern_key: 'general-medicine', selected: true %}
+  {% render 'kal-booking-flow-concern-row', icon_name: 'concern-general-medicine', name: 'General Wellness', concern_key: 'general-wellness', selected: false %}
 {% endcomment %}
 
 <button
   type="button"
   class="kal-concern-row {% if selected %}kal-concern-row--selected{% endif %}"
   data-kal-concern="{{ concern_key }}"
+  aria-pressed="{{ selected }}"
 >
   <span class="kal-concern-row__left">
     <span class="kal-concern-row__icon">
@@ -26,5 +35,7 @@
     </span>
     <span class="kal-concern-row__name">{{ name }}</span>
   </span>
-  <span class="kal-concern-row__radio" aria-hidden="true"></span>
+  <span class="kal-concern-row__checkbox" aria-hidden="true">
+    {%- render 'kal-booking-icons', icon_name: 'check' -%}
+  </span>
 </button>

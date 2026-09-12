@@ -626,13 +626,26 @@
    STEP: CONCERN SELECT (Step 1 of 5)
    Inserted between Entry and Doctor Select — see that step's own liquid
    comment for why.
+
+   MOBILE REDESIGN (this pass): a new Figma spec replaced the header's
+   progress dots with a static facility badge, added a new "STEP 1 OF 5 /
+   Next: Mode & Doctor" bar + progress bar below the header, moved the
+   banner above the list, and added a floating scroll hint. All of this is
+   scoped to below 750px only — the desktop composition (progress dots,
+   no step-bar, no scroll hint) is unchanged, achieved by hiding the new
+   mobile elements at 750px+ and un-hiding the pre-existing desktop ones
+   there instead of removing them. See the liquid file's own top comment
+   for the full reasoning, including the icon-reuse gap for three of the
+   new categories.
 ----------------------------------------- */
 
 /* Panel needs a definite height so the scroll child below (flex:1) has
    something concrete to be constrained within — same reasoning as every
-   other consolidated step's panel. */
+   other consolidated step's panel. Also the positioning context for the
+   mobile scroll-hint below (position:absolute needs a positioned ancestor). */
 .kal-step-concern-select .kal-step-shell__panel {
   height: 100%;
+  position: relative;
 }
 
 /* One scroll region for intro + the concern list together, at every width
@@ -642,15 +655,159 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header middle slot: holds both the mobile location badge and the
+   desktop progress dots as siblings, so the header's own
+   justify-content:space-between still sees exactly 3 children
+   (back / this / close) regardless of which breakpoint is showing. */
+.kal-concern-select__header-middle {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+}
+
+/* Mobile-only static facility badge — explicitly NOT a working dropdown,
+   see the liquid file's comment. Just the facility name, no click
+   handler, no data-kal-facility hook. */
+.kal-concern-select__location-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--kal-color-border);
+  border-radius: 999px;
+  background: var(--kal-color-white);
+}
+
+.kal-concern-select__location-badge .kal-icon svg {
+  width: 20px;
+  height: 20px;
+  color: var(--kal-color-location-text);
+}
+
+.kal-concern-select__location-text {
+  font-size: 14px;
+  color: var(--kal-color-location-text);
+}
+
+/* Desktop's progress dots stay in the DOM (unchanged) but hidden below
+   750px, where the badge above takes their place instead. */
+.kal-step-concern-select .kal-step-doctor-select__progress {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-concern-select__location-badge {
+    display: none;
+  }
+
+  .kal-step-concern-select .kal-step-doctor-select__progress {
+    display: flex;
+  }
+}
+
+/* New mobile-only step bar, directly below the header. Hidden entirely at
+   750px+ — desktop never had this element and isn't getting it in this
+   pass. */
+.kal-concern-select__step-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-concern-select__step-bar {
+    display: none;
+  }
+}
+
+.kal-concern-select__step-bar-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kal-concern-select__step-bar-step {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--kal-color-body);
+}
+
+.kal-concern-select__step-bar-next {
+  font-size: 14px;
+  color: var(--kal-color-body);
+}
+
+.kal-concern-select__step-bar-track {
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--kal-color-border);
+}
+
+/* 1/5 of the track, matching this being step 1 of 5 — same proportion the
+   Figma export's own fixed-pixel fill (68.6px of 327px) works out to. */
+.kal-concern-select__step-bar-fill {
+  width: 20%;
+  height: 100%;
+  border-radius: 999px;
+  background: #d9cdba;
+}
+
+/* Banner moved here from the footer (Figma: directly under the title,
+   above the list) — applies at every width, since no separate desktop
+   position was specified and duplicating it into a mobile-only /
+   desktop-only pair for a single element wasn't worth the complexity. */
+.kal-concern-select__banner {
+  margin: 0 24px;
 }
 
 .kal-concern-select__list {
   display: flex;
   flex-direction: column;
-  gap: 24px; /* matches the Figma export's Concerns container exactly —
-    7 rows x their own height + 6 gaps of 24px = the container's own
-    recorded height, so this isn't a guess */
-  padding: 0 24px;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+/* Mobile-only floating "more below" hint. Positioned against the panel
+   (position:relative, set above) so it stays put regardless of the list's
+   own scroll position, rather than scrolling away with the content. */
+.kal-concern-select__scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  bottom: 88px; /* clears the footer's Continue button */
+  left: 50%;
+  transform: translateX(-50%) rotate(90deg);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 0.5px solid #e5e5e5;
+  background: rgba(242, 242, 242, 0.9);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}
+
+.kal-concern-select__scroll-hint svg {
+  width: 20px;
+  height: 20px;
+  color: var(--kal-color-body);
+}
+
+@media screen and (min-width: 750px) {
+  .kal-concern-select__scroll-hint {
+    display: none;
+  }
 }
 
 .kal-concern-row {
@@ -698,35 +855,38 @@
   min-width: 0;
 }
 
-.kal-concern-row__radio {
+/* Checkbox, not radio — multi-select per the revised Figma spec (see this
+   step's own liquid/CSS section comments). Square instead of circular,
+   unchecked by default; the check glyph itself is a real
+   kal-booking-icons SVG (not a CSS-drawn dot), hidden until selected. */
+.kal-concern-row__checkbox {
   flex-shrink: 0;
-  position: relative;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid #e6e6e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #d9d9d9;
   box-sizing: border-box;
+  background: var(--kal-color-white);
 }
 
-.kal-concern-row__radio::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--kal-color-primary);
-  transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.1s ease;
+.kal-concern-row__checkbox svg {
+  width: 14px;
+  height: 14px;
+  color: var(--kal-color-white);
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }
 
-.kal-concern-row--selected .kal-concern-row__radio {
+.kal-concern-row--selected .kal-concern-row__checkbox {
   border-color: var(--kal-color-primary);
+  background: var(--kal-color-primary);
 }
 
-.kal-concern-row--selected .kal-concern-row__radio::after {
-  transform: translate(-50%, -50%) scale(1);
+.kal-concern-row--selected .kal-concern-row__checkbox svg {
+  opacity: 1;
 }
 
 .kal-concern-select__banner {
