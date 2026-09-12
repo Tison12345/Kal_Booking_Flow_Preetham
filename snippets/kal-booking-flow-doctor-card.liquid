@@ -1,41 +1,39 @@
 {% comment %}
-  One doctor card in the doctor-selection step. Redesigned to match a
-  newer, richer Figma spec — photo, languages, experience, specialty tags,
-  and a "Next Slot" bar, replacing the earlier simpler avatar+rating card.
+  The doctor card in Doctor Select (Step 2 of 5), matching the Figma spec
+  exactly (node 544:3781) — rebuilt as a fully static mockup per explicit
+  instruction, replacing the earlier real-backend-data version (name +
+  generic "Ayurveda Physician" subtitle only, since /api/public/doctors
+  only returns { id, name }). This card intentionally shows content
+  (degree, languages, experience, specialty tags, next slot, price) the
+  real API doesn't provide yet — it's a mockup, not live data.
 
   Accepts:
   - name: {String} e.g. "Dr. Neethu Jayachandran"
-  - specialization: {String} e.g. "General Physician"
-  - experience: {String} e.g. "12 yrs experience" — full phrase, not just the number,
-    since the Figma copy isn't a fixed template ("12 yrs experience")
-  - languages: {String} e.g. "English &middot; Hindi &middot; Malayalam" — pre-joined,
-    not a list, since the separator (&middot;) is part of the visual design
-  - tags: {String} comma-separated specialty tags, e.g. "Anxiety,Stress Management,Diabetes Care"
-    — split into individual pill chips
-  - next_slot: {String} e.g. "Today &bull; 10:30 AM" — pre-joined, same reasoning as languages
-  - selected: {Boolean} true for the currently-selected doctor
-  - photo_url: {String} doctor photo URL — DUMMY/placeholder for now, no real
-    doctor photos exist yet, falls back to a plain gradient block
-  - modes: {String} space-separated consultation modes this doctor is available
-    for, e.g. "in-clinic video". Defaults to both if not passed. Used by the JS
-    toggle to show/hide doctors when switching In-clinic / Video consult.
-    DUMMY for now — real per-doctor mode availability needs backend data.
+  - degree: {String} e.g. "BAMS"
+  - languages: {String} pre-joined, e.g. "English &middot; Hindi &middot; Malayalam"
+  - experience: {String} full phrase, e.g. "12 yrs experience"
+  - tags: {String} comma-separated specialty tags, e.g. "Anxiety,Stress Management"
+  - next_slot: {String} e.g. "Today, 10:30 AM"
+  - price: {String} e.g. "&#8377;500" — pre-formatted, not a bare number
+  - selected: {Boolean} true for the tan-border/gradient/shadow highlighted
+    treatment (same visual language as Concern Select's selected row)
+  - photo_url: {String} doctor photo URL — DUMMY/placeholder, no real
+    doctor photos exist yet
 
   Usage:
   {% render 'kal-booking-flow-doctor-card',
     name: 'Dr. Neethu Jayachandran',
-    specialization: 'General Physician',
-    experience: '12 yrs experience',
+    degree: 'BAMS',
     languages: 'English &middot; Hindi &middot; Malayalam',
+    experience: '12 yrs experience',
     tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
-    next_slot: 'Today &bull; 10:30 AM',
-    selected: true,
-    modes: 'in-clinic video'
+    next_slot: 'Today, 10:30 AM',
+    price: '&#8377;500',
+    selected: true
   %}
 {% endcomment %}
 
 {%- liquid
-  assign modes = modes | default: 'in-clinic video'
   assign tag_list = tags | default: '' | split: ','
 -%}
 
@@ -43,48 +41,48 @@
   type="button"
   class="kal-doctor-card {% if selected %}kal-doctor-card--selected{% endif %}"
   data-kal-doctor-name="{{ name }}"
-  data-kal-modes="{{ modes }}"
 >
   <span class="kal-doctor-card__top">
-    <span class="kal-doctor-card__photo">
-      {%- if photo_url != blank -%}
-        <img src="{{ photo_url }}" alt="{{ name }}" loading="lazy">
-      {%- endif -%}
-    </span>
-    <span class="kal-doctor-card__info">
-      <span class="kal-doctor-card__name">{{ name }}</span>
-      <span class="kal-doctor-card__specialization">{{ specialization }}</span>
-      <span class="kal-doctor-card__meta-row">
-        <span class="kal-doctor-card__meta-icon">
-          {%- render 'kal-booking-icons', icon_name: 'globe' -%}
-        </span>
-        {{ languages }}
+    <span class="kal-doctor-card__body">
+      <span class="kal-doctor-card__photo">
+        {%- if photo_url != blank -%}
+          <img src="{{ photo_url }}" alt="{{ name }}" loading="lazy">
+        {%- endif -%}
       </span>
-      <span class="kal-doctor-card__meta-row">
-        <span class="kal-doctor-card__meta-icon">
-          {%- render 'kal-booking-icons', icon_name: 'briefcase' -%}
+      <span class="kal-doctor-card__info">
+        <span class="kal-doctor-card__name">{{ name }}</span>
+        <span class="kal-doctor-card__meta-row">
+          <span class="kal-doctor-card__meta-icon">
+            {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
+          </span>
+          {{ degree }}
         </span>
-        {{ experience }}
+        <span class="kal-doctor-card__meta-row">
+          <span class="kal-doctor-card__meta-icon">
+            {%- render 'kal-booking-icons', icon_name: 'doctor-language' -%}
+          </span>
+          {{ languages }}
+        </span>
+        <span class="kal-doctor-card__meta-row">
+          <span class="kal-doctor-card__meta-icon">
+            {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
+          </span>
+          {{ experience }}
+        </span>
       </span>
     </span>
-  </span>
 
-  {%- if tag_list.size > 0 -%}
-    <span class="kal-doctor-card__tags">
-      {%- for tag in tag_list -%}
-        <span class="kal-doctor-card__tag">{{ tag | strip }}</span>
-      {%- endfor -%}
-    </span>
-  {%- endif -%}
-
-  <span class="kal-doctor-card__next-slot">
-    <span class="kal-doctor-card__next-slot-label">Next Slot :</span>
-    {{ next_slot }}
-  </span>
-
-  <span class="kal-doctor-card__indicator" aria-hidden="true">
-    {%- if selected -%}
-      {%- render 'kal-booking-icons', icon_name: 'check' -%}
+    {%- if tag_list.size > 0 -%}
+      <span class="kal-doctor-card__tags">
+        {%- for tag in tag_list -%}
+          <span class="kal-doctor-card__tag">{{ tag | strip }}</span>
+        {%- endfor -%}
+      </span>
     {%- endif -%}
+  </span>
+
+  <span class="kal-doctor-card__footer">
+    <span class="kal-doctor-card__next-slot">Next slot - <strong>{{ next_slot }}</strong></span>
+    <span class="kal-doctor-card__price">{{ price }}</span>
   </span>
 </button>

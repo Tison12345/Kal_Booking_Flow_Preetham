@@ -3,28 +3,33 @@
   new Concern Select step, not directly from Entry — see that step's own
   comment for why.
 
-  Clinic + doctor list are now REAL, fetched from the CMS (2026-08 backend
-  test): a facility strip (data-kal-facility-strip, 4 clinics — Indiranagar,
-  Koramangala, JP Nagar, Ernakulam, picked because each one actually has real
-  doctors assigned, confirmed live against GET /api/public/doctors before
-  hardcoding them here) drives which facility's doctors get fetched from
-  GET /api/public/doctors?facility_id=X. The doctor cards themselves
-  (data-kal-doctor-list) are an empty placeholder in this markup —
-  kal-booking-flow.js's loadDoctorsForFacility() replaces its contents with
-  real cards built from the API response (id + name only — that endpoint
-  doesn't return specialization/photo/languages/tags yet, so the dynamic
-  cards show name only, not the richer static mockup they replaced).
-
-  In-clinic/video mode toggle no longer filters the doctor list (the old
-  data-kal-modes attribute doesn't exist on API doctors — we have no
-  per-doctor mode-availability data from the backend yet), it only still
-  drives the price banner and the summary badge on later steps.
+  MOBILE REDESIGN per a later Figma pass (node 544:3781), reverting the
+  prior backend-integration work on this screen — explicit instruction:
+  - The facility strip (4 clinics, picking which one's doctors to fetch)
+    is gone. The design shows no in-page clinic picker on this screen at
+    all, just the shared header's facility badge (see
+    kal-booking-flow-step-header.liquid) — the CMS facility-strip/
+    GET /api/public/doctors?facility_id=X wiring this replaced is removed
+    from kal-booking-flow.js too (setFacility, loadDoctorsForFacility,
+    renderDoctorCards, MOCK_DOCTORS, the data-kal-facility and
+    data-kal-doctor-option click handlers).
+  - The doctor card is a full static mockup again (name, degree,
+    languages, experience, specialty tags, next slot, price) — see
+    kal-booking-flow-doctor-card.liquid's own comment for why this
+    intentionally shows content the real API doesn't provide yet.
+  - Downstream steps (Slot Picker) aren't affected: they already read
+    their own hardcoded default data-kal-doctor-id/data-kal-facility-id
+    off .kal-step-slot-picker's root element (see that step's own
+    liquid), never actually depending on doctorSelect's old dynamic
+    selection state.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
   switches at 750px. Left column reuses .kal-step-entry__info exactly like
   every other step's desktop composition (per the Figma spec — only the
-  heading text differs).
+  heading text differs); this pass is mobile-only, so its copy ("Who would
+  you like to see?") is left as-is while the mobile intro heading below
+  gets the new copy.
 {% endcomment %}
 
 <div class="kal-step-doctor-select kal-step-shell">
@@ -49,73 +54,58 @@
 
   <div class="kal-step-shell__panel">
 
-    <div class="kal-step-doctor-select__header kal-step-shell__header">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-back="concern-select" aria-label="Back">
-        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
-      </button>
-      <div class="kal-step-doctor-select__progress">
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-text">2/5</span>
-      </div>
-      {%- comment -%}
-        Own close button, matching Therapy Slot's pattern — a real flex
-        sibling of back/progress in this same row, not the separate,
-        absolutely-positioned .kal-booking-flow__close. That one is
-        positioned independently (top:12px, fixed) from wherever this
-        header row actually sits, so once the header got its own top
-        padding, the two drifted out of alignment. kal-booking-flow.js
-        hides the global close button whenever a step other than "entry"
-        is active, since every step but Entry now has its own.
-      {%- endcomment -%}
-      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
-    </div>
+    {%- comment -%}
+      Per the updated Figma spec (node 544:3781), Doctor Select's header
+      is the exact same composition Concern Select uses — back button,
+      mobile facility badge / desktop progress dots, close button, plus a
+      mobile step progress bar underneath. Shared via the same snippet
+      rather than duplicating that markup here (see
+      kal-booking-flow-step-header.liquid); the old dots-only header
+      (with its own inline "2/5" text and no facility badge/step-bar) is
+      gone.
+    {%- endcomment -%}
+    {%- render 'kal-booking-flow-step-header', back_target: 'concern-select', step_number: 2, step_total: 5, next_label: 'Date & Time' -%}
 
     <div class="kal-step-shell__scroll">
       <div class="kal-step-doctor-select__intro">
-        <p class="kal-step-doctor-select__eyebrow">Step 2 of 5</p>
-        <h2 class="kal-step-doctor-select__heading">Who would you like to see?</h2>
-        <p class="kal-step-doctor-select__subtext">Choose a doctor or browse by specialty.</p>
-      </div>
-
-      <div class="kal-slot-section__head">
-        <p class="kal-slot-section__label">Choose a clinic</p>
-      </div>
-      {%- comment -%} Populated statically below (4 real, hand-picked facilities — see the top comment for why). Selecting one re-fetches the doctor list via loadDoctorsForFacility() in kal-booking-flow.js. {%- endcomment -%}
-      <div class="kal-facility-strip" data-kal-facility-strip>
-        <button type="button" class="kal-facility-chip kal-facility-chip--active" data-kal-facility="bfa7bd70-428b-4fd3-80c3-2c7f0106497d" data-kal-facility-name="Indiranagar">Indiranagar</button>
-        <button type="button" class="kal-facility-chip" data-kal-facility="185b85d7-fad2-405d-b8ea-13dc683fbde8" data-kal-facility-name="Koramangala">Koramangala</button>
-        <button type="button" class="kal-facility-chip" data-kal-facility="6cb82314-692b-44ad-87e1-86e147bc107d" data-kal-facility-name="JP Nagar">JP Nagar</button>
-        <button type="button" class="kal-facility-chip" data-kal-facility="98d24182-c035-425d-9284-56c59cc05056" data-kal-facility-name="Ernakulam">Ernakulam</button>
+        <h2 class="kal-step-doctor-select__heading">Choose your doctor</h2>
+        <p class="kal-step-doctor-select__subtext">Select a doctor and how you&rsquo;d like to consult</p>
       </div>
 
       <div class="kal-toggle-group">
-        <button type="button" class="kal-toggle-btn" data-kal-mode="in-clinic">
+        <button type="button" class="kal-toggle-btn kal-toggle-btn--active" data-kal-mode="in-clinic">
           <span class="kal-icon kal-icon--location">
-            {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+            {%- render 'kal-booking-icons', icon_name: 'mode-location' -%}
           </span>
-          In-clinic
+          In-Clinic
         </button>
-        <button type="button" class="kal-toggle-btn kal-toggle-btn--active" data-kal-mode="video">
+        <button type="button" class="kal-toggle-btn" data-kal-mode="video">
           <span class="kal-icon kal-icon--video">
-            {%- render 'kal-booking-icons', icon_name: 'video-camera' -%}
+            {%- render 'kal-booking-icons', icon_name: 'mode-online' -%}
           </span>
-          Video consult
+          Video Consult
         </button>
       </div>
 
-      <div class="kal-step-doctor-select__list" data-kal-doctor-list>
-        <p class="kal-doctor-list__loading">Loading doctors&hellip;</p>
+      {%- assign doctor_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      <div class="kal-step-doctor-select__list">
+        {%- render 'kal-booking-flow-doctor-card',
+          name: 'Dr. Neethu Jayachandran',
+          degree: 'BAMS',
+          languages: 'English &middot; Hindi &middot; Malayalam',
+          experience: '12 yrs experience',
+          tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
+          next_slot: 'Today, 10:30 AM',
+          price: '&#8377;500',
+          selected: true,
+          photo_url: doctor_photo_url
+        -%}
       </div>
     </div>
 
     <div class="kal-step-shell__footer">
-      {%- render 'kal-booking-flow-price-banner' -%}
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
-        Select a doctor
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker">
+        Continue
       </button>
     </div>
 
