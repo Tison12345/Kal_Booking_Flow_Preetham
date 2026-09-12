@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const apiBaseUrl = flow.dataset.apiBaseUrl || '';
   const whatsappNumber = flow.dataset.whatsappNumber || '';
-  const doctorPhotoPlaceholder = flow.dataset.doctorPhotoPlaceholder || '';
 
   const openFlow = () => {
     flow.showModal();
@@ -35,23 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
       globalCloseBtn.hidden = stepName !== 'entry';
     }
 
-    // First time the visitor reaches doctor select, fetch the real doctor
-    // list for the default facility. After that, switching facilities
-    // re-fetches on demand (see setFacility), so this only needs to run once.
-    if (stepName === 'doctor-select' && !doctorSelectLoaded) {
-      doctorSelectLoaded = true;
-      loadDoctorsForFacility();
-    }
-
-    // First time the visitor reaches the slot picker, load today's slots
-    // and the day-strip's slot-count badges. After that, whatever day/time
-    // they'd picked just stays as-is.
-    if (stepName === 'slot-picker' && !slotPickerLoaded) {
-      slotPickerLoaded = true;
-      loadSlotPickerDay(todayStart());
-      loadDaySummaries(slotPicker.mode);
-    }
-
     // Refreshed every time (not just once) — unlike the slot picker, this
     // step has no state of its own to preserve, so it should always show
     // whatever's currently in slotPicker/patientDetails.
@@ -59,11 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderConfirmationSummary();
     }
 
-    // Same "load once" pattern as the Consultation slot picker, but for
-    // the Therapy screen's own independent state.
-    if (stepName === 'therapy-slot' && !therapySlotLoaded) {
-      therapySlotLoaded = true;
-      loadTherapySlotDay(todayStart());
+    if (stepName === 'therapy-confirmed') {
+      renderTherapyConfirmedSummary();
     }
   };
 
@@ -83,8 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const updateConcernContinueButton = () => {
+    const hasSelection = concernSelect.selected.size > 0;
+    // Per the updated Figma spec, the footer (not just the button) is
+    // absent until at least one concern is picked — a disabled-but-visible
+    // button was the old behavior, before this pass.
+    flow.querySelectorAll('[data-kal-concern-footer]').forEach((footer) => {
+      footer.hidden = !hasSelection;
+    });
     flow.querySelectorAll('[data-kal-concern-continue]').forEach((btn) => {
-      btn.disabled = concernSelect.selected.size === 0;
+      btn.disabled = !hasSelection;
     });
   };
 
@@ -104,263 +90,362 @@ document.addEventListener('DOMContentLoaded', () => {
     updateConcernContinueButton();
   };
 
-  // In-clinic / Video consult toggle: switches the active button (within
-  // whichever toggle group was clicked — mobile and desktop each have their
-  // own), swaps the price banner copy, and filters the doctor list down to
-  // doctors available in that mode.
+  // ----------------------------------------------------------------------
+  // THERAPY — "Choose your therapy" category checkboxes (node 539:2128).
+  // Deliberately separate state from concernSelect above, even though the
+  // rows look identical (reusing .kal-concern-row) and the toggle logic is
+  // the same shape — these are two different selections in two different
+  // flows, not one shared list.
+  // ----------------------------------------------------------------------
+
+  const therapyConcernSelect = {
+    selected: new Set(),
+  };
+
+  // Display names for the category checkboxes above — needed by
+  // renderTherapyConfirmedSummary() further down (the checkboxes'
+  // own data-kal-therapy-concern values are slugs, not display text).
+  const THERAPY_CATEGORY_LABELS = {
+    'relaxation-stress-relief': 'Relaxation & Stress Relief',
+    'pain-management': 'Pain Management',
+    'beauty-skin-care': 'Beauty & Skin Care',
+    'physiotherapy-rehab': 'Physiotherapy & Rehab',
+    'therapeutic-massage': 'Therapeutic Massage',
+  };
+
+  // Confirm is a step that belongs to the DROPDOWN specifically, not to
+  // category checkboxes — explicit instruction:
+  // - category only, ever: button is always "Continue", no confirm step.
+  // - dropdown only, ever: button starts as "Confirm"; clicking it flips
+  //   to "Continue" (which is what actually moves on).
+  // - both: whichever mechanism the visitor touched FIRST (starting from
+  //   zero total selections) decides — category-first skips confirm
+  //   entirely ("Continue"), dropdown-first still needs it.
+  // firstSource is (re)determined on the transition from 0 selections to
+  // 1 (in toggleTherapyConcern/toggleTherapyDropdownOption below) and
+  // reset back to null once everything is deselected, so the next fresh
+  // pick decides again.
+  const therapyFlowState = {
+    firstSource: null, // 'category' | 'dropdown' | null
+    confirmed: false,
+  };
+
+  const totalTherapySelectionCount = () => therapyConcernSelect.selected.size + therapyDropdownSelect.selected.size;
+
+  // Gated on EITHER selection mechanism — a category checkbox above, or a
+  // specific therapy from the dropdown below (therapyDropdownSelect, added
+  // further down with the dropdown itself) — per explicit instruction that
+  // "minimum 1 concern should be selected" covers both.
+  //
+  // The footer summary line's text is a separate, more specific rule
+  // (explicit instruction): it only appears once >=1 CATEGORY is selected
+  // — either alone ("1 therapy category selected") or combined with
+  // dropdown therapies ("2 therapies & 1 therapy category selected").
+  // Dropdown-only selections stay silent here, since the dropdown's own
+  // trigger label already says "N therapy selected" in that case (see
+  // updateTherapyDropdownSummary()) — a second count would be redundant.
+  const updateTherapyConcernContinueButton = () => {
+    const categoryCount = therapyConcernSelect.selected.size;
+    const therapyCount = therapyDropdownSelect.selected.size;
+    const hasSelection = categoryCount > 0 || therapyCount > 0;
+
+    flow.querySelectorAll('[data-kal-therapy-concern-footer]').forEach((footer) => {
+      footer.hidden = !hasSelection;
+    });
+
+    const needsConfirm = hasSelection && therapyFlowState.firstSource === 'dropdown' && !therapyFlowState.confirmed;
+    flow.querySelectorAll('[data-kal-therapy-concern-continue]').forEach((btn) => {
+      btn.disabled = !hasSelection;
+      btn.textContent = needsConfirm ? 'Confirm' : 'Continue';
+      btn.dataset.kalTherapyConcernMode = needsConfirm ? 'confirm' : 'continue';
+    });
+
+    const showSummary = categoryCount > 0;
+    let summaryText = '';
+    if (showSummary) {
+      const parts = [];
+      if (therapyCount > 0) {
+        parts.push(`${therapyCount} ${therapyCount === 1 ? 'therapy' : 'therapies'}`);
+      }
+      parts.push(`${categoryCount} ${categoryCount === 1 ? 'therapy category' : 'therapy categories'}`);
+      summaryText = `${parts.join(' & ')} selected`;
+    }
+    flow.querySelectorAll('[data-kal-therapy-concern-summary]').forEach((el) => {
+      el.hidden = !showSummary;
+      el.textContent = summaryText;
+    });
+  };
+
+  const toggleTherapyConcern = (concern) => {
+    const wasEmpty = totalTherapySelectionCount() === 0;
+    const isAdding = !therapyConcernSelect.selected.has(concern);
+    if (isAdding) {
+      therapyConcernSelect.selected.add(concern);
+    } else {
+      therapyConcernSelect.selected.delete(concern);
+    }
+    if (wasEmpty && isAdding) {
+      therapyFlowState.firstSource = 'category';
+      therapyFlowState.confirmed = false;
+    } else if (totalTherapySelectionCount() === 0) {
+      therapyFlowState.firstSource = null;
+      therapyFlowState.confirmed = false;
+    }
+    flow.querySelectorAll('[data-kal-therapy-concern]').forEach((row) => {
+      const isSelected = therapyConcernSelect.selected.has(row.dataset.kalTherapyConcern);
+      row.classList.toggle('kal-concern-row--selected', isSelected);
+      row.setAttribute('aria-pressed', String(isSelected));
+    });
+    updateTherapyConcernContinueButton();
+  };
+
+  // ----------------------------------------------------------------------
+  // THERAPY DROPDOWN — "Select the therapy" multi-select (node 623:7334,
+  // the open-panel state of the dropdown above). Real selection, not
+  // decorative: picking a specific therapy here also satisfies the "at
+  // least one selection" rule that gates the Confirm button, same as a
+  // category checkbox does (see updateTherapyConcernContinueButton above).
+  //
+  // The list is rendered client-side (not hardcoded in the liquid) because
+  // it has to re-sort on every toggle — selected therapies move to the top
+  // of the stack, per explicit instruction — which is simplest as a full
+  // re-render rather than manual DOM node reordering.
+  // ----------------------------------------------------------------------
+
+  const THERAPY_CHECK_ICON_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  // Matches kal-booking-icons.liquid's 'close' glyph — duplicated inline
+  // for the same reason as THERAPY_CHECK_ICON_SVG above (client-rendered chips).
+  const THERAPY_CLOSE_ICON_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><path d="m5 5 14 14"/></svg>';
+
+  const THERAPY_OPTIONS = [
+    { key: 'abhyanga', name: 'Abhyanga', tag: 'Most Booked' },
+    { key: 'janu-vasti', name: 'Janu Vasti' },
+    { key: 'kayaseka', name: 'Kayaseka' },
+    { key: 'panchakarma', name: 'Panchakarma', tag: 'Featured' },
+    { key: 'shirodhara', name: 'Shirodhara', tag: 'Most Booked' },
+    { key: 'choorna-pinda-sweda', name: 'Choorna Pinda Sweda' },
+    { key: 'greeva-vasti', name: 'Greeva Vasti' },
+    { key: 'kati-vasti', name: 'Kati Vasti' },
+    { key: 'nasya', name: 'Nasya' },
+    { key: 'netra-tarpana', name: 'Netra Tarpana' },
+    { key: 'njavarakizhi', name: 'Njavarakizhi' },
+    { key: 'patra-potali-sweda', name: 'Patra Potali Sweda' },
+    { key: 'pizhichil', name: 'Pizhichil' },
+    { key: 'shirovasti', name: 'Shirovasti' },
+    { key: 'swedana', name: 'Swedana' },
+    { key: 'thakradhara', name: 'Thakradhara' },
+    { key: 'udwartana', name: 'Udwartana' },
+  ];
+
+  const therapyDropdownSelect = {
+    selected: new Set(),
+  };
+
+  const renderTherapyDropdownList = () => {
+    // Selected options first (in their original relative order), then the
+    // rest — "the concern selected should be on top of the stack".
+    const sorted = [...THERAPY_OPTIONS].sort((a, b) => {
+      const aSelected = therapyDropdownSelect.selected.has(a.key);
+      const bSelected = therapyDropdownSelect.selected.has(b.key);
+      if (aSelected === bSelected) return 0;
+      return aSelected ? -1 : 1;
+    });
+
+    flow.querySelectorAll('[data-kal-therapy-dropdown-list]').forEach((list) => {
+      list.innerHTML = sorted.map((option) => {
+        const isSelected = therapyDropdownSelect.selected.has(option.key);
+        const tagHtml = option.tag
+          ? `<span class="kal-therapy-option__tag">${option.tag}</span>`
+          : '';
+        return `
+          <button type="button" class="kal-therapy-option${isSelected ? ' kal-therapy-option--selected' : ''}" data-kal-therapy-option="${option.key}" aria-pressed="${isSelected}">
+            <span class="kal-therapy-option__left">
+              <span class="kal-therapy-option__checkbox" aria-hidden="true">${THERAPY_CHECK_ICON_SVG}</span>
+              <span class="kal-therapy-option__name">${option.name}</span>
+            </span>
+            ${tagHtml}
+          </button>
+        `;
+      }).join('');
+    });
+  };
+
+  const updateTherapyDropdownSummary = () => {
+    const count = therapyDropdownSelect.selected.size;
+    flow.querySelectorAll('[data-kal-therapy-dropdown-summary]').forEach((el) => {
+      el.hidden = count === 0;
+    });
+    flow.querySelectorAll('[data-kal-therapy-dropdown-count]').forEach((el) => {
+      el.textContent = `${count} selected`;
+    });
+    flow.querySelectorAll('[data-kal-therapy-dropdown-label]').forEach((el) => {
+      el.textContent = count > 0 ? `${count} therapy selected` : 'Select the therapy';
+      el.classList.toggle('kal-therapy-select__placeholder--filled', count > 0);
+    });
+  };
+
+  // "Selected therapies" chip summary (node 623:7592) — mirrors
+  // therapyDropdownSelect in insertion order (Set iteration order),
+  // shown above the fold so a pick is visible without opening the
+  // dropdown. Each chip's own remove button re-toggles that same option.
+  const renderTherapySelectedChips = () => {
+    const selectedOptions = THERAPY_OPTIONS.filter((option) => therapyDropdownSelect.selected.has(option.key));
+
+    flow.querySelectorAll('[data-kal-therapy-selected]').forEach((wrapper) => {
+      wrapper.hidden = selectedOptions.length === 0;
+    });
+
+    flow.querySelectorAll('[data-kal-therapy-selected-chips]').forEach((chips) => {
+      chips.innerHTML = selectedOptions.map((option) => `
+        <span class="kal-therapy-chip">
+          <span class="kal-therapy-chip__name">${option.name}</span>
+          <button type="button" class="kal-therapy-chip__remove" data-kal-therapy-chip-remove="${option.key}" aria-label="Remove ${option.name}">${THERAPY_CLOSE_ICON_SVG}</button>
+        </span>
+      `).join('');
+    });
+  };
+
+  const toggleTherapyDropdownOption = (key) => {
+    const wasEmpty = totalTherapySelectionCount() === 0;
+    const isAdding = !therapyDropdownSelect.selected.has(key);
+    if (isAdding) {
+      therapyDropdownSelect.selected.add(key);
+    } else {
+      therapyDropdownSelect.selected.delete(key);
+    }
+    if (wasEmpty && isAdding) {
+      therapyFlowState.firstSource = 'dropdown';
+      therapyFlowState.confirmed = false;
+    } else if (totalTherapySelectionCount() === 0) {
+      therapyFlowState.firstSource = null;
+      therapyFlowState.confirmed = false;
+    }
+    renderTherapyDropdownList();
+    renderTherapySelectedChips();
+    updateTherapyDropdownSummary();
+    updateTherapyConcernContinueButton();
+  };
+
+  const clearTherapyDropdownSelection = () => {
+    therapyDropdownSelect.selected.clear();
+    if (totalTherapySelectionCount() === 0) {
+      therapyFlowState.firstSource = null;
+      therapyFlowState.confirmed = false;
+    }
+    renderTherapyDropdownList();
+    renderTherapySelectedChips();
+    updateTherapyDropdownSummary();
+    updateTherapyConcernContinueButton();
+  };
+
+  const setTherapyDropdownOpen = (wrapper, open) => {
+    const toggle = wrapper.querySelector('[data-kal-therapy-dropdown-toggle]');
+    const panel = wrapper.querySelector('[data-kal-therapy-dropdown-panel]');
+    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (panel) panel.hidden = !open;
+  };
+
+  // "Therapy" row on the Request Sent screen (node 539:2222) — joins
+  // whichever category checkboxes and/or dropdown therapies were picked
+  // on Step 1 of 2 into one display string. Called by goToStep() on
+  // arrival at "therapy-confirmed", same "refresh every time, not just
+  // once" treatment as renderConfirmationSummary().
+  const renderTherapyConfirmedSummary = () => {
+    // Patient Name (data-kal-confirm-name) is the same shared hook the
+    // consultation flow's Confirmation/Booking Confirmed screens use,
+    // but THEY only get it populated via renderConfirmationSummary(),
+    // which only runs on goToStep('confirmation') — never called for
+    // this step, so without setting it here too it stayed stuck at the
+    // placeholder em dash. Set directly from the same patientDetails
+    // state (populated by Therapy Details' data-kal-field="name" input).
+    flow.querySelectorAll('[data-kal-confirm-name]').forEach((el) => {
+      el.textContent = patientDetails.name || '—';
+    });
+
+    const names = [
+      ...Array.from(therapyDropdownSelect.selected, (key) => {
+        const option = THERAPY_OPTIONS.find((o) => o.key === key);
+        return option ? option.name : null;
+      }),
+      ...Array.from(therapyConcernSelect.selected, (key) => THERAPY_CATEGORY_LABELS[key] || null),
+    ].filter(Boolean);
+
+    flow.querySelectorAll('[data-kal-therapy-confirm-summary]').forEach((el) => {
+      el.textContent = names.length > 0 ? names.join(', ') : '—';
+    });
+  };
+
+  renderTherapyDropdownList();
+  renderTherapySelectedChips();
+
+  // In-clinic / Video consult toggle: switches the active button and keeps
+  // the summary badge on later steps in sync. Per the updated Figma spec,
+  // Doctor Select's card is a single static mockup shown for both modes
+  // (no more per-doctor mode-availability filtering — that relied on a
+  // data-kal-modes attribute the static card no longer sets), and the
+  // price banner this used to swap copy on is gone too (price now lives
+  // in the doctor card's own footer).
   const setMode = (mode) => {
     flow.querySelectorAll('.kal-toggle-btn').forEach((btn) => {
       btn.classList.toggle('kal-toggle-btn--active', btn.dataset.kalMode === mode);
-    });
-
-    flow.querySelectorAll('[data-kal-mode-content]').forEach((el) => {
-      el.hidden = el.dataset.kalModeContent !== mode;
-    });
-
-    flow.querySelectorAll('.kal-doctor-card').forEach((card) => {
-      const modes = (card.dataset.kalModes || '').split(' ');
-      card.hidden = !modes.includes(mode);
     });
 
     flow.querySelectorAll('[data-kal-summary-mode]').forEach((el) => {
       el.textContent = mode === 'video' ? 'Online' : 'In-Clinic';
     });
 
+    // Slot Picker's day-strip/slot-grid are static now (see that step's
+    // own liquid comment), so switching modes no longer re-fetches or
+    // re-renders anything there — just tracked for Confirmation's summary.
     slotPicker.mode = mode;
-    // If the slot picker has already loaded a day, the previously fetched
-    // slots/day-summaries were scoped to the old mode (in-clinic requests
-    // are filtered server-side by facility_id, video requests aren't) —
-    // reload rather than just re-render.
-    if (slotPickerLoaded) {
-      loadSlotPickerDay(slotPicker.selectedDate);
-      loadDaySummaries(mode);
-    }
   };
 
   // ----------------------------------------------------------------------
-  // DOCTOR SELECT — facility strip + real doctor list from the CMS
-  // (GET /api/public/doctors?facility_id=X). Added alongside the backend
-  // test that first wired real slot data — before this, doctor cards were
-  // three static, hardcoded Liquid renders with no connection to the CMS
-  // at all. That endpoint only returns { id, name } (no specialization,
-  // photo, languages, tags, or per-doctor mode-availability yet), so the
-  // cards built here are deliberately leaner than the old mockup — real
-  // name, generic subtitle, nothing fabricated to look more specific than
-  // the data actually is.
+  // DOCTOR SELECT — per the updated Figma spec (node 544:3781), this step
+  // reverted to a fully static mockup: no facility strip, no CMS doctor
+  // fetch. The doctor card is now static Liquid (see
+  // kal-booking-flow-step-doctor-select.liquid /
+  // kal-booking-flow-doctor-card.liquid) — nothing to wire up here. The
+  // In-Clinic/Video Consult toggle above (setMode) still applies to this
+  // step, and Slot Picker still gets its doctor/facility from its own
+  // hardcoded default data attributes (see that step's own liquid),
+  // unaffected by this.
+  // ----------------------------------------------------------------------
+
+  // ----------------------------------------------------------------------
+  // SLOT PICKER — per the updated Figma spec (node 438:7388), the day strip
+  // and time-slot grid are static Liquid now, not fetched/rendered here —
+  // see kal-booking-flow-step-slot-picker.liquid's own comment. What's left
+  // is just: tracking which static day/slot/tab is selected, for
+  // Confirmation's summary and the tab show/hide.
   //
-  // The 4 facilities in the strip are hardcoded (not fetched from
-  // GET /api/public/facilities, even though that endpoint exists) —
-  // picked by hand after checking live which of the CMS's facilities
-  // actually have doctors assigned, so the demo never lands on a clinic
-  // with an empty doctor list.
+  // Therapy Slot used to reuse several helpers below (toDateKey,
+  // formatDayChipLabel, periodForHour, generateMockSlots, STRIP_DAYS,
+  // SLOT_PERIODS, DAY_LABELS, the calendar modal) for its own day/slot
+  // picker — that whole screen was replaced by a therapy-category
+  // checkbox list (node 539:2128, see that step's own liquid comment), so
+  // those helpers and the calendar modal they fed are gone too, along
+  // with USE_MOCK_DATA (its only two call sites were Doctor Select's old
+  // dynamic fetch and this one, both now removed).
   // ----------------------------------------------------------------------
-
-  let doctorSelectLoaded = false;
-
-  const doctorSelect = {
-    facilityId: 'bfa7bd70-428b-4fd3-80c3-2c7f0106497d', // Indiranagar, matches the strip's default-active chip
-    facilityName: 'Indiranagar',
-    doctors: [],
-    selectedDoctorId: null,
-  };
-
-  const CHECK_ICON_SVG =
-    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-
-  // Same generic stock photo on every doctor card — the doctors API only
-  // returns { id, name }, no real per-doctor photo, so a shared placeholder
-  // reads more like "photo coming soon" than a gradient block does, without
-  // pretending to be any specific doctor's actual picture.
-  const renderDoctorCards = () => {
-    let listHtml;
-    if (doctorSelect.doctors.length === 0) {
-      listHtml = '<p class="kal-doctor-list__empty">No doctors available at this clinic right now.</p>';
-    } else {
-      listHtml = doctorSelect.doctors
-        .map((doctor) => {
-          const selected = doctor.id === doctorSelect.selectedDoctorId;
-          return `
-            <button type="button" class="kal-doctor-card${selected ? ' kal-doctor-card--selected' : ''}" data-kal-doctor-option="${doctor.id}" data-kal-modes="in-clinic video">
-              <span class="kal-doctor-card__top">
-                <span class="kal-doctor-card__photo">${
-                  doctorPhotoPlaceholder
-                    ? `<img src="${doctorPhotoPlaceholder}" alt="" loading="lazy">`
-                    : ''
-                }</span>
-                <span class="kal-doctor-card__info">
-                  <span class="kal-doctor-card__name">${doctor.name}</span>
-                  <span class="kal-doctor-card__specialization">Ayurveda Physician</span>
-                </span>
-              </span>
-              <span class="kal-doctor-card__indicator" aria-hidden="true">${selected ? CHECK_ICON_SVG : ''}</span>
-            </button>
-          `;
-        })
-        .join('');
-    }
-
-    flow.querySelectorAll('[data-kal-doctor-list]').forEach((el) => {
-      el.innerHTML = listHtml;
-    });
-  };
-
-  const updateDoctorContinueButton = () => {
-    const doctor = doctorSelect.doctors.find((d) => d.id === doctorSelect.selectedDoctorId);
-    flow.querySelectorAll('[data-kal-doctor-continue]').forEach((btn) => {
-      btn.disabled = !doctor;
-      btn.textContent = doctor ? `Continue with ${doctor.name}` : 'Select a doctor';
-    });
-  };
-
-  const selectDoctor = (doctorId) => {
-    doctorSelect.selectedDoctorId = doctorId;
-    renderDoctorCards();
-    updateDoctorContinueButton();
-
-    // Prime Slot Picker's facility/doctor before the visitor navigates
-    // there — that step reads these two attributes fresh on every fetch
-    // (see its own liquid comment), so overwriting them here is all the
-    // handoff needs.
-    if (slotPickerEl) {
-      slotPickerEl.dataset.kalDoctorId = doctorId;
-      slotPickerEl.dataset.kalFacilityId = doctorSelect.facilityId;
-    }
-
-    // Slot Picker's and Confirmation's own doctor-summary cards
-    // (data-kal-summary-name/-meta) are still static Liquid text otherwise
-    // — keep them in sync with whoever's actually selected here, same
-    // reasoning as the location-text fix in setFacility.
-    const doctor = doctorSelect.doctors.find((d) => d.id === doctorId);
-    if (doctor) {
-      flow.querySelectorAll('[data-kal-summary-name]').forEach((el) => {
-        el.textContent = doctor.name;
-      });
-      flow.querySelectorAll('[data-kal-summary-meta]').forEach((el) => {
-        el.textContent = 'Ayurveda Physician';
-      });
-    }
-  };
-
-  // Same 2 doctors regardless of which facility chip is picked — this is
-  // frontend-only mock data, not meant to simulate per-facility rosters.
-  // Same { id, name } shape the real /api/public/doctors response uses, so
-  // nothing downstream (selectDoctor, renderDoctorCards, the summary-name
-  // sync) needs to know or care whether this came from the API or here.
-  const MOCK_DOCTORS = [
-    { id: 'mock-doctor-1', name: 'Dr. Offline One' },
-    { id: 'mock-doctor-2', name: 'Dr. Offline Two' },
-  ];
-
-  const loadDoctorsForFacility = async () => {
-    doctorSelect.doctors = [];
-    doctorSelect.selectedDoctorId = null;
-    flow.querySelectorAll('[data-kal-doctor-list]').forEach((el) => {
-      el.innerHTML = '<p class="kal-doctor-list__loading">Loading doctors&hellip;</p>';
-    });
-    updateDoctorContinueButton();
-
-    if (USE_MOCK_DATA) {
-      doctorSelect.doctors = MOCK_DOCTORS;
-      selectDoctor(MOCK_DOCTORS[0].id);
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `${apiBaseUrl}/api/public/doctors?facility_id=${encodeURIComponent(doctorSelect.facilityId)}`,
-      );
-      if (!res.ok) throw new Error(`Doctors fetch failed: ${res.status}`);
-      const data = await res.json();
-      doctorSelect.doctors = data.doctors ?? [];
-      if (doctorSelect.doctors.length > 0) {
-        selectDoctor(doctorSelect.doctors[0].id);
-      } else {
-        renderDoctorCards();
-        updateDoctorContinueButton();
-      }
-    } catch (err) {
-      flow.querySelectorAll('[data-kal-doctor-list]').forEach((el) => {
-        el.innerHTML = '<p class="kal-doctor-list__empty">Could not load doctors. Please try again.</p>';
-      });
-    }
-  };
-
-  const setFacility = (facilityId, facilityName) => {
-    doctorSelect.facilityId = facilityId;
-    doctorSelect.facilityName = facilityName;
-
-    flow.querySelectorAll('[data-kal-facility]').forEach((chip) => {
-      chip.classList.toggle('kal-facility-chip--active', chip.dataset.kalFacility === facilityId);
-    });
-
-    // Every step's displayed clinic address follows whichever facility is
-    // currently selected here — see the "Kormangala was stale" fix earlier
-    // in this build for why this needs to actually stay in sync.
-    flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
-      el.textContent = `Kerala Ayurveda Wellness Center, ${facilityName} · Opens 8 AM`;
-    });
-
-    loadDoctorsForFacility();
-  };
-
-  // ----------------------------------------------------------------------
-  // SLOT PICKER — day strip, calendar modal, and time-slot grid.
-  // Mirrors the real staff CMS's SlotPicker.tsx mechanics (see the comment
-  // at the top of kal-booking-flow-step-slot-picker.liquid for the mapping).
-  // ----------------------------------------------------------------------
-
-  // Backend testing (2026-08): kal_booking_api_base_url is now set to
-  // http://localhost:3000 in the theme (CMS backend running via `npm run dev`
-  // on the same machine as whoever's testing this — see the demo-store test
-  // notes for why it's localhost and not a deployed URL). CORS is scoped to
-  // https://arise-jin.myshopify.com specifically (app/lib/cors.ts in the CMS
-  // repo), so this only actually reaches the backend when opened from that
-  // domain, not from any other origin. Flip back to true if the local CMS
-  // dev server isn't running — every fetch below will otherwise just fail.
-  //
-  // Flipped back to true — frontend-only work for now, backend hookup
-  // (doctors, slot picking, everything else this flag and the doctor-list
-  // fetch below gate) is deliberately deferred. See MOCK_DOCTORS below —
-  // loadDoctorsForFacility() didn't previously check this flag at all
-  // (the doctor list was wired straight to the real API with no mock
-  // fallback), so that's now gated the same way slots/day-summaries
-  // already were.
-  const USE_MOCK_DATA = true;
 
   const CONSULT_DURATION_MINUTES = 45; // confirmed decision, see shopify-booking-api-reference.md §4.5
-  const STRIP_DAYS = 10; // matches SlotPicker.tsx's STRIP_DAYS
-  const MAX_FUTURE_DAYS = 90; // matches SlotPicker.tsx's MAX_FUTURE_DAYS
-  const SLOT_PERIODS = [
-    { key: 'Morning', startHour: 6, endHour: 12 },
-    { key: 'Afternoon', startHour: 12, endHour: 16 },
-    { key: 'Evening', startHour: 16, endHour: 22 },
-  ];
-  const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const FULL_DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const MONTH_LABELS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
-  const slotPickerEl = flow.querySelector('.kal-step-slot-picker');
-  const calendarModal = flow.querySelector('[data-kal-calendar-modal]');
-
-  let slotPickerLoaded = false;
+  // Day strip and slot grid are static markup now (see this step's own
+  // liquid comment) — selectedSlot starts pre-set to the 10:30 AM button
+  // marked kal-slot-chip--active there, so Confirmation's summary has
+  // something real to show even if the visitor never touches this step.
   const slotPicker = {
-    mode: 'video', // mirrors the toggle's default active button
+    mode: 'in-clinic', // mirrors the toggle's default active button (Doctor Select's In-Clinic, per the updated Figma spec)
     selectedDate: new Date(),
-    selectedSlot: null, // { start_time, end_time }
+    selectedSlot: { start_time: '10:30:00', end_time: '11:15:00' },
     calendarMonth: new Date(),
-    slotsCache: new Map(), // "mode::YYYY-MM-DD" -> slots array
-    daySummaryMap: new Map(), // "YYYY-MM-DD" -> { summary_date, total_slots, booked_slots }
-    daySummariesCache: new Map(), // mode -> summaries array (day-strip range is fixed, so keyed by mode only)
-  };
-
-  const toDateKey = (date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
   };
 
   const startOfDay = (date) => {
@@ -376,11 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const todayStart = () => startOfDay(new Date());
-  const maxFutureDate = () => addDays(todayStart(), MAX_FUTURE_DAYS);
-
-  const formatDayChipLabel = (date) => {
-    return toDateKey(date) === toDateKey(todayStart()) ? 'Today' : DAY_LABELS[date.getDay()];
-  };
 
   const formatTime12h = (timeStr) => {
     const [hStr, mStr] = timeStr.split(':');
@@ -391,335 +471,20 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${h}:${mStr} ${period}`;
   };
 
-  const formatContinueDate = (date) => `${MONTH_LABELS[date.getMonth()].slice(0, 3)} ${date.getDate()}`;
-
   const formatConfirmationDate = (date) =>
     `${FULL_DAY_LABELS[date.getDay()]} ${date.getDate()} ${MONTH_LABELS[date.getMonth()].slice(0, 3)}`;
 
-  const periodForHour = (hour) => {
-    const period = SLOT_PERIODS.find((p) => hour >= p.startHour && hour < p.endHour);
-    return period ? period.key : null;
-  };
-
-  // Matches SlotPicker.tsx: video/online mode filters client-side to
-  // slot_type "online"/"both" (no facility scoping); in-clinic mode sends
-  // facility_id and relies on the RPC's facility join, no client filter.
-  const slotTypeMatchesMode = (slotType, mode) => {
-    if (mode !== 'video') return true;
-    return slotType === 'online' || slotType === 'both';
-  };
-
-  // Renders a "N slots" badge per day chip from the day-summaries fetch, and
-  // disables days with zero availability — matches the Figma spec's
-  // green/amber/grey coding. Thresholds (0 / 1-2 / 3+) aren't from the real
-  // CMS (it doesn't expose one), chosen to match the Figma example spread.
-  const daySlotBadgeHtml = (dateKey) => {
-    const summary = slotPicker.daySummaryMap.get(dateKey);
-    if (!summary) return { badge: '', disabled: false }; // not loaded yet — plain chip, no badge
-    const available = Math.max(0, summary.total_slots - summary.booked_slots);
-    if (available === 0) {
-      return { badge: '<span class="kal-day-chip__badge kal-day-chip__badge--none">0 slot</span>', disabled: true };
-    }
-    if (available <= 2) {
-      return {
-        badge: `<span class="kal-day-chip__badge kal-day-chip__badge--low">${available} slot${available === 1 ? '' : 's'}</span>`,
-        disabled: false,
-      };
-    }
-    return { badge: `<span class="kal-day-chip__badge kal-day-chip__badge--high">${available} slots</span>`, disabled: false };
-  };
-
-  const renderDayStrip = () => {
-    const selectedKey = toDateKey(slotPicker.selectedDate);
-    const chips = [];
-    for (let i = 0; i < STRIP_DAYS; i++) {
-      chips.push(addDays(todayStart(), i));
-    }
-
-    flow.querySelectorAll('[data-kal-day-strip]').forEach((strip) => {
-      strip.innerHTML = '';
-      chips.forEach((date) => {
-        const dateKey = toDateKey(date);
-        const { badge, disabled } = daySlotBadgeHtml(dateKey);
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'kal-day-chip' + (dateKey === selectedKey ? ' kal-day-chip--active' : '');
-        btn.dataset.kalDate = dateKey;
-        btn.disabled = disabled;
-        btn.innerHTML =
-          `<span class="kal-day-chip__label">${formatDayChipLabel(date)}</span>` +
-          `<span class="kal-day-chip__date">${date.getDate()}</span>` +
-          badge;
-        strip.appendChild(btn);
-      });
+  // Switches which of the three static [data-kal-slot-panel] grids is
+  // visible — Morning/Afternoon/Evening are all static markup now (see
+  // this step's own liquid comment), so this is pure show/hide, no
+  // fetch/re-render involved.
+  const setSlotTab = (period) => {
+    flow.querySelectorAll('.kal-slot-tab').forEach((tab) => {
+      tab.classList.toggle('kal-slot-tab--active', tab.dataset.kalSlotTab === period);
     });
-  };
-
-  const fetchDaySummaries = async (mode) => {
-    if (slotPicker.daySummariesCache.has(mode)) {
-      return slotPicker.daySummariesCache.get(mode);
-    }
-
-    const startKey = toDateKey(todayStart());
-    const endKey = toDateKey(addDays(todayStart(), STRIP_DAYS - 1));
-
-    if (USE_MOCK_DATA) {
-      const summaries = generateMockDaySummaries(startKey, endKey);
-      slotPicker.daySummariesCache.set(mode, summaries);
-      return summaries;
-    }
-
-    const doctorId = slotPickerEl.dataset.kalDoctorId;
-    const facilityId = slotPickerEl.dataset.kalFacilityId;
-    // Mirrors the mode logic in fetchSlotsForDate: video sends online_only
-    // instead of facility_id; in-clinic sends facility_id and no online_only.
-    const modeParam = mode === 'video' ? '&online_only=true' : `&facility_id=${encodeURIComponent(facilityId)}`;
-    const url =
-      `${apiBaseUrl}/api/public/availability/day-summaries?doctor_id=${encodeURIComponent(doctorId)}` +
-      `&start_date=${startKey}&end_date=${endKey}${modeParam}&duration_minutes=${CONSULT_DURATION_MINUTES}`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Day summaries fetch failed: ${response.status}`);
-    }
-    const data = await response.json();
-    const summaries = data.summaries || [];
-    slotPicker.daySummariesCache.set(mode, summaries);
-    return summaries;
-  };
-
-  const loadDaySummaries = async (mode) => {
-    try {
-      const summaries = await fetchDaySummaries(mode);
-      if (slotPicker.mode !== mode) return; // mode changed again before this resolved
-      slotPicker.daySummaryMap = new Map(summaries.map((s) => [s.summary_date, s]));
-    } catch (err) {
-      if (slotPicker.mode !== mode) return;
-      slotPicker.daySummaryMap = new Map(); // fall back to plain chips, no badges
-    }
-    renderDayStrip();
-  };
-
-  const renderSlotPeriods = (allSlots) => {
-    const relevant = allSlots.filter((s) => slotTypeMatchesMode(s.slot_type, slotPicker.mode));
-    const buckets = { Morning: [], Afternoon: [], Evening: [] };
-    relevant.forEach((slot) => {
-      const period = periodForHour(parseInt(slot.start_time.split(':')[0], 10));
-      if (period) buckets[period].push(slot);
+    flow.querySelectorAll('[data-kal-slot-panel]').forEach((panel) => {
+      panel.hidden = panel.dataset.kalSlotPanel !== period;
     });
-
-    const selectedStart = slotPicker.selectedSlot ? slotPicker.selectedSlot.start_time : null;
-    let html = '';
-    SLOT_PERIODS.forEach(({ key }) => {
-      if (buckets[key].length === 0) return;
-      html += `<div class="kal-slot-period"><p class="kal-slot-period__label">${key}</p><div class="kal-slot-grid">`;
-      buckets[key].forEach((slot) => {
-        if (slot.is_available) {
-          const isActive = slot.start_time === selectedStart;
-          html +=
-            `<button type="button" class="kal-slot-chip${isActive ? ' kal-slot-chip--active' : ''}" ` +
-            `data-kal-slot-start="${slot.start_time}" data-kal-slot-end="${slot.end_time}">` +
-            `${formatTime12h(slot.start_time)}</button>`;
-        } else {
-          html += `<button type="button" class="kal-slot-chip" disabled>${formatTime12h(slot.start_time)}</button>`;
-        }
-      });
-      html += '</div></div>';
-    });
-
-    if (!html) {
-      html = '<p class="kal-slot-periods__empty">No slots available on this day. Try another date.</p>';
-    }
-
-    flow.querySelectorAll('[data-kal-slot-periods]').forEach((el) => {
-      el.innerHTML = html;
-    });
-  };
-
-  const updateContinueButton = () => {
-    flow.querySelectorAll('[data-kal-slot-continue]').forEach((btn) => {
-      if (slotPicker.selectedSlot) {
-        btn.disabled = false;
-        btn.textContent = `Continue with ${formatContinueDate(slotPicker.selectedDate)}, ${formatTime12h(slotPicker.selectedSlot.start_time)}`;
-      } else {
-        btn.disabled = true;
-        btn.textContent = 'Select a date and time';
-      }
-    });
-  };
-
-  // Mock slots: 9:00 AM to 6:00 PM in CONSULT_DURATION_MINUTES steps, every
-  // 3rd slot marked unavailable so the disabled/struck-through state is
-  // visible while testing. slot_type "both" so it shows under either mode.
-  const generateMockSlots = () => {
-    const slots = [];
-    const startMins = 9 * 60;
-    const endMins = 18 * 60;
-    let index = 0;
-    for (let mins = startMins; mins + CONSULT_DURATION_MINUTES <= endMins; mins += CONSULT_DURATION_MINUTES) {
-      const toTimeStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
-      slots.push({
-        start_time: toTimeStr(mins),
-        end_time: toTimeStr(mins + CONSULT_DURATION_MINUTES),
-        slot_type: 'both',
-        facility_id: null,
-        is_available: index % 3 !== 1,
-      });
-      index++;
-    }
-    return slots;
-  };
-
-  // Mock day summaries: a fixed repeating pattern across the strip so the
-  // green/amber/grey badge states are all visible while testing.
-  const generateMockDaySummaries = (startKey, endKey) => {
-    const pattern = [5, 4, 0, 2, 1, 6, 3];
-    const summaries = [];
-    let cursor = new Date(`${startKey}T00:00:00`);
-    const end = new Date(`${endKey}T00:00:00`);
-    let i = 0;
-    while (cursor <= end) {
-      summaries.push({ summary_date: toDateKey(cursor), total_slots: pattern[i % pattern.length], booked_slots: 0 });
-      cursor = addDays(cursor, 1);
-      i++;
-    }
-    return summaries;
-  };
-
-  const fetchSlotsForDate = async (mode, dateKey) => {
-    const cacheKey = `${mode}::${dateKey}`;
-    if (slotPicker.slotsCache.has(cacheKey)) {
-      return slotPicker.slotsCache.get(cacheKey);
-    }
-
-    if (USE_MOCK_DATA) {
-      const slots = generateMockSlots();
-      slotPicker.slotsCache.set(cacheKey, slots);
-      return slots;
-    }
-
-    const doctorId = slotPickerEl.dataset.kalDoctorId;
-    const facilityId = slotPickerEl.dataset.kalFacilityId;
-    // In-clinic mode scopes to the facility server-side; video mode doesn't
-    // send facility_id at all, matching SlotPicker.tsx's isOnlineOnly branch.
-    const facilityParam = mode === 'video' ? '' : `&facility_id=${encodeURIComponent(facilityId)}`;
-    const url =
-      `${apiBaseUrl}/api/public/availability/slots?doctor_id=${encodeURIComponent(doctorId)}` +
-      `&date=${dateKey}${facilityParam}&duration_minutes=${CONSULT_DURATION_MINUTES}`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Slot fetch failed: ${response.status}`);
-    }
-    const data = await response.json();
-    const slots = data.slots || [];
-    slotPicker.slotsCache.set(cacheKey, slots);
-    return slots;
-  };
-
-  const loadSlotPickerDay = async (date) => {
-    slotPicker.selectedDate = date;
-    slotPicker.selectedSlot = null;
-    renderDayStrip();
-    updateContinueButton();
-
-    const dateKey = toDateKey(date);
-    const mode = slotPicker.mode;
-    flow.querySelectorAll('[data-kal-slot-periods]').forEach((el) => {
-      el.innerHTML = '<p class="kal-slot-periods__empty">Loading available times&hellip;</p>';
-    });
-
-    try {
-      const slots = await fetchSlotsForDate(mode, dateKey);
-      // The user may have picked a different day/mode while this was in flight
-      if (toDateKey(slotPicker.selectedDate) !== dateKey || slotPicker.mode !== mode) return;
-      renderSlotPeriods(slots);
-    } catch (err) {
-      if (toDateKey(slotPicker.selectedDate) !== dateKey || slotPicker.mode !== mode) return;
-      flow.querySelectorAll('[data-kal-slot-periods]').forEach((el) => {
-        el.innerHTML = '<p class="kal-slot-periods__empty">Could not load times. Please try again.</p>';
-      });
-    }
-  };
-
-  // Calendar modal — month grid, chevron nav clamped to [today, today+90 days]
-  // The calendar modal is one shared DOM element used by both the
-  // Consultation Slot Picker and the Therapy slot screen, each with their
-  // own independent date state (slotPicker / therapySlot). These two
-  // variables say which one the modal is currently operating on —
-  // openCalendarModal() sets them, everything else here reads them instead
-  // of hardcoding slotPicker like this used to.
-  let calendarActiveTarget = null; // slotPicker or therapySlot
-  let calendarActiveLoader = null; // loadSlotPickerDay or loadTherapySlotDay
-
-  const renderCalendarMonth = () => {
-    const monthLabel = flow.querySelector('[data-kal-calendar-month]');
-    const grid = flow.querySelector('[data-kal-calendar-grid]');
-    const prevBtn = flow.querySelector('[data-kal-calendar-prev]');
-    const nextBtn = flow.querySelector('[data-kal-calendar-next]');
-
-    const viewYear = calendarActiveTarget.calendarMonth.getFullYear();
-    const viewMonth = calendarActiveTarget.calendarMonth.getMonth();
-    monthLabel.textContent = `${MONTH_LABELS[viewMonth]} ${viewYear}`;
-
-    const todayKey = toDateKey(todayStart());
-    const maxKey = toDateKey(maxFutureDate());
-    const selectedKey = toDateKey(calendarActiveTarget.selectedDate);
-
-    const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-
-    let html = '';
-    for (let i = 0; i < firstWeekday; i++) {
-      html += '<span class="kal-calendar-modal__cell kal-calendar-modal__cell--empty"></span>';
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      const cellKey = toDateKey(new Date(viewYear, viewMonth, day));
-      const isDisabled = cellKey < todayKey || cellKey > maxKey;
-      const classes = ['kal-calendar-modal__cell'];
-      if (cellKey === selectedKey) classes.push('kal-calendar-modal__cell--selected');
-      if (cellKey === todayKey) classes.push('kal-calendar-modal__cell--today');
-      if (isDisabled) classes.push('kal-calendar-modal__cell--disabled');
-      html +=
-        `<button type="button" class="${classes.join(' ')}" data-kal-calendar-date="${cellKey}"` +
-        `${isDisabled ? ' disabled' : ''}>${day}</button>`;
-    }
-    grid.innerHTML = html;
-
-    // Clamp nav using month-index arithmetic, not string comparison — "9" > "10"
-    // as strings would wrongly re-enable "next" one month early.
-    const monthIndex = (y, m) => y * 12 + m;
-    const viewIndex = monthIndex(viewYear, viewMonth);
-    const todayIndex = monthIndex(todayStart().getFullYear(), todayStart().getMonth());
-    const maxDate = maxFutureDate();
-    const maxIndex = monthIndex(maxDate.getFullYear(), maxDate.getMonth());
-    prevBtn.disabled = viewIndex <= todayIndex;
-    nextBtn.disabled = viewIndex >= maxIndex;
-  };
-
-  const navigateCalendarMonth = (delta) => {
-    calendarActiveTarget.calendarMonth = new Date(
-      calendarActiveTarget.calendarMonth.getFullYear(),
-      calendarActiveTarget.calendarMonth.getMonth() + delta,
-      1
-    );
-    renderCalendarMonth();
-  };
-
-  const openCalendarModal = (targetState, loaderFn) => {
-    calendarActiveTarget = targetState;
-    calendarActiveLoader = loaderFn;
-    targetState.calendarMonth = new Date(
-      targetState.selectedDate.getFullYear(),
-      targetState.selectedDate.getMonth(),
-      1
-    );
-    renderCalendarMonth();
-    calendarModal.hidden = false;
-  };
-
-  const closeCalendarModal = () => {
-    calendarModal.hidden = true;
   };
 
   // ----------------------------------------------------------------------
@@ -762,8 +527,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ----------------------------------------------------------------------
   // CONFIRMATION — read-only summary of what was collected in the previous
-  // steps. No new state here, just displaying slotPicker/patientDetails.
+  // steps, plus the Payment Method choice added in a later Figma pass
+  // (node 438:7468). No amount actually changes based on this — it's a
+  // static mockup, purely visual selection between the two cards.
   // ----------------------------------------------------------------------
+
+  const setPaymentMethod = (method) => {
+    flow.querySelectorAll('[data-kal-payment-method]').forEach((btn) => {
+      btn.classList.toggle('kal-payment-option--selected', btn.dataset.kalPaymentMethod === method);
+    });
+
+    // Booking Confirmed's own "Payment" row (data-kal-confirm-payment)
+    // reflects whichever card was selected here — same "populate ahead of
+    // time, elsewhere in the DOM" pattern as renderConfirmationSummary's
+    // other data-kal-confirm-* hooks.
+    flow.querySelectorAll('[data-kal-confirm-payment]').forEach((el) => {
+      el.textContent = method === 'pay-at-clinic' ? 'Pay at clinic' : 'Online payment';
+    });
+  };
 
   const renderConfirmationSummary = () => {
     flow.querySelectorAll('[data-kal-confirm-name]').forEach((el) => {
@@ -772,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     flow.querySelectorAll('[data-kal-confirm-mode]').forEach((el) => {
       const modeLabel = slotPicker.mode === 'video' ? 'Online' : 'In Clinic';
-      el.textContent = `${modeLabel} • ${CONSULT_DURATION_MINUTES} mins`;
+      el.textContent = `${modeLabel} - ${CONSULT_DURATION_MINUTES} mins`;
     });
 
     flow.querySelectorAll('[data-kal-confirm-datetime]').forEach((el) => {
@@ -782,155 +563,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       el.textContent = `${formatConfirmationDate(slotPicker.selectedDate)}, ${formatTime12h(slotPicker.selectedSlot.start_time)}`;
     });
-  };
-
-  // ----------------------------------------------------------------------
-  // THERAPY SLOT — single-doctor variant of the slot picker, own state.
-  // Deliberately separate from slotPicker/renderDayStrip/etc. — see
-  // kal-booking-flow-step-therapy-slot.liquid's comment for why (that JS is
-  // bound to one specific element via querySelector, first-match only, so
-  // two screens sharing it would fight over whose doctor/facility data
-  // wins). Reuses the pure helpers above (formatTime12h, toDateKey,
-  // addDays, todayStart, periodForHour, generateMockSlots, STRIP_DAYS,
-  // SLOT_PERIODS) since those don't depend on which element is "the" slot
-  // picker. Always in-clinic — no mode axis, no day-summaries/badges.
-  // ----------------------------------------------------------------------
-
-  const therapySlotEl = flow.querySelector('.kal-step-therapy-slot');
-
-  let therapySlotLoaded = false;
-  const therapySlot = {
-    selectedDate: new Date(),
-    selectedSlot: null,
-    calendarMonth: new Date(),
-    slotsCache: new Map(), // "YYYY-MM-DD" -> slots array
-  };
-
-  const renderTherapyDayStrip = () => {
-    const selectedKey = toDateKey(therapySlot.selectedDate);
-    const chips = [];
-    for (let i = 0; i < STRIP_DAYS; i++) {
-      chips.push(addDays(todayStart(), i));
-    }
-
-    flow.querySelectorAll('[data-kal-therapy-day-strip]').forEach((strip) => {
-      strip.innerHTML = '';
-      chips.forEach((date) => {
-        const dateKey = toDateKey(date);
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'kal-day-chip' + (dateKey === selectedKey ? ' kal-day-chip--active' : '');
-        btn.dataset.kalTherapyDate = dateKey;
-        btn.innerHTML =
-          `<span class="kal-day-chip__label">${formatDayChipLabel(date)}</span>` +
-          `<span class="kal-day-chip__date">${date.getDate()}</span>`;
-        strip.appendChild(btn);
-      });
-    });
-  };
-
-  const renderTherapySlotPeriods = (allSlots) => {
-    // Always in-clinic — no client-side slot_type filter needed, same as
-    // the Consultation slot picker's in-clinic branch (server's
-    // facility_id join already scopes results).
-    const buckets = { Morning: [], Afternoon: [], Evening: [] };
-    allSlots.forEach((slot) => {
-      const period = periodForHour(parseInt(slot.start_time.split(':')[0], 10));
-      if (period) buckets[period].push(slot);
-    });
-
-    const selectedStart = therapySlot.selectedSlot ? therapySlot.selectedSlot.start_time : null;
-    let html = '';
-    SLOT_PERIODS.forEach(({ key }) => {
-      if (buckets[key].length === 0) return;
-      html += `<div class="kal-slot-period"><p class="kal-slot-period__label">${key}</p><div class="kal-slot-grid">`;
-      buckets[key].forEach((slot) => {
-        if (slot.is_available) {
-          const isActive = slot.start_time === selectedStart;
-          html +=
-            `<button type="button" class="kal-slot-chip${isActive ? ' kal-slot-chip--active' : ''}" ` +
-            `data-kal-therapy-slot-start="${slot.start_time}" data-kal-therapy-slot-end="${slot.end_time}">` +
-            `${formatTime12h(slot.start_time)}</button>`;
-        } else {
-          html += `<button type="button" class="kal-slot-chip" disabled>${formatTime12h(slot.start_time)}</button>`;
-        }
-      });
-      html += '</div></div>';
-    });
-
-    if (!html) {
-      html = '<p class="kal-slot-periods__empty">No slots available on this day. Try another date.</p>';
-    }
-
-    flow.querySelectorAll('[data-kal-therapy-slot-periods]').forEach((el) => {
-      el.innerHTML = html;
-    });
-  };
-
-  const updateTherapyContinueButton = () => {
-    flow.querySelectorAll('[data-kal-therapy-continue]').forEach((btn) => {
-      if (therapySlot.selectedSlot) {
-        btn.disabled = false;
-        // "7 Aug" — formatConfirmationDate gives "Friday 7 Aug", drop the
-        // leading weekday word to match the Figma's "Continue • 7 Aug, ..." format.
-        const dateLabel = formatConfirmationDate(therapySlot.selectedDate).replace(/^\S+\s/, '');
-        btn.innerHTML =
-          `Continue <span class="kal-therapy-continue__datetime">&bull; ${dateLabel}, ${formatTime12h(therapySlot.selectedSlot.start_time)}</span>`;
-      } else {
-        btn.disabled = true;
-        btn.textContent = 'Select a date and time';
-      }
-    });
-  };
-
-  const fetchTherapySlotsForDate = async (dateKey) => {
-    if (therapySlot.slotsCache.has(dateKey)) {
-      return therapySlot.slotsCache.get(dateKey);
-    }
-
-    if (USE_MOCK_DATA) {
-      const slots = generateMockSlots();
-      therapySlot.slotsCache.set(dateKey, slots);
-      return slots;
-    }
-
-    const doctorId = therapySlotEl.dataset.kalDoctorId;
-    const facilityId = therapySlotEl.dataset.kalFacilityId;
-    const url =
-      `${apiBaseUrl}/api/public/availability/slots?doctor_id=${encodeURIComponent(doctorId)}` +
-      `&date=${dateKey}&facility_id=${encodeURIComponent(facilityId)}&duration_minutes=${CONSULT_DURATION_MINUTES}`;
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Slot fetch failed: ${response.status}`);
-    }
-    const data = await response.json();
-    const slots = data.slots || [];
-    therapySlot.slotsCache.set(dateKey, slots);
-    return slots;
-  };
-
-  const loadTherapySlotDay = async (date) => {
-    therapySlot.selectedDate = date;
-    therapySlot.selectedSlot = null;
-    renderTherapyDayStrip();
-    updateTherapyContinueButton();
-
-    const dateKey = toDateKey(date);
-    flow.querySelectorAll('[data-kal-therapy-slot-periods]').forEach((el) => {
-      el.innerHTML = '<p class="kal-slot-periods__empty">Loading available times&hellip;</p>';
-    });
-
-    try {
-      const slots = await fetchTherapySlotsForDate(dateKey);
-      if (toDateKey(therapySlot.selectedDate) !== dateKey) return;
-      renderTherapySlotPeriods(slots);
-    } catch (err) {
-      if (toDateKey(therapySlot.selectedDate) !== dateKey) return;
-      flow.querySelectorAll('[data-kal-therapy-slot-periods]').forEach((el) => {
-        el.innerHTML = '<p class="kal-slot-periods__empty">Could not load times. Please try again.</p>';
-      });
-    }
   };
 
   // Any CTA anywhere on the site with this class opens the flow
@@ -955,16 +587,6 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleConcern(concernTrigger.dataset.kalConcern);
     }
 
-    const facilityTrigger = e.target.closest('[data-kal-facility]');
-    if (facilityTrigger) {
-      setFacility(facilityTrigger.dataset.kalFacility, facilityTrigger.dataset.kalFacilityName);
-    }
-
-    const doctorOptionTrigger = e.target.closest('[data-kal-doctor-option]');
-    if (doctorOptionTrigger) {
-      selectDoctor(doctorOptionTrigger.dataset.kalDoctorOption);
-    }
-
     const modeTrigger = e.target.closest('[data-kal-mode]');
     if (modeTrigger) {
       setMode(modeTrigger.dataset.kalMode);
@@ -975,13 +597,21 @@ document.addEventListener('DOMContentLoaded', () => {
       setGender(genderTrigger.dataset.kalGender);
     }
 
-    // Guarded on dataset.kalDate existing — the Therapy screen's day chips
-    // use a different attribute (data-kal-therapy-date, handled below), so
-    // without this guard this block would also fire for them with an
-    // undefined date and throw/no-op incorrectly.
-    const dayChipTrigger = e.target.closest('.kal-day-chip');
-    if (dayChipTrigger && dayChipTrigger.dataset.kalDate) {
-      loadSlotPickerDay(new Date(`${dayChipTrigger.dataset.kalDate}T00:00:00`));
+    const paymentMethodTrigger = e.target.closest('[data-kal-payment-method]');
+    if (paymentMethodTrigger) {
+      setPaymentMethod(paymentMethodTrigger.dataset.kalPaymentMethod);
+    }
+
+    // Static day strip now (see this step's own liquid comment) — just
+    // tracks selectedDate for Confirmation's summary and toggles the
+    // active card, no fetch/re-render.
+    const slotDayTrigger = e.target.closest('.kal-day-chip[data-kal-slot-day-offset]:not(:disabled)');
+    if (slotDayTrigger) {
+      const offset = parseInt(slotDayTrigger.dataset.kalSlotDayOffset, 10);
+      slotPicker.selectedDate = addDays(todayStart(), offset);
+      flow.querySelectorAll('.kal-day-chip[data-kal-slot-day-offset]').forEach((chip) => {
+        chip.classList.toggle('kal-day-chip--active', chip === slotDayTrigger);
+      });
     }
 
     const slotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');
@@ -996,53 +626,60 @@ document.addEventListener('DOMContentLoaded', () => {
           chip.dataset.kalSlotStart === slotChipTrigger.dataset.kalSlotStart
         );
       });
-      updateContinueButton();
     }
 
-    const therapyDayChipTrigger = e.target.closest('.kal-day-chip[data-kal-therapy-date]');
-    if (therapyDayChipTrigger) {
-      loadTherapySlotDay(new Date(`${therapyDayChipTrigger.dataset.kalTherapyDate}T00:00:00`));
+    const slotTabTrigger = e.target.closest('[data-kal-slot-tab]');
+    if (slotTabTrigger) {
+      setSlotTab(slotTabTrigger.dataset.kalSlotTab);
     }
 
-    const therapySlotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');
-    if (therapySlotChipTrigger && therapySlotChipTrigger.dataset.kalTherapySlotStart) {
-      therapySlot.selectedSlot = {
-        start_time: therapySlotChipTrigger.dataset.kalTherapySlotStart,
-        end_time: therapySlotChipTrigger.dataset.kalTherapySlotEnd,
-      };
-      flow.querySelectorAll('[data-kal-therapy-slot-periods] .kal-slot-chip').forEach((chip) => {
-        chip.classList.toggle(
-          'kal-slot-chip--active',
-          chip.dataset.kalTherapySlotStart === therapySlotChipTrigger.dataset.kalTherapySlotStart
-        );
-      });
-      updateTherapyContinueButton();
+    const therapyConcernTrigger = e.target.closest('[data-kal-therapy-concern]');
+    if (therapyConcernTrigger) {
+      toggleTherapyConcern(therapyConcernTrigger.dataset.kalTherapyConcern);
     }
 
-    // Calendar modal is shared — which date-state it operates on depends on
-    // which step's calendar-icon button was actually clicked.
-    const openCalendarTrigger = e.target.closest('[data-kal-open-calendar]');
-    if (openCalendarTrigger) {
-      const stepName = openCalendarTrigger.closest('[data-kal-step]')?.dataset.kalStep;
-      if (stepName === 'therapy-slot') {
-        openCalendarModal(therapySlot, loadTherapySlotDay);
+    // Confirm only exists for the dropdown-first path (see
+    // therapyFlowState above) — clicking it while in that mode just flips
+    // to "Continue" without navigating. Clicking in "continue" mode
+    // navigates to Step 2 of 2 (Therapy Details) — done here explicitly
+    // rather than via a plain data-kal-goto on the button, since that
+    // attribute would fire the generic gotoTrigger handler below on
+    // EVERY click regardless of mode, skipping the confirm step entirely.
+    const therapyConcernContinueTrigger = e.target.closest('[data-kal-therapy-concern-continue]');
+    if (therapyConcernContinueTrigger) {
+      if (therapyConcernContinueTrigger.dataset.kalTherapyConcernMode === 'confirm') {
+        therapyFlowState.confirmed = true;
+        updateTherapyConcernContinueButton();
       } else {
-        openCalendarModal(slotPicker, loadSlotPickerDay);
+        goToStep('therapy-details');
       }
     }
-    if (e.target.closest('[data-kal-close-calendar]')) {
-      closeCalendarModal();
-    }
-    if (e.target.closest('[data-kal-calendar-prev]')) {
-      navigateCalendarMonth(-1);
-    }
-    if (e.target.closest('[data-kal-calendar-next]')) {
-      navigateCalendarMonth(1);
-    }
-    const calendarDateTrigger = e.target.closest('[data-kal-calendar-date]:not(:disabled)');
-    if (calendarDateTrigger) {
-      calendarActiveLoader(new Date(`${calendarDateTrigger.dataset.kalCalendarDate}T00:00:00`));
-      closeCalendarModal();
+
+    const therapyDropdownToggle = e.target.closest('[data-kal-therapy-dropdown-toggle]');
+    const therapyDropdownOption = e.target.closest('[data-kal-therapy-option]');
+    const therapyDropdownClear = e.target.closest('[data-kal-therapy-dropdown-clear]');
+    const therapyChipRemove = e.target.closest('[data-kal-therapy-chip-remove]');
+
+    if (therapyChipRemove) {
+      toggleTherapyDropdownOption(therapyChipRemove.dataset.kalTherapyChipRemove);
+    } else if (therapyDropdownClear) {
+      clearTherapyDropdownSelection();
+    } else if (therapyDropdownOption) {
+      toggleTherapyDropdownOption(therapyDropdownOption.dataset.kalTherapyOption);
+    } else if (therapyDropdownToggle) {
+      const wrapper = therapyDropdownToggle.closest('[data-kal-therapy-dropdown]');
+      if (wrapper) {
+        const isOpen = therapyDropdownToggle.getAttribute('aria-expanded') === 'true';
+        setTherapyDropdownOpen(wrapper, !isOpen);
+      }
+    } else {
+      // Any other click closes any open therapy dropdown — including a
+      // click elsewhere in the flow, not just outside the flow entirely.
+      flow.querySelectorAll('[data-kal-therapy-dropdown]').forEach((wrapper) => {
+        if (!wrapper.contains(e.target)) {
+          setTherapyDropdownOpen(wrapper, false);
+        }
+      });
     }
   });
 
