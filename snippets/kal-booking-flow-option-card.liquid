@@ -11,7 +11,7 @@
   - goto: {String} value for data-kal-goto, used by the flow JS later to route to the right next step
 
   Usage:
-  {% render 'kal-booking-flow-option-card', variant: 'primary', icon_name: 'calendar', title: 'Book a consultation', subtitle: 'In-clinic or video — under a minute', goto: 'consultation' %}
+  {% render 'kal-booking-flow-option-card', variant: 'primary', icon_name: 'calendar', title: 'Book a consultation', subtitle: 'In-clinic or video under a minute', goto: 'consultation' %}
 {% endcomment %}
 
 <button type="button" class="kal-option-card kal-option-card--{{ variant }}" data-kal-goto="{{ goto }}">
@@ -22,7 +22,12 @@
     <span class="kal-option-card__title">{{ title }}</span>
     <span class="kal-option-card__subtitle">{{ subtitle }}</span>
   </span>
+  {%- comment -%}
+    Plain chevron, not a full arrow-with-shaft — matches the export
+    (node 656:5121 shows a bare "›" on both cards, not arrow-right's
+    horizontal line + head).
+  {%- endcomment -%}
   <span class="kal-icon kal-icon--arrow">
-    {%- render 'kal-booking-icons', icon_name: 'arrow-right' -%}
+    {%- render 'kal-booking-icons', icon_name: 'chevron-right' -%}
   </span>
 </button>
