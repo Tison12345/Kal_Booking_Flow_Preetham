@@ -222,6 +222,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Same 2 doctors regardless of which facility chip is picked — this is
+  // frontend-only mock data, not meant to simulate per-facility rosters.
+  // Same { id, name } shape the real /api/public/doctors response uses, so
+  // nothing downstream (selectDoctor, renderDoctorCards, the summary-name
+  // sync) needs to know or care whether this came from the API or here.
+  const MOCK_DOCTORS = [
+    { id: 'mock-doctor-1', name: 'Dr. Offline One' },
+    { id: 'mock-doctor-2', name: 'Dr. Offline Two' },
+  ];
+
   const loadDoctorsForFacility = async () => {
     doctorSelect.doctors = [];
     doctorSelect.selectedDoctorId = null;
@@ -229,6 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
       el.innerHTML = '<p class="kal-doctor-list__loading">Loading doctors&hellip;</p>';
     });
     updateDoctorContinueButton();
+
+    if (USE_MOCK_DATA) {
+      doctorSelect.doctors = MOCK_DOCTORS;
+      selectDoctor(MOCK_DOCTORS[0].id);
+      return;
+    }
 
     try {
       const res = await fetch(
@@ -282,7 +298,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // repo), so this only actually reaches the backend when opened from that
   // domain, not from any other origin. Flip back to true if the local CMS
   // dev server isn't running — every fetch below will otherwise just fail.
-  const USE_MOCK_DATA = false;
+  //
+  // Flipped back to true — frontend-only work for now, backend hookup
+  // (doctors, slot picking, everything else this flag and the doctor-list
+  // fetch below gate) is deliberately deferred. See MOCK_DOCTORS below —
+  // loadDoctorsForFacility() didn't previously check this flag at all
+  // (the doctor list was wired straight to the real API with no mock
+  // fallback), so that's now gated the same way slots/day-summaries
+  // already were.
+  const USE_MOCK_DATA = true;
 
   const CONSULT_DURATION_MINUTES = 45; // confirmed decision, see shopify-booking-api-reference.md §4.5
   const STRIP_DAYS = 10; // matches SlotPicker.tsx's STRIP_DAYS

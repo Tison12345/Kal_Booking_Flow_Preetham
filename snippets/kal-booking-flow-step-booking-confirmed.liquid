@@ -26,142 +26,106 @@
   data-kal-confirm-booking hook) so the full flow is clickable through to
   this screen for demo purposes, even though nothing is actually booked
   yet on the backend.
+
+  Single shared markup, not a __mobile + __desktop split — consolidated
+  into the shared step shell (see "SHARED STEP SHELL" in
+  kal-booking-flow.css), same correction as the Confirmation step: the
+  success icon, intro, and full Consultation Details card were
+  byte-for-byte identical between the old mobile and desktop blocks. The
+  real differences are the "Before your visit" card and the
+  "Reschedule or cancel" link, which the desktop Figma export omits
+  entirely — both hidden at 750px+ via CSS
+  (.kal-step-booking-confirmed .kal-before-visit and
+  .kal-step-booking-confirmed__reschedule), the same technique used for
+  Confirmation's pay-notice. No header/progress-dots/back-button on this
+  step at any width (booking is done, nothing to navigate back to), so
+  unlike the other consolidated steps there's no .kal-step-shell__header
+  here at all.
 {% endcomment %}
 
-<div class="kal-step-booking-confirmed">
+<div class="kal-step-booking-confirmed kal-step-shell">
 
-  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
-  <div class="kal-step-booking-confirmed__mobile">
-
-    <div class="kal-confirmation-success-icon">
-      <span class="kal-confirmation-success-icon__inner">
-        {%- render 'kal-booking-icons', icon_name: 'check' -%}
+  <div class="kal-step-entry__info kal-step-shell__info">
+    <div class="kal-step-entry__info-content">
+      <h2 class="kal-step-entry__heading">You&rsquo;re all set</h2>
+      <p class="kal-step-entry__body-text">Check the details before we hold it for you.</p>
+    </div>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin (not received yet) -->
+      </span>
+      <span class="kal-step-entry__location-text">
+        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
       </span>
     </div>
+  </div>
 
-    <div class="kal-step-booking-confirmed__intro">
-      <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
-      <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
-    </div>
+  <div class="kal-step-shell__panel">
 
-    <div class="kal-confirmation-details">
-      <p class="kal-confirmation-details__label">Consultation Details</p>
-      <div class="kal-confirmation-details__divider"></div>
-      <div class="kal-confirmation-details__rows">
-        <div class="kal-confirmation-details__row">
-          <span class="kal-confirmation-details__key">Reference No.</span>
-          <span class="kal-confirmation-details__value" data-kal-confirm-ref>&mdash;</span>
+    <div class="kal-step-shell__scroll">
+      <div class="kal-confirmation-success-icon">
+        <span class="kal-confirmation-success-icon__inner">
+          {%- render 'kal-booking-icons', icon_name: 'check' -%}
+        </span>
+      </div>
+
+      <div class="kal-step-booking-confirmed__intro">
+        <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
+        <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
+      </div>
+
+      <div class="kal-confirmation-details">
+        <p class="kal-confirmation-details__label">Consultation Details</p>
+        <div class="kal-confirmation-details__divider"></div>
+        <div class="kal-confirmation-details__rows">
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Reference No.</span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-ref>&mdash;</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Patient Name</span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Mode</span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-mode>&mdash;</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Day &amp; Time</span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-datetime>&mdash;</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Payment</span>
+            <span class="kal-confirmation-details__value">At the Clinic</span>
+          </div>
         </div>
-        <div class="kal-confirmation-details__row">
-          <span class="kal-confirmation-details__key">Patient Name</span>
-          <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
-        </div>
-        <div class="kal-confirmation-details__row">
-          <span class="kal-confirmation-details__key">Mode</span>
-          <span class="kal-confirmation-details__value" data-kal-confirm-mode>&mdash;</span>
-        </div>
-        <div class="kal-confirmation-details__row">
-          <span class="kal-confirmation-details__key">Day &amp; Time</span>
-          <span class="kal-confirmation-details__value" data-kal-confirm-datetime>&mdash;</span>
-        </div>
-        <div class="kal-confirmation-details__row">
-          <span class="kal-confirmation-details__key">Payment</span>
-          <span class="kal-confirmation-details__value">At the Clinic</span>
-        </div>
+      </div>
+
+      {%- comment -%} Desktop-only omission handled in CSS, see this file's top comment {%- endcomment -%}
+      <div class="kal-before-visit">
+        <p class="kal-before-visit__label">Before your visit</p>
+        <ul class="kal-before-visit__list">
+          <li class="kal-before-visit__item">
+            <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+            <span>Pay at reception cash or card.</span>
+          </li>
+          <li class="kal-before-visit__item">
+            <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+            <span>Arrive 10 minutes early for check-in.</span>
+          </li>
+          <li class="kal-before-visit__item">
+            <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+            <span>Bring an ID and your referral letter if you have one.</span>
+          </li>
+        </ul>
       </div>
     </div>
 
-    <div class="kal-before-visit">
-      <p class="kal-before-visit__label">Before your visit</p>
-      <ul class="kal-before-visit__list">
-        <li class="kal-before-visit__item">
-          <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-          <span>Pay at reception cash or card.</span>
-        </li>
-        <li class="kal-before-visit__item">
-          <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-          <span>Arrive 10 minutes early for check-in.</span>
-        </li>
-        <li class="kal-before-visit__item">
-          <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-          <span>Bring an ID and your referral letter if you have one.</span>
-        </li>
-      </ul>
-    </div>
-
+    {%- comment -%} Desktop-only omission handled in CSS, see this file's top comment {%- endcomment -%}
     <button type="button" class="kal-step-booking-confirmed__reschedule" data-kal-reschedule-cancel>
       Reschedule or cancel
     </button>
 
-  </div>
-
-  {%- comment -%}
-    ============ DESKTOP (750px and up) ============
-    Reuses .kal-step-doctor-select__desktop/__panel, same as every other
-    step. No progress dots, no "Before your visit" card, and no
-    "Reschedule or cancel" link here — unlike mobile, this Figma export
-    stops right after the Consultation Details card (confirmed in both the
-    screenshot and the Copy-as-CSS dump), same kind of deliberate
-    mobile/desktop content difference as Confirmation dropping its
-    "pay at the clinic" notice on desktop.
-  {%- endcomment -%}
-  <div class="kal-step-doctor-select__desktop">
-    <div class="kal-step-entry__info">
-      <div class="kal-step-entry__info-content">
-        <h2 class="kal-step-entry__heading">You&rsquo;re all set</h2>
-        <p class="kal-step-entry__body-text">Check the details before we hold it for you.</p>
-      </div>
-      <div class="kal-step-entry__location">
-        <span class="kal-icon kal-icon--location">
-          <!-- ICON: location-pin (not received yet) -->
-        </span>
-        <span class="kal-step-entry__location-text">
-          Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-        </span>
-      </div>
-    </div>
-
-    <div class="kal-step-doctor-select__panel">
-      <div class="kal-step-booking-confirmed__scroll">
-        <div class="kal-confirmation-success-icon">
-          <span class="kal-confirmation-success-icon__inner">
-            {%- render 'kal-booking-icons', icon_name: 'check' -%}
-          </span>
-        </div>
-
-        <div class="kal-step-booking-confirmed__intro">
-          <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
-          <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
-        </div>
-
-        <div class="kal-confirmation-details">
-          <p class="kal-confirmation-details__label">Consultation Details</p>
-          <div class="kal-confirmation-details__divider"></div>
-          <div class="kal-confirmation-details__rows">
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-details__key">Reference No.</span>
-              <span class="kal-confirmation-details__value" data-kal-confirm-ref>&mdash;</span>
-            </div>
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-details__key">Patient Name</span>
-              <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
-            </div>
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-details__key">Mode</span>
-              <span class="kal-confirmation-details__value" data-kal-confirm-mode>&mdash;</span>
-            </div>
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-details__key">Day &amp; Time</span>
-              <span class="kal-confirmation-details__value" data-kal-confirm-datetime>&mdash;</span>
-            </div>
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-details__key">Payment</span>
-              <span class="kal-confirmation-details__value">At the Clinic</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
 </div>

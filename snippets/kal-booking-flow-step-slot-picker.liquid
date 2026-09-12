@@ -24,7 +24,10 @@
   is wired (explicitly deferred, see build log). Doctor summary card text is
   still dummy for the same reason.
 
-  Left column reuses .kal-step-entry__info (desktop), same as the other steps.
+  Single shared markup, not a __mobile + __desktop split — see the "SHARED
+  STEP SHELL" comment in kal-booking-flow.css for why and how the layout
+  switches at 750px. Left column reuses .kal-step-entry__info, same as the
+  other steps.
 
   The calendar modal itself lives in kal-booking-flow.liquid, not here — see
   the comment there for why (overflow-clipping bug when nested inside the
@@ -45,12 +48,29 @@
   attributes before navigating here — the slot-picker JS itself reads them
   fresh on every fetch and needs no other change.
 {%- endcomment -%}
-<div class="kal-step-slot-picker" data-kal-doctor-id="2a3340b9-79d2-4d50-ba28-817f61ce327e" data-kal-facility-id="bfa7bd70-428b-4fd3-80c3-2c7f0106497d">
+<div class="kal-step-slot-picker kal-step-shell" data-kal-doctor-id="2a3340b9-79d2-4d50-ba28-817f61ce327e" data-kal-facility-id="bfa7bd70-428b-4fd3-80c3-2c7f0106497d">
 
-  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
-  <div class="kal-step-slot-picker__mobile">
+  <div class="kal-step-entry__info kal-step-shell__info">
+    <div class="kal-step-entry__info-content">
+      <h2 class="kal-step-entry__heading">Pick your visit</h2>
+      <p class="kal-step-entry__body-text">
+        Book a consultation in under a minute in-clinic or video. Confirmation
+        arrives instantly, no account required.
+      </p>
+    </div>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin (not received yet) -->
+      </span>
+      <span class="kal-step-entry__location-text">
+        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+      </span>
+    </div>
+  </div>
 
-    <div class="kal-step-doctor-select__header">
+  <div class="kal-step-shell__panel">
+
+    <div class="kal-step-doctor-select__header kal-step-shell__header">
       <button type="button" class="kal-step-doctor-select__back" data-kal-back="doctor-select" aria-label="Back">
         {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
       </button>
@@ -72,120 +92,47 @@
       aren't actually scoped to that one step, same convention as
       .kal-step-entry__info being reused on the desktop composition.
     {%- endcomment -%}
-    <div class="kal-step-doctor-select__intro">
-      <p class="kal-step-doctor-select__eyebrow">Step 3 of 5</p>
-      <h2 class="kal-step-doctor-select__heading">Pick your visit</h2>
-    </div>
-
-    <div class="kal-doctor-summary" data-kal-doctor-summary>
-      <span class="kal-doctor-summary__avatar"></span>
-      <span class="kal-doctor-summary__info">
-        <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Offline One</span>
-        <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
-      </span>
-      <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
-    </div>
-
-    <div class="kal-slot-section">
-      <div class="kal-slot-section__head">
-        <p class="kal-slot-section__label">Choose a day</p>
-        <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
-          {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
-        </button>
+    <div class="kal-step-shell__scroll">
+      <div class="kal-step-doctor-select__intro">
+        <p class="kal-step-doctor-select__eyebrow">Step 3 of 5</p>
+        <h2 class="kal-step-doctor-select__heading">Pick your visit</h2>
       </div>
-      {%- comment -%} Populated client-side by renderDayStrip() in kal-booking-flow.js {%- endcomment -%}
-      <div class="kal-day-strip" data-kal-day-strip></div>
-    </div>
 
-    <div class="kal-slot-section">
-      <p class="kal-slot-section__label">Available time</p>
-      {%- comment -%} Populated client-side by renderSlotPeriods() in kal-booking-flow.js {%- endcomment -%}
-      <div class="kal-slot-periods" data-kal-slot-periods>
-        <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
+      <div class="kal-doctor-summary" data-kal-doctor-summary>
+        <span class="kal-doctor-summary__avatar"></span>
+        <span class="kal-doctor-summary__info">
+          <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Offline One</span>
+          <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
+        </span>
+        <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
+      </div>
+
+      <div class="kal-slot-section">
+        <div class="kal-slot-section__head">
+          <p class="kal-slot-section__label">Choose a day</p>
+          <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
+            {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+          </button>
+        </div>
+        {%- comment -%} Populated client-side by renderDayStrip() in kal-booking-flow.js {%- endcomment -%}
+        <div class="kal-day-strip" data-kal-day-strip></div>
+      </div>
+
+      <div class="kal-slot-section">
+        <p class="kal-slot-section__label">Available time</p>
+        {%- comment -%} Populated client-side by renderSlotPeriods() in kal-booking-flow.js {%- endcomment -%}
+        <div class="kal-slot-periods" data-kal-slot-periods>
+          <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
+        </div>
       </div>
     </div>
 
-    <div class="kal-step-slot-picker__footer">
+    <div class="kal-step-shell__footer">
       <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details" data-kal-slot-continue disabled>
         Select a date and time
       </button>
     </div>
 
-  </div>
-
-  {%- comment -%}
-    ============ DESKTOP (750px and up) — matches Figma Frame 4 exactly ============
-    Reuses .kal-step-doctor-select__desktop/__panel directly (not a separate
-    kal-step-slot-picker__desktop/__panel copy) so the grid/panel layout is
-    governed by literally the same CSS rule as Doctor Select, not a second
-    copy that has to be kept in sync by hand — that's what let this drift
-    out of matching Doctor Select's proportions/behavior over several edits.
-  {%- endcomment -%}
-  <div class="kal-step-doctor-select__desktop">
-    <div class="kal-step-entry__info">
-      <div class="kal-step-entry__info-content">
-        <h2 class="kal-step-entry__heading">Pick your visit</h2>
-        <p class="kal-step-entry__body-text">
-          Book a consultation in under a minute in-clinic or video. Confirmation
-          arrives instantly, no account required.
-        </p>
-      </div>
-      <div class="kal-step-entry__location">
-        <span class="kal-icon kal-icon--location">
-          <!-- ICON: location-pin (not received yet) -->
-        </span>
-        <span class="kal-step-entry__location-text">
-          Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-        </span>
-      </div>
-    </div>
-
-    <div class="kal-step-doctor-select__panel">
-      <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-text">3/5</span>
-      </div>
-
-      <div class="kal-step-slot-picker__scroll">
-        <div class="kal-doctor-summary" data-kal-doctor-summary>
-          <span class="kal-doctor-summary__avatar"></span>
-          <span class="kal-doctor-summary__info">
-            <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Offline One</span>
-            <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
-          </span>
-          <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
-        </div>
-
-        <div class="kal-slot-section">
-          <div class="kal-slot-section__head">
-            <p class="kal-slot-section__label">Choose a day</p>
-            <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
-              {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
-            </button>
-          </div>
-          {%- comment -%} Populated client-side by renderDayStrip() in kal-booking-flow.js {%- endcomment -%}
-          <div class="kal-day-strip" data-kal-day-strip></div>
-        </div>
-
-        <div class="kal-slot-section">
-          <p class="kal-slot-section__label">Available time</p>
-          {%- comment -%} Populated client-side by renderSlotPeriods() in kal-booking-flow.js {%- endcomment -%}
-          <div class="kal-slot-periods" data-kal-slot-periods>
-            <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="kal-step-doctor-select__desktop-footer">
-        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details" data-kal-slot-continue disabled>
-          Select a date and time
-        </button>
-      </div>
-    </div>
   </div>
 
 </div>

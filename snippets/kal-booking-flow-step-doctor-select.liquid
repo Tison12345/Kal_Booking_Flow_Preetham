@@ -9,25 +9,47 @@
   doctors assigned, confirmed live against GET /api/public/doctors before
   hardcoding them here) drives which facility's doctors get fetched from
   GET /api/public/doctors?facility_id=X. The doctor cards themselves
-  (data-kal-doctor-list, one per breakpoint) are empty placeholders in this
-  markup — kal-booking-flow.js's loadDoctorsForFacility() replaces their
-  contents with real cards built from the API response (id + name only —
-  that endpoint doesn't return specialization/photo/languages/tags yet, so
-  the dynamic cards show name only, not the richer static mockup they
-  replaced).
+  (data-kal-doctor-list) are an empty placeholder in this markup —
+  kal-booking-flow.js's loadDoctorsForFacility() replaces its contents with
+  real cards built from the API response (id + name only — that endpoint
+  doesn't return specialization/photo/languages/tags yet, so the dynamic
+  cards show name only, not the richer static mockup they replaced).
 
   In-clinic/video mode toggle no longer filters the doctor list (the old
   data-kal-modes attribute doesn't exist on API doctors — we have no
   per-doctor mode-availability data from the backend yet), it only still
   drives the price banner and the summary badge on later steps.
+
+  Single shared markup, not a __mobile + __desktop split — see the "SHARED
+  STEP SHELL" comment in kal-booking-flow.css for why and how the layout
+  switches at 750px. Left column reuses .kal-step-entry__info exactly like
+  every other step's desktop composition (per the Figma spec — only the
+  heading text differs).
 {% endcomment %}
 
-<div class="kal-step-doctor-select">
+<div class="kal-step-doctor-select kal-step-shell">
 
-  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
-  <div class="kal-step-doctor-select__mobile">
+  <div class="kal-step-entry__info kal-step-shell__info">
+    <div class="kal-step-entry__info-content">
+      <h2 class="kal-step-entry__heading">Who would you like to see?</h2>
+      <p class="kal-step-entry__body-text">
+        Book a consultation in under a minute in-clinic or video. Confirmation
+        arrives instantly, no account required.
+      </p>
+    </div>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin (not received yet) -->
+      </span>
+      <span class="kal-step-entry__location-text">
+        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+      </span>
+    </div>
+  </div>
 
-    <div class="kal-step-doctor-select__header">
+  <div class="kal-step-shell__panel">
+
+    <div class="kal-step-doctor-select__header kal-step-shell__header">
       <button type="button" class="kal-step-doctor-select__back" data-kal-back="concern-select" aria-label="Back">
         {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
       </button>
@@ -52,17 +74,7 @@
       <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
     </div>
 
-    {%- comment -%}
-      Wraps everything between the fixed header and fixed footer in its own
-      scroll area — needed now that the redesigned doctor cards are tall
-      enough to push total content past typical mobile viewport height. On
-      mobile, #kal-booking-flow-content itself is the only scroll container
-      (overflow-y:auto is never turned off below 750px, unlike desktop), so
-      without this, the whole page — footer included — scrolled together,
-      and the Continue button only appeared once you scrolled all the way
-      down instead of staying pinned to the bottom of the frame.
-    {%- endcomment -%}
-    <div class="kal-step-doctor-select__scroll">
+    <div class="kal-step-shell__scroll">
       <div class="kal-step-doctor-select__intro">
         <p class="kal-step-doctor-select__eyebrow">Step 2 of 5</p>
         <h2 class="kal-step-doctor-select__heading">Who would you like to see?</h2>
@@ -100,85 +112,13 @@
       </div>
     </div>
 
-    <div class="kal-step-doctor-select__footer">
+    <div class="kal-step-shell__footer">
       {%- render 'kal-booking-flow-price-banner' -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
         Select a doctor
       </button>
     </div>
 
-  </div>
-
-  {%- comment -%}
-    ============ DESKTOP (750px and up) ============
-    Left column reuses the exact same structure/copy as the Entry step's
-    desktop left column (per the Figma spec — only the heading text differs).
-  {%- endcomment -%}
-  <div class="kal-step-doctor-select__desktop">
-    <div class="kal-step-entry__info">
-      <div class="kal-step-entry__info-content">
-        <h2 class="kal-step-entry__heading">Who would you like to see?</h2>
-        <p class="kal-step-entry__body-text">
-          Book a consultation in under a minute in-clinic or video. Confirmation
-          arrives instantly, no account required.
-        </p>
-      </div>
-      <div class="kal-step-entry__location">
-        <span class="kal-icon kal-icon--location">
-          <!-- ICON: location-pin (not received yet) -->
-        </span>
-        <span class="kal-step-entry__location-text">
-          Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-        </span>
-      </div>
-    </div>
-
-    <div class="kal-step-doctor-select__panel">
-      <div class="kal-step-doctor-select__progress kal-step-doctor-select__progress--desktop">
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-text">2/5</span>
-      </div>
-
-      <div class="kal-slot-section__head">
-        <p class="kal-slot-section__label">Choose a clinic</p>
-      </div>
-      <div class="kal-facility-strip" data-kal-facility-strip>
-        <button type="button" class="kal-facility-chip kal-facility-chip--active" data-kal-facility="bfa7bd70-428b-4fd3-80c3-2c7f0106497d" data-kal-facility-name="Indiranagar">Indiranagar</button>
-        <button type="button" class="kal-facility-chip" data-kal-facility="185b85d7-fad2-405d-b8ea-13dc683fbde8" data-kal-facility-name="Koramangala">Koramangala</button>
-        <button type="button" class="kal-facility-chip" data-kal-facility="6cb82314-692b-44ad-87e1-86e147bc107d" data-kal-facility-name="JP Nagar">JP Nagar</button>
-        <button type="button" class="kal-facility-chip" data-kal-facility="98d24182-c035-425d-9284-56c59cc05056" data-kal-facility-name="Ernakulam">Ernakulam</button>
-      </div>
-
-      <div class="kal-toggle-group">
-        <button type="button" class="kal-toggle-btn" data-kal-mode="in-clinic">
-          <span class="kal-icon kal-icon--location">
-            {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
-          </span>
-          In-clinic
-        </button>
-        <button type="button" class="kal-toggle-btn kal-toggle-btn--active" data-kal-mode="video">
-          <span class="kal-icon kal-icon--video">
-            {%- render 'kal-booking-icons', icon_name: 'video-camera' -%}
-          </span>
-          Video consult
-        </button>
-      </div>
-
-      <div class="kal-step-doctor-select__list kal-step-doctor-select__list--desktop" data-kal-doctor-list>
-        <p class="kal-doctor-list__loading">Loading doctors&hellip;</p>
-      </div>
-
-      <div class="kal-step-doctor-select__desktop-footer">
-        {%- render 'kal-booking-flow-price-banner' -%}
-        <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
-          Select a doctor
-        </button>
-      </div>
-    </div>
   </div>
 
 </div>

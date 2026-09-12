@@ -90,10 +90,12 @@
   .kal-booking-flow__content {
     padding: 0;
     /* Every desktop step is a fixed-height grid row (grid-template-rows:100%
-       on each .kal-step-*__desktop) whose right-hand panel already handles
-       its own overflow internally via .kal-step-*__scroll / __list--desktop
-       (flex:1; min-height:0; overflow-y:auto). That's the same pattern
-       Doctor Select always used, and it needs no scrolling here at all —
+       on each .kal-step-*__desktop / .kal-step-shell) whose right-hand
+       panel already handles its own overflow internally via
+       .kal-step-shell__scroll / .kal-step-doctor-select__list / each
+       remaining .kal-step-*__scroll (flex:1; min-height:0; overflow-y:auto).
+       That's the same pattern Doctor Select always used, and it needs no
+       scrolling here at all —
        this must stay hidden, or this whole block (left column included)
        becomes a second, redundant scroll container layered on top, which
        is what let the left column scroll out of view. Do not change this
@@ -105,53 +107,33 @@
 }
 
 /* Slim scrollbar for the per-step internal scroll containers referenced in
-   the comment above (.kal-step-doctor-select__list--desktop,
-   .kal-step-doctor-select__scroll, .kal-step-concern-select__scroll,
-   .kal-step-slot-picker__scroll, .kal-step-patient-details__scroll,
-   .kal-step-confirmation__scroll, .kal-step-booking-confirmed__scroll).
+   the comment above (.kal-step-shell__scroll — now every consolidated
+   step's single shared scroll region, including Confirmation and Booking
+   Confirmed — .kal-step-doctor-select__list — Doctor Select's own list,
+   which becomes the scrolling element on desktop, see SHARED STEP SHELL).
    Without this they use the browser's default scrollbar, which on
    Windows/Chrome reserves ~15-17px and doesn't overlay — wide enough to
    crowd content sitting near the right edge (e.g. the calendar-icon button
    on Slot Picker). Firefox and WebKit need separate properties; there's no
    single standard way to do this yet. */
-.kal-step-doctor-select__list--desktop,
-.kal-step-doctor-select__scroll,
-.kal-step-concern-select__scroll,
-.kal-step-slot-picker__scroll,
-.kal-step-patient-details__scroll,
-.kal-step-confirmation__scroll,
-.kal-step-booking-confirmed__scroll {
+.kal-step-shell__scroll,
+.kal-step-doctor-select__list {
   scrollbar-width: thin;
   scrollbar-color: var(--kal-color-border) transparent;
 }
 
-.kal-step-doctor-select__list--desktop::-webkit-scrollbar,
-.kal-step-doctor-select__scroll::-webkit-scrollbar,
-.kal-step-concern-select__scroll::-webkit-scrollbar,
-.kal-step-slot-picker__scroll::-webkit-scrollbar,
-.kal-step-patient-details__scroll::-webkit-scrollbar,
-.kal-step-confirmation__scroll::-webkit-scrollbar,
-.kal-step-booking-confirmed__scroll::-webkit-scrollbar {
+.kal-step-shell__scroll::-webkit-scrollbar,
+.kal-step-doctor-select__list::-webkit-scrollbar {
   width: 6px;
 }
 
-.kal-step-doctor-select__list--desktop::-webkit-scrollbar-track,
-.kal-step-doctor-select__scroll::-webkit-scrollbar-track,
-.kal-step-concern-select__scroll::-webkit-scrollbar-track,
-.kal-step-slot-picker__scroll::-webkit-scrollbar-track,
-.kal-step-patient-details__scroll::-webkit-scrollbar-track,
-.kal-step-confirmation__scroll::-webkit-scrollbar-track,
-.kal-step-booking-confirmed__scroll::-webkit-scrollbar-track {
+.kal-step-shell__scroll::-webkit-scrollbar-track,
+.kal-step-doctor-select__list::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.kal-step-doctor-select__list--desktop::-webkit-scrollbar-thumb,
-.kal-step-doctor-select__scroll::-webkit-scrollbar-thumb,
-.kal-step-concern-select__scroll::-webkit-scrollbar-thumb,
-.kal-step-slot-picker__scroll::-webkit-scrollbar-thumb,
-.kal-step-patient-details__scroll::-webkit-scrollbar-thumb,
-.kal-step-confirmation__scroll::-webkit-scrollbar-thumb,
-.kal-step-booking-confirmed__scroll::-webkit-scrollbar-thumb {
+.kal-step-shell__scroll::-webkit-scrollbar-thumb,
+.kal-step-doctor-select__list::-webkit-scrollbar-thumb {
   background: var(--kal-color-border);
   border-radius: 999px;
 }
@@ -523,36 +505,140 @@
 }
 
 /* ----------------------------------------
-   STEP: CONCERN SELECT (Step 1 of 5)
-   Inserted between Entry and Doctor Select — see that step's own liquid
-   comment for why. Mobile only for now, same starting point Doctor Select
-   had before its desktop composition existed (no desktop spec given yet).
+   SHARED STEP SHELL
+   Used by Concern Select, Doctor Select, Slot Picker, Patient Details,
+   Confirmation, and Booking Confirmed — six steps that used to duplicate
+   their entire form/content markup into a separate __mobile block and
+   __desktop block (e.g. two copies of the patient-details inputs, one
+   with plain ids and one with -desktop suffixed ids; two copies of
+   Confirmation's detail rows). Consolidated so each of those steps now
+   renders its fields/lists/buttons exactly once; mobile vs desktop is
+   purely this one grid switching from a single column to a 3fr/5fr
+   two-column layout at 750px, same breakpoint as the rest of this file.
+
+   Confirmation and Booking Confirmed were added to this list after
+   checking their old __mobile/__desktop blocks side by side — despite the
+   original comment claiming "genuinely different compositions," the
+   doctor summary card and detail rows were byte-for-byte identical in
+   both; only one or two small elements per step (Confirmation's
+   pay-notice, Booking Confirmed's "Before your visit" card and
+   reschedule link) are true content differences, now handled with a
+   plain display:none at 750px+ on just those elements (see each step's
+   own CSS section below) rather than duplicating everything else too.
+
+   .kal-step-shell__info (the desktop-only decorative left column, reusing
+   .kal-step-entry__info) and .kal-step-shell__panel (mobile: the whole
+   column; desktop: the right-hand column) are both always in the DOM,
+   toggled by display — not duplicated content, just one column that's
+   hidden depending on width, same as every other __mobile/__desktop pair
+   in this file, just at a smaller grain.
+
+   NOT used by Entry or Therapy Slot — those still have their own
+   genuinely different mobile vs desktop compositions (different copy, not
+   just a different layout of the same fields) and keep their existing
+   __mobile/__desktop split untouched. The
+   .kal-step-doctor-select__desktop/__panel/__progress--desktop/
+   __desktop-footer/__list--desktop classes below are still required by
+   those other steps — do not remove them even though the steps above no
+   longer reference them.
 ----------------------------------------- */
 
-.kal-step-concern-select {
+.kal-step-shell {
   height: 100%;
 }
 
-.kal-step-concern-select__mobile {
+.kal-step-shell__info {
+  display: none;
+}
+
+.kal-step-shell__panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%; /* same reasoning as .kal-step-doctor-select__mobile below —
-    the middle scroll child needs a definite height to be constrained within */
+  box-sizing: border-box;
 }
 
 @media screen and (min-width: 750px) {
-  .kal-step-concern-select__mobile {
+  .kal-step-shell {
+    display: grid;
+    grid-template-columns: 3fr 5fr;
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .kal-step-shell > * {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .kal-step-shell__info {
+    display: flex;
+  }
+
+  .kal-step-shell__panel {
+    height: 100%;
+    justify-content: space-between;
+    padding: 16px 16px 0;
+  }
+}
+
+/* Header: back + progress dots + close. Back/close only make sense on
+   mobile — desktop has no in-panel back/close on any step in this file,
+   same as Entry/Confirmation/Booking Confirmed's desktop compositions;
+   closing there relies on the Escape key or clicking the dialog backdrop
+   (see kal-booking-flow.js's flow click listener). Hiding them here at
+   750px — instead of the old separate .kal-step-doctor-select__progress--
+   desktop modifier on a second, duplicated progress-dot element — is what
+   lets the progress dots be the exact same element at both sizes. */
+.kal-step-shell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 24px 24px 0;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-shell__header {
+    justify-content: flex-end;
+    padding: 0 24px;
+  }
+
+  .kal-step-shell__header .kal-step-doctor-select__back {
     display: none;
   }
 }
 
-/* Desktop composition reuses .kal-step-doctor-select__desktop/__panel
-   directly (see this step's own liquid comment for why) — this scroll
-   wrapper is the only Concern-Select-specific desktop rule needed, same
-   role as .kal-step-slot-picker__scroll/.kal-step-patient-details__scroll
-   on their own steps. */
-.kal-step-concern-select__scroll {
+/* Footer: price banner (where the step has one) + continue button. Old
+   mobile .kal-step-doctor-select__footer and desktop __desktop-footer were
+   already pixel-identical (display/gap/padding) bar one extra flex-shrink:0
+   — so this one class replaces both with no media query needed at all. */
+.kal-step-shell__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 24px 24px;
+  flex-shrink: 0;
+}
+
+/* ----------------------------------------
+   STEP: CONCERN SELECT (Step 1 of 5)
+   Inserted between Entry and Doctor Select — see that step's own liquid
+   comment for why.
+----------------------------------------- */
+
+/* Panel needs a definite height so the scroll child below (flex:1) has
+   something concrete to be constrained within — same reasoning as every
+   other consolidated step's panel. */
+.kal-step-concern-select .kal-step-shell__panel {
+  height: 100%;
+}
+
+/* One scroll region for intro + the concern list together, at every width
+   — this step never had a different desktop scroll boundary (unlike
+   Doctor Select, where only the doctor list itself scrolls on desktop). */
+.kal-step-concern-select .kal-step-shell__scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -675,33 +761,49 @@
   height: 100%;
 }
 
-.kal-step-doctor-select__mobile {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  /* height (not min-height) — this now needs a hard boundary, since its
-     middle child (.kal-step-doctor-select__scroll, below) is flex:1 and
-     needs a definite space to fill/be constrained within, the same way
-     every step's desktop __panel already works. Header and footer stay
-     fixed; only the scroll child in between moves. */
+/* height (not min-height) — the panel needs a hard boundary, since its
+   scroll child (.kal-step-shell__scroll, below) is flex:1 and needs a
+   definite space to fill/be constrained within. */
+.kal-step-doctor-select .kal-step-shell__panel {
   height: 100%;
 }
 
-/* Everything between the header and footer, scrolling internally — added
-   once the redesigned doctor cards (photo + tags + next-slot bar each)
-   got tall enough that three of them could exceed the mobile viewport.
-   Without this, #kal-booking-flow-content itself was the only scroll
-   container on mobile (unlike desktop, its overflow-y:auto is never
-   turned off below 750px), so the whole page scrolled as one block and
-   the Continue button only appeared once scrolled all the way down,
-   instead of staying pinned to the bottom of the frame. */
-.kal-step-doctor-select__scroll {
+/* Mobile: everything between the header and footer (intro, clinic strip,
+   mode toggle, doctor list) scrolls together as one region — added once
+   the redesigned doctor cards (photo + tags + next-slot bar each) got tall
+   enough that three of them could exceed the mobile viewport. Without
+   this, #kal-booking-flow-content itself was the only scroll container on
+   mobile, so the whole page scrolled as one block and the Continue button
+   only appeared once scrolled all the way down, instead of staying pinned
+   to the bottom of the frame.
+
+   Desktop: the clinic strip and mode toggle stay fixed in place instead —
+   only the doctor list itself scrolls, in the space left over — so this
+   region's own overflow is turned off at 750px and flex:1/overflow-y:auto
+   moves onto .kal-step-doctor-select__list instead (see below). */
+.kal-step-doctor-select .kal-step-shell__scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-doctor-select .kal-step-shell__scroll {
+    overflow-y: visible;
+  }
+
+  .kal-step-doctor-select__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .kal-step-doctor-select .kal-doctor-card {
+    margin-bottom: 16px;
+  }
 }
 
 .kal-step-doctor-select__header {
@@ -885,8 +987,9 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0; /* without this, cards inside the scrollable desktop list
-    (.kal-step-doctor-select__list--desktop, a flex column with overflow-y:auto)
-    get squeezed instead of the list scrolling: flex items shrink by default
+    (.kal-step-doctor-select__list, flex:1 + overflow-y:auto at 750px — see
+    SHARED STEP SHELL) get squeezed instead of the list scrolling: flex
+    items shrink by default
     when content exceeds the container, so each card's own height collapsed
     below its natural size, and this card's own overflow:hidden then clipped
     everything past the top row — photo, name, and selection dot survived
@@ -1111,12 +1214,6 @@
   cursor: pointer;
 }
 
-@media screen and (min-width: 750px) {
-  .kal-step-doctor-select__mobile {
-    display: none;
-  }
-}
-
 /* Desktop composition — left column reuses .kal-step-entry__info and friends
    (same visual treatment, per the Figma spec), right column is new */
 .kal-step-doctor-select__desktop {
@@ -1157,16 +1254,6 @@
   flex-shrink: 0;
 }
 
-.kal-step-doctor-select__list--desktop {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.kal-step-doctor-select__desktop .kal-doctor-card {
-  margin-bottom: 16px;
-}
-
 .kal-step-doctor-select__desktop-footer {
   display: flex;
   flex-direction: column;
@@ -1203,47 +1290,44 @@
   height: 100%;
 }
 
-.kal-step-slot-picker__mobile {
-  display: flex;
-  flex-direction: column;
-  /* Same pattern as .kal-step-confirmation__mobile: content stays
-     top-anchored in normal flow, min-height:100% + margin-top:auto on the
-     footer (below) is what pushes just the button to the bottom. An
-     earlier version centered the content block via margin-top/bottom:auto
-     on the intro/last slot section instead — reverted to match the
-     simpler top-anchored look used on the other steps. */
+/* Content stays top-anchored in normal flow on mobile, min-height:
+   100% + margin-top:auto on the footer is what pushes just the button to
+   the bottom without needing an internal scroll region — unlike Doctor
+   Select/Concern Select, this step's mobile composition never wrapped its
+   content in its own scrolling area, relying on the dialog content's own
+   scroll instead. Desktop's height:100%/justify-content:space-between
+   come from the shared .kal-step-shell__panel rule (see SHARED STEP SHELL
+   above); this only needs the mobile-only min-height override. */
+.kal-step-slot-picker .kal-step-shell__panel {
   min-height: 100%;
-  gap: 16px;
 }
 
-.kal-step-slot-picker__mobile .kal-step-slot-picker__footer {
+/* margin-top:auto pins the footer to the bottom on mobile when content is
+   shorter than the viewport; harmless at desktop width since the panel's
+   own justify-content:space-between already does the same job there (an
+   auto margin and space-between distribute the same leftover space). */
+.kal-step-slot-picker .kal-step-shell__footer {
   margin-top: auto;
 }
 
-@media screen and (min-width: 750px) {
-  .kal-step-slot-picker__mobile {
-    display: none;
-  }
-}
-
-/* No .kal-step-slot-picker__desktop / __panel here anymore — the desktop
-   composition's outer <div> and right-column <div> now use
-   .kal-step-doctor-select__desktop / __panel directly (see that class's
-   own rules, near the Doctor Select section above), so this step's grid/
-   panel layout can't drift out of matching Doctor Select's. */
-
-.kal-step-slot-picker__scroll {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  overflow-y: auto;
+/* One scroll region for doctor-summary + both slot sections together —
+   but only at desktop width. On mobile this step never had its own
+   internal scroll container (see .kal-step-shell__panel comment above); on
+   desktop it needs one because the dialog's own content scroll is turned
+   off at that width. */
+.kal-step-slot-picker .kal-step-shell__scroll {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.kal-step-slot-picker__footer {
-  padding: 0 16px 20px;
+@media screen and (min-width: 750px) {
+  .kal-step-slot-picker .kal-step-shell__scroll {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+  }
 }
 
 /* Doctor summary card */
@@ -1257,17 +1341,17 @@
   border-radius: 16px;
 }
 
-.kal-step-slot-picker__mobile .kal-doctor-summary {
+/* Scoped to .kal-step-slot-picker specifically — Confirmation and Therapy
+   Slot also use .kal-doctor-summary but keep their own separate margin
+   rules untouched. */
+.kal-step-slot-picker .kal-doctor-summary {
   margin: 0 16px;
 }
 
-/* Was scoped to .kal-step-slot-picker__desktop, a class removed from the
-   markup when this composition was consolidated onto .kal-step-doctor-
-   select__desktop — rescoped to the actual desktop scroll wrapper so it
-   applies again. Without it, this had zero horizontal margin on desktop,
-   sitting flush against the scroll container's edge. */
-.kal-step-slot-picker__scroll .kal-doctor-summary {
-  margin: 0 24px;
+@media screen and (min-width: 750px) {
+  .kal-step-slot-picker .kal-doctor-summary {
+    margin: 0 24px;
+  }
 }
 
 .kal-doctor-summary__avatar {
@@ -1317,17 +1401,20 @@
   min-width: 0;
 }
 
-.kal-step-slot-picker__mobile .kal-slot-section {
+/* Scoped to .kal-step-slot-picker — Therapy Slot has its own separate rule
+   (.kal-step-therapy-slot__mobile .kal-slot-section) for its own copy of
+   this section. 24px at desktop is also what keeps the calendar-icon
+   button (inside .kal-slot-section__head) clear of the scrollbar — at
+   0 right padding that icon sits flush against the scroll container's
+   edge, right where the scrollbar renders. */
+.kal-step-slot-picker .kal-slot-section {
   padding: 0 16px;
 }
 
-/* Same rescoping as .kal-doctor-summary above — .kal-step-slot-picker__desktop
-   no longer exists in the markup. Restoring this padding is also the fix
-   for the calendar-icon button (inside .kal-slot-section__head) getting
-   covered by the scrollbar: with zero right padding, that icon sat flush
-   against the scroll container's edge, right where the scrollbar renders. */
-.kal-step-slot-picker__scroll .kal-slot-section {
-  padding: 0 24px;
+@media screen and (min-width: 750px) {
+  .kal-step-slot-picker .kal-slot-section {
+    padding: 0 24px;
+  }
 }
 
 .kal-slot-section__head {
@@ -1667,26 +1754,21 @@
   height: 100%;
 }
 
-.kal-step-patient-details__mobile {
-  display: flex;
-  flex-direction: column;
-  /* Same pattern as .kal-step-confirmation__mobile: content stays
-     top-anchored in normal flow, min-height:100% + margin-top:auto on the
-     footer (below) is what pushes just the button to the bottom. An
-     earlier version centered the content block via margin-top/bottom:auto
-     on the intro/form instead — reverted, that's not the look wanted here. */
+/* Content stays top-anchored in normal flow on mobile, min-height:
+   100% + margin-top:auto on the footer is what pushes just the button to
+   the bottom without needing an internal scroll region. Desktop's
+   height:100%/justify-content:space-between come from the shared
+   .kal-step-shell__panel rule (see SHARED STEP SHELL above); this only
+   needs the mobile-only min-height override. */
+.kal-step-patient-details .kal-step-shell__panel {
   min-height: 100%;
-  gap: 16px;
 }
 
-.kal-step-patient-details__mobile .kal-step-slot-picker__footer {
+/* Harmless at desktop width: the panel's own justify-content:space-between
+   already lands the footer at the bottom there the same way an auto
+   margin would. */
+.kal-step-patient-details .kal-step-shell__footer {
   margin-top: auto;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-step-patient-details__mobile {
-    display: none;
-  }
 }
 
 .kal-form {
@@ -1694,6 +1776,19 @@
   flex-direction: column;
   gap: 24px;
   padding: 0 24px;
+}
+
+/* Desktop: the panel already supplies 16px of horizontal padding (Figma's
+   own math: 500px column - 16px - 16px = 468px form width, i.e. zero
+   additional horizontal padding from the form itself) — override both the
+   padding and the gap to match. Replaces the old .kal-form--desktop
+   modifier class that used to live on a second, duplicated copy of this
+   form. */
+@media screen and (min-width: 750px) {
+  .kal-form {
+    padding: 0;
+    gap: 16px;
+  }
 }
 
 .kal-form-field {
@@ -1764,86 +1859,125 @@
   color: #0b0b0c;
 }
 
-/* Desktop composition — same grid/panel/scroll pattern as every other
-   step's desktop composition (Doctor Select, Slot Picker). */
-
-/* No .kal-step-patient-details__desktop / __panel here anymore — same
-   reasoning as Slot Picker (see that section's comment): this composition
-   reuses .kal-step-doctor-select__desktop / __panel directly. */
-
-.kal-step-patient-details__scroll {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  overflow-y: auto;
+/* Mobile: the form sits directly after the intro, no internal scroll
+   region (same page-level-scroll strategy as Slot Picker's mobile
+   composition — see that step's .kal-step-shell__scroll comment).
+   Desktop: needs its own scroll region since the dialog's own content
+   scroll is turned off at that width. */
+@media screen and (min-width: 750px) {
+  .kal-step-patient-details .kal-step-shell__scroll {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+  }
 }
 
-/* Desktop form: the base .kal-form (mobile) has its own 0 24px padding and
-   24px gap. The panel here already supplies 16px of horizontal padding
-   (Figma's own math: 500px column - 16px - 16px = 468px form width, i.e.
-   zero additional horizontal padding from the form itself) — override both
-   the padding and the gap to match. */
-.kal-form--desktop {
-  padding: 0;
-  gap: 16px;
-}
-
+/* WhatsApp Number + Email: stacked on mobile (each its own full-width
+   .kal-form-field, same as Full Name/Gender above them), side by side on
+   desktop — the only genuine layout-only difference between the two sizes
+   on this step, now expressed as one wrapper + a media query instead of
+   two separately-maintained copies of the fields themselves. */
 .kal-form-row {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-form-row {
+    flex-direction: row;
+    gap: 16px;
+  }
 }
 
 .kal-form-row .kal-form-field {
-  flex: 1;
   min-width: 0;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-form-row .kal-form-field {
+    flex: 1;
+  }
 }
 
 /* ----------------------------------------
    STEP: CONFIRMATION (Step 5 of 5)
+   Consolidated into the shared step shell (see SHARED STEP SHELL above) —
+   was a duplicated __mobile/__desktop pair; now the doctor summary card
+   and detail rows render exactly once. Only the pay-notice differs by
+   width (see this file's own top comment) — hidden entirely at 750px+
+   rather than kept as a second copy of everything around it.
+
    Doctor summary card reuses .kal-doctor-summary exactly as-is from Slot
-   Picker — same 16px horizontal margin convention as that step's mobile
-   composition.
+   Picker — same 16px horizontal margin convention as this step's mobile
+   layout.
 ----------------------------------------- */
 
-/* Same fix as .kal-step-slot-picker / .kal-step-patient-details (see those
-   rules' comments): without this, the outer wrapper falls back to
-   height:auto instead of filling the fixed-height dialog, breaking the
-   desktop grid/panel/scroll chain below it. */
+/* Same fix as every other consolidated step's outer wrapper: without
+   this, the outer wrapper falls back to height:auto instead of filling
+   the fixed-height dialog, breaking the desktop grid/panel/scroll chain
+   below it. */
 .kal-step-confirmation {
   height: 100%;
 }
 
-.kal-step-confirmation__mobile {
+.kal-step-confirmation .kal-step-shell__panel {
+  height: 100%;
+}
+
+/* Mobile: one scroll region for everything between header and footer,
+   same as every other consolidated step. Desktop: the grid/panel chain
+   from SHARED STEP SHELL already constrains this, so overflow-y:auto
+   keeps working unchanged at 750px+ — no override needed there, unlike
+   Doctor Select (which moves scrolling onto its own list at desktop
+   width instead). */
+.kal-step-confirmation .kal-step-shell__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  /* min-height:100% (not height) lets the footer reach the bottom of the
-     viewport even when there's little content. Unlike Patient Details/
-     Slot Picker, this step's content should stay top-anchored as-is —
-     only the footer needs to move, so margin-top:auto on just that one
-     element (below) is enough; no need to also center the content block. */
-  min-height: 100%;
   gap: 16px;
+  padding: 0 16px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-confirmation .kal-step-shell__scroll {
+    /* Figma's desktop inset is 24px, vs. 16px on mobile — matches the
+       original desktop-only .kal-step-confirmation__scroll padding. */
+    padding: 0 24px;
+    gap: 24px;
+  }
+
+  /* The one genuine content difference between mobile and desktop for
+     this step — the desktop Figma export omits this notice entirely,
+     confirmed against both the screenshot and the Copy-as-CSS export
+     (see this file's top comment). */
+  .kal-step-confirmation .kal-confirmation-pay-notice {
+    display: none;
+  }
 }
 
 /* margin-top:auto goes on the pay-notice, not the footer below it — this
    pulls the notice+button down together as a pair with a fixed gap
    between them, instead of just the button reaching the bottom and
-   leaving the notice stranded up with the rest of the content. */
-.kal-step-confirmation__mobile .kal-confirmation-pay-notice {
+   leaving the notice stranded up with the rest of the content. Harmless
+   at desktop width, where the notice is hidden and the panel's own
+   justify-content:space-between (from SHARED STEP SHELL) already lands
+   the footer at the bottom the same way. */
+.kal-step-confirmation .kal-confirmation-pay-notice {
   margin-top: auto;
 }
 
+/* Figma spec gives the doctor-summary card 48px of horizontal inset vs.
+   the details card's 24px at desktop, and flush with it (16px, matching
+   the scroll region's own padding) on mobile — one extra margin layered
+   on top of the scroll region's own side padding, at both sizes. */
 @media screen and (min-width: 750px) {
-  .kal-step-confirmation__mobile {
-    display: none;
+  .kal-step-confirmation .kal-doctor-summary {
+    margin: 0 24px;
   }
-}
-
-.kal-step-confirmation__mobile .kal-doctor-summary,
-.kal-step-confirmation__mobile .kal-confirmation-details,
-.kal-step-confirmation__mobile .kal-confirmation-pay-notice {
-  margin-left: 16px;
-  margin-right: 16px;
 }
 
 /* Figma reference (both mobile and desktop) shows no bordered card around
@@ -1939,32 +2073,13 @@
   color: var(--kal-color-body);
 }
 
-/* Desktop — reuses .kal-step-doctor-select__desktop/__panel (see the
-   Liquid file's comment). Only the scroll area is Confirmation-specific. */
-
-.kal-step-confirmation__scroll {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 0 24px;
-}
-
-/* Figma spec gives the doctor-summary card 48px of horizontal inset vs.
-   the details card's 24px — .kal-step-confirmation__scroll's own 24px
-   padding above already accounts for the details card, so the summary
-   card just needs 24px more on top of that to reach 48px total. */
-.kal-step-confirmation__scroll .kal-doctor-summary {
-  margin: 0 24px;
-}
-
 /* ----------------------------------------
    STEP: BOOKING CONFIRMED
-   Post-booking success screen. Mobile only for now. No progress dots, no
-   back button — booking is done, nothing to navigate back to. Content
+   Post-booking success screen. Consolidated into the shared step shell
+   (see SHARED STEP SHELL above and this step's own liquid file comment) —
+   was a duplicated __mobile/__desktop pair; now the success icon, intro,
+   and detail card render exactly once. No progress dots, no back button
+   at any width — booking is done, nothing to navigate back to. Content
    flows top-down naturally (no min-height:100% + bottom-pinning trick
    like other steps use) — the Figma reference shows normal stacked
    content, not anything pinned to the viewport's bottom edge.
@@ -1974,19 +2089,32 @@
   height: 100%;
 }
 
-.kal-step-booking-confirmed__mobile {
+.kal-step-booking-confirmed .kal-step-shell__panel {
+  height: 100%;
+}
+
+.kal-step-booking-confirmed .kal-step-shell__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  /* min-height:100% is what gives margin-top:auto on .kal-before-visit
-     (below) real free space to push into — same pattern as every other
-     step. Content above stays top-anchored in normal flow. */
-  min-height: 100%;
   gap: 16px;
   padding-top: 24px;
 }
 
 @media screen and (min-width: 750px) {
-  .kal-step-booking-confirmed__mobile {
+  .kal-step-booking-confirmed .kal-step-shell__scroll {
+    padding-top: 0;
+    gap: 24px;
+  }
+
+  /* The two genuine content differences between mobile and desktop for
+     this step — the desktop Figma export stops right after the
+     Consultation Details card (confirmed in both the screenshot and the
+     Copy-as-CSS dump), same technique as Confirmation's pay-notice. */
+  .kal-step-booking-confirmed .kal-before-visit,
+  .kal-step-booking-confirmed__reschedule {
     display: none;
   }
 }
@@ -2030,8 +2158,18 @@
   text-align: center;
 }
 
-.kal-step-booking-confirmed__mobile .kal-confirmation-details {
+.kal-step-booking-confirmed .kal-confirmation-details {
   margin: 0 16px;
+}
+
+@media screen and (min-width: 750px) {
+  /* Matches the original desktop-only scroll wrapper's 24px side padding,
+     which this card previously inherited by being the only element inside
+     it without its own margin — see the desktop notes on Confirmation's
+     equivalent .kal-doctor-summary rule for the same 16px/24px split. */
+  .kal-step-booking-confirmed .kal-confirmation-details {
+    margin: 0 24px;
+  }
 }
 
 .kal-before-visit {
@@ -2099,23 +2237,6 @@
   font-size: 14px;
   color: var(--kal-color-primary);
   cursor: pointer;
-}
-
-/* Desktop — reuses .kal-step-doctor-select__desktop/__panel, same as every
-   other step. .kal-confirmation-success-icon and
-   .kal-step-booking-confirmed__intro are reused as-is from mobile
-   (align-self:center / text-align:center work the same regardless of the
-   parent's own alignment), so only the scroll wrapper is new here. */
-
-.kal-step-booking-confirmed__scroll {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 0 24px;
 }
 
 /* ----------------------------------------
