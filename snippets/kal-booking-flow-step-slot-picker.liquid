@@ -1,53 +1,58 @@
 {% comment %}
   Step 4 (shown as "Step 3 of 5") — pick a day and time slot.
 
-  Day strip, calendar modal, and time-slot grid are all JS-driven — see the
-  "SLOT PICKER" section of kal-booking-flow.js. Mirrors the real staff CMS's
-  SlotPicker.tsx mechanics exactly:
-  - Day strip: today + next 9 days (matches STRIP_DAYS = 10 in SlotPicker.tsx),
-    generated client-side, no API call needed.
-  - Calendar modal: month grid, chevron nav clamped to [today, today+90 days]
-    (MAX_FUTURE_DAYS), past/beyond-cap cells disabled.
-  - Time slots: GET /api/public/availability/slots?doctor_id=&date=&facility_id=&duration_minutes=45,
-    grouped into Morning/Afternoon/Evening client-side (6-12 / 12-16 / 16-22,
-    same ranges as SlotPicker.tsx). Slots come back for the whole day and are
-    rendered disabled+struck-through when is_available is false, rather than
-    omitted — same as the real CMS (SlotPicker.tsx line ~386).
-  - Mode filtering matches SlotPicker.tsx exactly: video/online mode filters
-    client-side to slot_type "online"/"both" (no facility_id sent); in-clinic
-    mode sends facility_id and relies on the RPC's own facility join to scope
-    results, no client-side slot_type filter needed.
+  MOBILE REDESIGN per a later Figma pass (node 438:7388), same instruction
+  as Doctor Select: stay with the design, ignore backend integration.
+  - Header swapped to the shared kal-booking-flow-step-header.liquid
+    snippet (back/facility badge/close + step progress bar), replacing
+    the old dots-only header.
+  - The doctor summary line is now a richer static "appointment card"
+    (photo, "YOUR CONSULTATION" eyebrow, name, mode + price) — deliberately
+    NOT reusing .kal-doctor-summary — this is new, separate markup/CSS
+    (.kal-appointment-card*). Confirmation used to share .kal-doctor-summary
+    too but dropped it entirely in its own later redesign pass (see that
+    step's own liquid comment), so as of that pass nothing references
+    .kal-doctor-summary anymore.
+  - The day strip is now fully static (5 hardcoded day cards matching the
+    Figma example exactly — Today/Mon/Tue/Wed/Thu with their own slot
+    counts and colors), not client-generated from today's real date via
+    STRIP_DAYS/generateMockDaySummaries. Clicking a card still updates
+    slotPicker.selectedDate (via a real day-offset from today), just
+    without any per-day fetch or badge computation.
+  - "Available time" is now a Morning/Afternoon/Evening TAB bar (only one
+    panel visible at a time) instead of three stacked labeled sections.
+    Each panel's time buttons are static markup (Morning matches the
+    Figma grid exactly, with 10:30 AM pre-selected; Afternoon/Evening are
+    reasonable static fills — Figma's own export only showed the Morning
+    tab's content). Kept as plain .kal-slot-chip buttons with the same
+    data-kal-slot-start/-end attributes the existing click handler and
+    Confirmation-summary formatting already expect, so slot selection
+    still works with no JS rewrite needed for that part.
+  - The calendar icon next to "CHOOSE A SLOT" is decorative only now (no
+    data-kal-open-calendar) — the calendar MODAL flow doesn't fit a fully
+    static day strip. The calendar modal this used to share with Therapy
+    Slot's old date picker is gone entirely now — that screen was
+    replaced by a therapy-category checkbox list in its own later flow
+    change (node 539:2128, see that step's own liquid comment), so
+    nothing opens the modal anymore and it (kal-booking-flow.liquid's
+    kal-calendar-modal, its CSS, and its JS) was removed rather than left
+    dead.
+  - Continue is now a plain always-enabled button (a slot is already
+    selected by default, matching the Figma screenshot), not a
+    disabled-until-selected button with dynamic "Continue with <date>"
+    text — see kal-booking-flow.js's own comment on this.
 
   Doctor id/facility id are still placeholders (data-kal-doctor-id/
-  data-kal-facility-id on the wrapper below) — real values come from whichever
-  doctor was picked in the previous step, once doctor-selection data fetching
-  is wired (explicitly deferred, see build log). Doctor summary card text is
-  still dummy for the same reason.
+  data-kal-facility-id on the wrapper below) — unaffected by this pass,
+  harmless to leave for whenever real backend wiring resumes, even though
+  nothing here calls them today since the day-strip/slot-grid are static.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
   switches at 750px. Left column reuses .kal-step-entry__info, same as the
-  other steps.
-
-  The calendar modal itself lives in kal-booking-flow.liquid, not here — see
-  the comment there for why (overflow-clipping bug when nested inside the
-  scrollable content area).
+  other steps; this pass is mobile-only, so that copy is left as-is.
 {% endcomment %}
 
-{%- comment -%}
-  data-kal-doctor-id / data-kal-facility-id: PLACEHOLDER values (a real
-  doctor/facility pair from the CMS, used so slot fetching hits real
-  availability data). Currently "Dr Offline One" (staff.id
-  2a3340b9-79d2-4d50-ba28-817f61ce327e) at the Indiranagar facility
-  (bfa7bd70-428b-4fd3-80c3-2c7f0106497d) — picked over the earlier
-  Neethu Jayachandran / Koramangala pairing specifically because this doctor
-  actually has real weekly_availability rows configured at Indiranagar
-  (confirmed live via the get_available_slots_for_date RPC — Neethu has none
-  there, only at Koramangala). Once doctor-selection is wired to real backend
-  data, the doctor-card click handler should just overwrite these two
-  attributes before navigating here — the slot-picker JS itself reads them
-  fresh on every fetch and needs no other change.
-{%- endcomment -%}
 <div class="kal-step-slot-picker kal-step-shell" data-kal-doctor-id="2a3340b9-79d2-4d50-ba28-817f61ce327e" data-kal-facility-id="bfa7bd70-428b-4fd3-80c3-2c7f0106497d">
 
   <div class="kal-step-entry__info kal-step-shell__info">
@@ -70,66 +75,103 @@
 
   <div class="kal-step-shell__panel">
 
-    <div class="kal-step-doctor-select__header kal-step-shell__header">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-back="doctor-select" aria-label="Back">
-        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
-      </button>
-      <div class="kal-step-doctor-select__progress">
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-text">3/5</span>
-      </div>
-      {%- comment -%} Own close button — see Doctor Select's header comment for why {%- endcomment -%}
-      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
-    </div>
+    {%- render 'kal-booking-flow-step-header', back_target: 'doctor-select', step_number: 3, step_total: 5, next_label: 'Personal details' -%}
 
-    {%- comment -%}
-      Reuses the same eyebrow/heading classes as the Doctor Select step's
-      intro block (kal-step-doctor-select__eyebrow/__heading) — those classes
-      aren't actually scoped to that one step, same convention as
-      .kal-step-entry__info being reused on the desktop composition.
-    {%- endcomment -%}
     <div class="kal-step-shell__scroll">
       <div class="kal-step-doctor-select__intro">
-        <p class="kal-step-doctor-select__eyebrow">Step 3 of 5</p>
-        <h2 class="kal-step-doctor-select__heading">Pick your visit</h2>
+        <h2 class="kal-step-doctor-select__heading">Choose a date &amp; time</h2>
       </div>
 
-      <div class="kal-doctor-summary" data-kal-doctor-summary>
-        <span class="kal-doctor-summary__avatar"></span>
-        <span class="kal-doctor-summary__info">
-          <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Offline One</span>
-          <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
-        </span>
-        <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
-      </div>
+      {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
 
       <div class="kal-slot-section">
         <div class="kal-slot-section__head">
-          <p class="kal-slot-section__label">Choose a day</p>
-          <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
-            {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+          <p class="kal-slot-section__label">Choose a Slot</p>
+          <button type="button" class="kal-icon-button kal-icon-button--round" aria-label="Open calendar">
+            {%- render 'kal-booking-icons', icon_name: 'calendar-month' -%}
           </button>
         </div>
-        {%- comment -%} Populated client-side by renderDayStrip() in kal-booking-flow.js {%- endcomment -%}
-        <div class="kal-day-strip" data-kal-day-strip></div>
+
+        <div class="kal-day-strip">
+          <button type="button" class="kal-day-chip kal-day-chip--active" data-kal-slot-day-offset="0">
+            <span class="kal-day-chip__label">Today</span>
+            <span class="kal-day-chip__date">6</span>
+            <span class="kal-day-chip__badge kal-day-chip__badge--high">5 slots</span>
+          </button>
+          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="1">
+            <span class="kal-day-chip__label">Mon</span>
+            <span class="kal-day-chip__date">7</span>
+            <span class="kal-day-chip__badge kal-day-chip__badge--high">4 slots</span>
+          </button>
+          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="2">
+            <span class="kal-day-chip__label">Tue</span>
+            <span class="kal-day-chip__date">8</span>
+            <span class="kal-day-chip__badge kal-day-chip__badge--high">3 slots</span>
+          </button>
+          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="3" disabled>
+            <span class="kal-day-chip__label">Wed</span>
+            <span class="kal-day-chip__date">9</span>
+            <span class="kal-day-chip__badge kal-day-chip__badge--none">0 slots</span>
+          </button>
+          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="4">
+            <span class="kal-day-chip__label">Thu</span>
+            <span class="kal-day-chip__date">10</span>
+            <span class="kal-day-chip__badge kal-day-chip__badge--busy">5 slots</span>
+          </button>
+        </div>
       </div>
 
-      <div class="kal-slot-section">
-        <p class="kal-slot-section__label">Available time</p>
-        {%- comment -%} Populated client-side by renderSlotPeriods() in kal-booking-flow.js {%- endcomment -%}
-        <div class="kal-slot-periods" data-kal-slot-periods>
-          <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
+      <div class="kal-slot-tabs">
+        <div class="kal-slot-tabs__bar">
+          <button type="button" class="kal-slot-tab kal-slot-tab--active" data-kal-slot-tab="morning">
+            {%- render 'kal-booking-icons', icon_name: 'period-morning' -%}
+            MORNING
+          </button>
+          <button type="button" class="kal-slot-tab" data-kal-slot-tab="afternoon">
+            {%- render 'kal-booking-icons', icon_name: 'period-afternoon' -%}
+            AFTERNOON
+          </button>
+          <button type="button" class="kal-slot-tab" data-kal-slot-tab="evening">
+            {%- render 'kal-booking-icons', icon_name: 'period-evening' -%}
+            EVENING
+          </button>
+        </div>
+
+        <div data-kal-slot-periods>
+          <div class="kal-slot-grid" data-kal-slot-panel="morning">
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="09:00:00" data-kal-slot-end="09:45:00">9:00 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="09:30:00" data-kal-slot-end="10:15:00">9:30 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="09:45:00" data-kal-slot-end="10:30:00">9:45 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="10:00:00" data-kal-slot-end="10:45:00">10:00 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="10:15:00" data-kal-slot-end="11:00:00">10:15 AM</button>
+            <button type="button" class="kal-slot-chip kal-slot-chip--active" data-kal-slot-start="10:30:00" data-kal-slot-end="11:15:00">10:30 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="11:00:00" data-kal-slot-end="11:45:00">11:00 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="11:15:00" data-kal-slot-end="12:00:00">11:15 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="11:30:00" data-kal-slot-end="12:15:00">11:30 AM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="11:45:00" data-kal-slot-end="12:30:00">11:45 AM</button>
+          </div>
+          <div class="kal-slot-grid" data-kal-slot-panel="afternoon" hidden>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="12:00:00" data-kal-slot-end="12:45:00">12:00 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="12:30:00" data-kal-slot-end="13:15:00">12:30 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="13:00:00" data-kal-slot-end="13:45:00">1:00 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="13:30:00" data-kal-slot-end="14:15:00">1:30 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="14:00:00" data-kal-slot-end="14:45:00">2:00 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="14:30:00" data-kal-slot-end="15:15:00">2:30 PM</button>
+          </div>
+          <div class="kal-slot-grid" data-kal-slot-panel="evening" hidden>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="16:00:00" data-kal-slot-end="16:45:00">4:00 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="16:30:00" data-kal-slot-end="17:15:00">4:30 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="17:00:00" data-kal-slot-end="17:45:00">5:00 PM</button>
+            <button type="button" class="kal-slot-chip" data-kal-slot-start="17:30:00" data-kal-slot-end="18:15:00">5:30 PM</button>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="kal-step-shell__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details" data-kal-slot-continue disabled>
-        Select a date and time
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
+        Continue
       </button>
     </div>
 
