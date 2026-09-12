@@ -1,0 +1,88 @@
+{% comment %}
+  Shared step header: back button + facility badge (mobile) / progress
+  dots (desktop) + close button, plus the mobile-only step progress bar
+  underneath ("STEP X OF 5 / Next: ..." + a fill line). Concern Select
+  and Doctor Select both use this exact composition per their Figma specs
+  (nodes 544:3648 and 544:3781) — extracted here instead of duplicating
+  the markup per step, so every step that reuses this header shares one
+  definition (see kal-booking-flow.css's .kal-step-header__* /
+  .kal-step-progress-bar__* rules, themselves generalized from what was
+  originally Concern Select-only CSS).
+
+  Accepts:
+  - back_target: {String} data-kal-back value, e.g. "entry"
+  - step_number: {Number} 1-5, which step this is
+  - step_total: {Number} total steps, e.g. 5
+  - next_label: {String} e.g. "Mode & Doctor", "Date & Time" — ignored on
+    the last step (step_number == step_total), which shows a plain
+    "Final step" instead of "Next : ..." per the Confirmation step's own
+    Figma spec (node 438:7468)
+  - location_text: {String} facility name shown in the badge — defaults to
+    "Indiranagar" (dummy value, same placeholder used everywhere else in
+    this flow until it's wired to a real facility)
+
+  Usage:
+  {% render 'kal-booking-flow-step-header', back_target: 'entry', step_number: 1, step_total: 5, next_label: 'Mode & Doctor' %}
+{% endcomment %}
+
+{%- liquid
+  assign location_text = location_text | default: 'Indiranagar'
+  assign step_percent = step_number | times: 100.0 | divided_by: step_total
+-%}
+
+<div class="kal-step-doctor-select__header kal-step-shell__header">
+  <button type="button" class="kal-step-doctor-select__back" data-kal-back="{{ back_target }}" aria-label="Back">
+    {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+  </button>
+
+  <div class="kal-step-header__location-slot">
+    {%- comment -%}
+      Mobile: static facility badge. The down chevron is purely visual —
+      no data-kal-facility hook, no click handler. Explicit instruction:
+      "dont need this dropdown [behavior] just the selected facility
+      should be shown" — the chevron stays for visual match, the dropdown
+      it implies doesn't actually open anything yet.
+    {%- endcomment -%}
+    <div class="kal-step-header__location-badge">
+      <span class="kal-step-header__location-badge-left">
+        <span class="kal-icon kal-icon--location">
+          {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+        </span>
+        <span class="kal-step-header__location-text">{{ location_text }}</span>
+      </span>
+      <span class="kal-step-header__location-chevron" aria-hidden="true">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
+      </span>
+    </div>
+
+    {%- comment -%} Desktop: unchanged progress dots, hidden below 750px, see CSS {%- endcomment -%}
+    <div class="kal-step-doctor-select__progress">
+      {%- for i in (1..step_total) -%}
+        <span class="kal-step-doctor-select__progress-dot{% if i == step_number %} kal-step-doctor-select__progress-dot--active{% endif %}"></span>
+      {%- endfor -%}
+      <span class="kal-step-doctor-select__progress-text">{{ step_number }}/{{ step_total }}</span>
+    </div>
+  </div>
+
+  {%- comment -%} Own close button — a real flex sibling of back/badge in this row, not the separate, absolutely-positioned .kal-booking-flow__close {%- endcomment -%}
+  <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">
+    {%- render 'kal-booking-icons', icon_name: 'close' -%}
+  </button>
+</div>
+
+{%- comment -%} Mobile-only step progress bar, replaces the header's progress dots visually at this width — see CSS {%- endcomment -%}
+<div class="kal-step-progress-bar">
+  <div class="kal-step-progress-bar__labels">
+    <span class="kal-step-progress-bar__step">Step {{ step_number }} of {{ step_total }}</span>
+    <span class="kal-step-progress-bar__next">
+      {%- if step_number == step_total -%}
+        Final step
+      {%- else -%}
+        Next : {{ next_label }}
+      {%- endif -%}
+    </span>
+  </div>
+  <div class="kal-step-progress-bar__track">
+    <div class="kal-step-progress-bar__fill" style="--kal-step-progress: {{ step_percent }}%;"></div>
+  </div>
+</div>

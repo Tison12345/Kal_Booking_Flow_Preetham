@@ -1,0 +1,36 @@
+{% comment %}
+  Shared "appointment card" summary — doctor photo, "YOUR CONSULTATION"
+  eyebrow, name, and a mode + price row. Slot Picker (node 438:7388) and
+  Patient Details (node 438:7643) both use this exact composition per
+  their Figma specs, so it's extracted here instead of duplicating the
+  markup per step (same reasoning as kal-booking-flow-step-header.liquid).
+
+  Mode text (data-kal-summary-mode) is kept in sync with the In-Clinic/
+  Video Consult toggle on Doctor Select by kal-booking-flow.js's setMode —
+  no extra wiring needed here, every instance of this snippet just picks
+  up the same live text.
+
+  Accepts:
+  - photo_url: {String} doctor photo URL — DUMMY/placeholder, no real
+    doctor photos exist yet
+  - name: {String} e.g. "Dr. Neethu Jayachandran"
+  - price: {String} pre-formatted, e.g. "&#8377;500"
+
+  Usage:
+  {% render 'kal-booking-flow-appointment-card', photo_url: doctor_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' %}
+{% endcomment %}
+
+<div class="kal-appointment-card">
+  <span class="kal-appointment-card__photo">
+    <img src="{{ photo_url }}" alt="{{ name }}" loading="lazy">
+  </span>
+  <span class="kal-appointment-card__body">
+    <span class="kal-appointment-card__eyebrow">Your Consultation</span>
+    <span class="kal-appointment-card__name">{{ name }}</span>
+    <span class="kal-appointment-card__meta">
+      <span data-kal-summary-mode>In-Clinic</span>
+      <span class="kal-appointment-card__divider" aria-hidden="true"></span>
+      <span>{{ price }}</span>
+    </span>
+  </span>
+</div>
