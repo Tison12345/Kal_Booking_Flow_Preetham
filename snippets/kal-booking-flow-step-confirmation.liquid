@@ -1,23 +1,40 @@
 {% comment %}
   Step 5 of 5 — final review before booking. Shows a read-only summary of
-  everything collected in the previous steps (doctor, day/time, patient
-  name, mode) and a "Confirm Booking" button.
+  everything collected in the previous steps (doctor, patient, mode,
+  day/time) and a payment-method choice.
 
-  Doctor summary card reuses the same data-kal-doctor-summary/
-  data-kal-summary-name/-meta/-mode hooks as the Slot Picker step — still
-  static placeholder text for the same reason (doctor-selection data
-  fetching is deferred), but the mode badge stays in sync automatically
-  since setMode() in kal-booking-flow.js already updates every
-  [data-kal-summary-mode] element on the page, not just Slot Picker's.
+  MOBILE REDESIGN per a later Figma pass (node 438:7468), same instruction
+  as the previous four steps: stay with the design, ignore backend
+  integration.
+  - Header swapped to the shared kal-booking-flow-step-header.liquid
+    snippet. Since this is the last step, its step-progress-bar shows a
+    plain "Final step" instead of "Next : ..." — see that snippet's own
+    comment for the step_number == step_total branch that does this.
+  - Heading changed from "Confirm your slot" to "Confirm booking" to
+    match the export; subtext unchanged.
+  - The old .kal-doctor-summary avatar row above the details card is
+    gone — the export has no separate doctor-summary card on this step,
+    just the details list below, now starting with its own "Doctor" row
+    (previously the doctor's name only appeared in that removed summary
+    row, not in the details list itself).
+  - Details list gained a "Doctor" row (first) and renamed "Patient Name"
+    to "Patient" to match the export; "Fee" is gone from this list
+    entirely — replaced by the new Payment Method section below (two
+    cards: "Pay now" at a 10%-off price, "Pay at clinic" at full price).
+    Both are static mock prices (₹450 / ₹495), same category as the
+    doctor's photo/fee being placeholders elsewhere in this flow.
+  - Payment Method cards are click-to-select (data-kal-payment-method,
+    handled by setPaymentMethod() in kal-booking-flow.js) purely for
+    visual state — no amount is actually charged differently, this is a
+    mockup. "Pay now" starts selected, matching the export.
+  - The old "pay at the clinic" notice banner is gone — payment method is
+    now an explicit choice via the cards above, not a fixed notice.
+  - Button text changed from "Confirm Booking" to "Confirm payment" to
+    match the export; still carries data-kal-confirm-booking and
+    data-kal-goto="booking-confirmed" exactly as before — see below for
+    why those remain a to-do, not wired to the backend.
 
-  The four detail rows (Patient Name, Mode, Day & Time, Fee) are populated
-  by renderConfirmationSummary() in kal-booking-flow.js, reading straight
-  from the patientDetails/slotPicker state already being tracked — no new
-  state, just displaying what was already collected. Fee is still a static
-  ₹800 placeholder (no real fee-lookup wired yet, same category as the
-  doctor's name/photo being placeholders).
-
-  "Confirm Booking" is NOT wired to the backend (explicit instruction
+  "Confirm payment" is NOT wired to the backend (explicit instruction
   throughout this build — "dont integrate it"). data-kal-confirm-booking is
   a hook with no click handler yet; when backend integration happens, this
   is where the two-call sequence documented in
@@ -29,20 +46,18 @@
   call goToStep('booking-confirmed') after a successful booking, not
   unconditionally like the plain data-kal-goto does today.
 
-  Single shared markup, not a __mobile + __desktop split — consolidated
-  into the shared step shell (see "SHARED STEP SHELL" in
-  kal-booking-flow.css). This step was previously excluded from that
-  consolidation on the assumption its mobile/desktop compositions were
-  "genuinely different, not just a different layout of the same fields" —
-  checking the two blocks side by side showed that wasn't actually true:
-  the doctor summary card and all four detail rows were byte-for-byte
-  identical in both. The ONLY real content difference is the
-  "pay at the clinic" notice, which the desktop Figma export omits
-  entirely — handled below with one CSS rule
-  (.kal-step-confirmation .kal-confirmation-pay-notice, hidden at
-  750px+), the same way Doctor Select hides its back/close buttons at
-  desktop width, rather than keeping two copies of everything else just
-  to accommodate one element that differs.
+  Single shared markup, not a __mobile + __desktop split — this step was
+  already fully consolidated into the shared step shell before this pass
+  (see "SHARED STEP SHELL" in kal-booking-flow.css), unlike the earlier
+  steps in this redesign series that still have a separate desktop
+  .kal-step-entry__info block to leave untouched. There's no such
+  separate desktop content here to preserve, so — unlike those steps —
+  this content change (dropping the doctor-summary row and the pay
+  notice, adding the Doctor row and the Payment Method cards) affects
+  both breakpoints, not mobile only. The now-dead desktop-only CSS
+  overrides this left behind (the doctor-summary-card margin, the
+  pay-notice display:none) are addressed in kal-booking-flow.css's own
+  comment.
 {% endcomment %}
 
 <div class="kal-step-confirmation kal-step-shell">
@@ -64,36 +79,12 @@
 
   <div class="kal-step-shell__panel">
 
-    <div class="kal-step-doctor-select__header kal-step-shell__header">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-back="patient-details" aria-label="Back">
-        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
-      </button>
-      <div class="kal-step-doctor-select__progress">
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
-        <span class="kal-step-doctor-select__progress-text">5/5</span>
-      </div>
-      {%- comment -%} Own close button — see Doctor Select's header comment for why {%- endcomment -%}
-      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
-    </div>
+    {%- render 'kal-booking-flow-step-header', back_target: 'patient-details', step_number: 5, step_total: 5 -%}
 
     <div class="kal-step-shell__scroll">
       <div class="kal-step-doctor-select__intro">
-        <p class="kal-step-doctor-select__eyebrow">Step 5 of 5</p>
-        <h2 class="kal-step-doctor-select__heading">Confirm your slot</h2>
+        <h2 class="kal-step-doctor-select__heading">Confirm booking</h2>
         <p class="kal-step-doctor-select__subtext">Check the details before we hold it for you.</p>
-      </div>
-
-      <div class="kal-doctor-summary" data-kal-doctor-summary>
-        <span class="kal-doctor-summary__avatar"></span>
-        <span class="kal-doctor-summary__info">
-          <span class="kal-doctor-summary__name" data-kal-summary-name>Dr. Offline One</span>
-          <span class="kal-doctor-summary__meta" data-kal-summary-meta>General Physician - 12yrs</span>
-        </span>
-        <span class="kal-doctor-summary__mode" data-kal-summary-mode>Online</span>
       </div>
 
       <div class="kal-confirmation-details">
@@ -101,7 +92,11 @@
         <div class="kal-confirmation-details__divider"></div>
         <div class="kal-confirmation-details__rows">
           <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Patient Name</span>
+            <span class="kal-confirmation-details__key">Doctor</span>
+            <span class="kal-confirmation-details__value">Dr. Neethu Jayachandran</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Patient</span>
             <span class="kal-confirmation-details__value" data-kal-confirm-name>—</span>
           </div>
           <div class="kal-confirmation-details__row">
@@ -109,28 +104,48 @@
             <span class="kal-confirmation-details__value" data-kal-confirm-mode>—</span>
           </div>
           <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Day &amp; Time</span>
+            <span class="kal-confirmation-details__key">Date &amp; Time</span>
             <span class="kal-confirmation-details__value" data-kal-confirm-datetime>—</span>
-          </div>
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Fee</span>
-            <span class="kal-confirmation-details__value">&#8377;800</span>
           </div>
         </div>
       </div>
 
-      {%- comment -%} Desktop-only omission handled in CSS, see this file's top comment {%- endcomment -%}
-      <div class="kal-confirmation-pay-notice">
-        <span class="kal-confirmation-pay-notice__icon">
-          {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
-        </span>
-        <span class="kal-confirmation-pay-notice__text">Pay at the clinic &mdash; cash or card at reception</span>
+      {%- comment -%}
+        Payment Method — new per this Figma pass, replacing the old fixed
+        "Fee" row + "pay at the clinic" notice. Click-to-select between
+        the two cards is purely visual (setPaymentMethod() in
+        kal-booking-flow.js just toggles kal-payment-option--selected) —
+        both prices are static mockup values, nothing is actually
+        charged differently. "Pay now" starts selected, matching the
+        export.
+      {%- endcomment -%}
+      <div class="kal-payment-section">
+        <p class="kal-payment-section__label">Payment Method</p>
+        <div class="kal-payment-options">
+          <button type="button" class="kal-payment-option kal-payment-option--selected" data-kal-payment-method="pay-now">
+            <span class="kal-payment-option__badge">Save 10%</span>
+            <span class="kal-payment-option__icon">
+              {%- render 'kal-booking-icons', icon_name: 'payment-card' -%}
+            </span>
+            <span class="kal-payment-option__title">Pay now</span>
+            <span class="kal-payment-option__divider" aria-hidden="true"></span>
+            <span class="kal-payment-option__price">&#8377;450</span>
+          </button>
+          <button type="button" class="kal-payment-option" data-kal-payment-method="pay-at-clinic">
+            <span class="kal-payment-option__icon kal-payment-option__icon--tint">
+              {%- render 'kal-booking-icons', icon_name: 'clinic-building' -%}
+            </span>
+            <span class="kal-payment-option__title">Pay at clinic</span>
+            <span class="kal-payment-option__divider" aria-hidden="true"></span>
+            <span class="kal-payment-option__price">&#8377;495</span>
+          </button>
+        </div>
       </div>
     </div>
 
     <div class="kal-step-shell__footer">
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        Confirm Booking
+        Confirm payment
       </button>
     </div>
 
