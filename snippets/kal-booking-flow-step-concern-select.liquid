@@ -86,15 +86,25 @@
 
       <div class="kal-concern-select__header-middle">
         {%- comment -%}
-          Mobile: static facility badge, no dropdown behavior (explicit
-          instruction — not wired to data-kal-facility or any click
-          handler). Hidden at 750px+, see CSS.
+          Mobile: static facility badge. The chevron is shown per the
+          updated Figma spec (a plain rotated chevron-left, same trick the
+          spec itself uses — "chevron_left" rotated -90deg — rather than a
+          separate down-chevron icon), but it's purely visual: no
+          data-kal-facility hook, no click handler. Explicit instruction:
+          "dont need this dropdown [behavior] just the selected facility
+          should be shown" — the chevron stays for visual match, the
+          dropdown it implies doesn't actually open anything yet.
         {%- endcomment -%}
         <div class="kal-concern-select__location-badge">
-          <span class="kal-icon kal-icon--location">
-            {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+          <span class="kal-concern-select__location-badge-left">
+            <span class="kal-icon kal-icon--location">
+              {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+            </span>
+            <span class="kal-concern-select__location-text">Indiranagar</span>
           </span>
-          <span class="kal-concern-select__location-text">Indiranagar</span>
+          <span class="kal-concern-select__location-chevron" aria-hidden="true">
+            {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+          </span>
         </div>
 
         {%- comment -%} Desktop: unchanged progress dots, hidden below 750px, see CSS {%- endcomment -%}

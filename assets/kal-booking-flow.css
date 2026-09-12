@@ -672,16 +672,27 @@
 }
 
 /* Mobile-only static facility badge — explicitly NOT a working dropdown,
-   see the liquid file's comment. Just the facility name, no click
-   handler, no data-kal-facility hook. */
+   see the liquid file's comment. The chevron is shown for visual match
+   with the spec, but nothing here is wired to a click handler. flex:1
+   fills the space between the header's back/close buttons, matching the
+   Figma spec's wide pill (257px of a 343px row) rather than a
+   tight-fitting badge. */
 .kal-concern-select__location-badge {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex: 1;
   gap: 4px;
   padding: 4px 8px;
   border: 1px solid var(--kal-color-border);
   border-radius: 999px;
   background: var(--kal-color-white);
+}
+
+.kal-concern-select__location-badge-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .kal-concern-select__location-badge .kal-icon svg {
@@ -693,6 +704,15 @@
 .kal-concern-select__location-text {
   font-size: 14px;
   color: var(--kal-color-location-text);
+}
+
+/* Reuses chevron-left, rotated to point down — same trick the Figma spec
+   itself uses instead of a dedicated down-chevron icon. */
+.kal-concern-select__location-chevron svg {
+  width: 24px;
+  height: 24px;
+  color: var(--kal-color-location-text);
+  transform: rotate(-90deg);
 }
 
 /* Desktop's progress dots stay in the DOM (unchanged) but hidden below
