@@ -76,8 +76,18 @@
   /* Matches Frame 3 in the Figma spec exactly: padding: 0px 0px 36px —
      zero top, zero sides, so the banner sits flush with no gap around it.
      Everything else that needs side spacing (body text, label, cards,
-     location) applies its own horizontal padding individually. */
-  padding: 0 0 36px;
+     location) applies its own horizontal padding individually.
+
+     Top padding is the phone's real safe area (notch / Dynamic Island /
+     status bar), not a hardcoded number — env(safe-area-inset-top) only
+     has a value once the viewport meta tag includes viewport-fit=cover
+     (see layout/theme.liquid), and returns 0 safely on devices without a
+     notch (older phones, desktop) or if that env() function isn't
+     supported at all, since it's given as a fallback default. This is
+     mobile only — the desktop dialog (see the media query below) floats
+     centered on the page, nowhere near the real device's status bar, so
+     it never needs this. */
+  padding: env(safe-area-inset-top, 0px) 0 36px;
 }
 
 /* Each step wrapper (data-kal-step) needs to fill the content area for
