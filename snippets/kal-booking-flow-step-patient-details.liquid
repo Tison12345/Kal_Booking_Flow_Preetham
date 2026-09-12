@@ -1,12 +1,33 @@
 {% comment %}
   Step 5 (labeled "Step 4 of 5") — collects who the visit is for: full
-  name, gender, WhatsApp number, and
-  an optional email.
+  name, gender, phone number, and an optional email.
+
+  MOBILE REDESIGN per a later Figma pass (node 438:7643), same instruction
+  as the previous two steps: stay with the design, ignore backend
+  integration.
+  - Header swapped to the shared kal-booking-flow-step-header.liquid
+    snippet, and the appointment summary card is now the shared
+    kal-booking-flow-appointment-card.liquid (same component Slot Picker
+    uses) instead of no summary at all.
+  - Top heading is now "Appointment Details" (matching the Figma page
+    title), with "Who is this visit for?" moved to its own heading right
+    above the form — previously that phrase was the ONLY heading, reused
+    for both the mobile intro and the desktop left-column copy.
+  - Phone Number field gained the Figma's country-code prefix (a
+    decorative +91/India-flag chip, not a working country picker — same
+    "visual match, not wired" treatment as the location badge's dropdown
+    chevron elsewhere in this flow). Label text changed from "WhatsApp
+    Number" to "Phone Number" to match the export; the underlying
+    data-kal-field="whatsapp" identifier is untouched (JS validation
+    keys off that, not the label).
+  - Labels/inputs restyled to match the export (sentence-case medium-
+    weight labels instead of bold uppercase eyebrow-style ones, #e5e1d9
+    borders instead of #e6e6e8) — see kal-booking-flow.css's own comments.
 
   Gender is Male/Female only, not Male/Female/Other — explicit instruction,
   even though the Figma export showed three pill options (Female/Male/Other).
   patients.gender in the database accepts 'male'/'female'/'other', so this
-  is a UI choice, not a backend constraint.
+  is a UI choice, not a backend constraint. Unchanged by this pass.
 
   NOT WIRED TO THE BACKEND YET (explicit instruction — "build the backend
   too but dont integrate it"). The backend already exists and needs no new
@@ -61,31 +82,23 @@
 
   <div class="kal-step-shell__panel">
 
-    <div class="kal-step-doctor-select__header kal-step-shell__header">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-back="slot-picker" aria-label="Back">
-        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
-      </button>
-      <div class="kal-step-doctor-select__progress">
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-dot kal-step-doctor-select__progress-dot--active"></span>
-        <span class="kal-step-doctor-select__progress-dot"></span>
-        <span class="kal-step-doctor-select__progress-text">4/5</span>
-      </div>
-      {%- comment -%} Own close button — see Doctor Select's header comment for why {%- endcomment -%}
-      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
-    </div>
+    {%- render 'kal-booking-flow-step-header', back_target: 'slot-picker', step_number: 4, step_total: 5, next_label: 'Review & Payment' -%}
 
     <div class="kal-step-shell__scroll">
       <div class="kal-step-doctor-select__intro">
-        <p class="kal-step-doctor-select__eyebrow">Step 4 of 5</p>
+        <h2 class="kal-step-doctor-select__heading">Appointment Details</h2>
+      </div>
+
+      {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
+
+      <div class="kal-step-doctor-select__intro">
         <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
       </div>
 
       <div class="kal-form">
         <div class="kal-form-field">
-          <label class="kal-form-label" for="kal-patient-name">Full Name*</label>
+          <label class="kal-form-label" for="kal-patient-name">Full name*</label>
           <input
             type="text"
             id="kal-patient-name"
@@ -106,16 +119,37 @@
 
         <div class="kal-form-row">
           <div class="kal-form-field">
-            <label class="kal-form-label" for="kal-patient-whatsapp">WhatsApp Number*</label>
-            <input
-              type="tel"
-              id="kal-patient-whatsapp"
-              class="kal-form-input"
-              data-kal-field="whatsapp"
-              placeholder="10-digit mobile number"
-              autocomplete="tel"
-              inputmode="numeric"
-            >
+            <label class="kal-form-label" for="kal-patient-whatsapp">Phone Number*</label>
+            {%- comment -%}
+              Country-code chip is decorative — a fixed +91/India-flag
+              display, not a working country picker (same "visual match,
+              not wired" treatment as the location badge's dropdown
+              chevron elsewhere in this flow). The field's own identifier
+              (data-kal-field="whatsapp") is unchanged from before the
+              label rename, since JS validation keys off that.
+            {%- endcomment -%}
+            <div class="kal-phone-input">
+              <span class="kal-phone-input__country" aria-hidden="true">
+                <span class="kal-phone-input__flag">
+                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--saffron"></span>
+                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--white"></span>
+                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--green"></span>
+                </span>
+                <span class="kal-phone-input__code">+91</span>
+                <span class="kal-phone-input__chevron">
+                  {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
+                </span>
+              </span>
+              <input
+                type="tel"
+                id="kal-patient-whatsapp"
+                class="kal-form-input kal-phone-input__field"
+                data-kal-field="whatsapp"
+                placeholder="10-digit mobile number"
+                autocomplete="tel"
+                inputmode="numeric"
+              >
+            </div>
           </div>
 
           <div class="kal-form-field">
