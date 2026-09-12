@@ -1,27 +1,42 @@
 {% comment %}
-  Step 6 — post-booking success screen, shown after "Confirm Booking" is
+  Step 6 — post-booking success screen, shown after "Confirm payment" is
   tapped on the Confirmation step. No progress dots and no back button
   here on purpose (matches the Figma reference) — booking is done, there's
   nothing to go back to.
 
-  Patient Name, Mode, and Day & Time reuse the EXACT SAME data-kal-confirm-*
+  MOBILE REDESIGN per a later Figma pass (node 438:7571), same instruction
+  as the previous five steps: stay with the design, ignore backend
+  integration.
+  - Added the same shared kal-booking-flow-appointment-card.liquid used
+    on Slot Picker/Patient Details, right below the intro — this screen
+    didn't have one before.
+  - "Reference No." row removed — not in the export. "Day & Time" renamed
+    to "Date & Time" to match it.
+  - "Payment" row is now dynamic (data-kal-confirm-payment), reflecting
+    whichever card was selected on Confirmation's new Payment Method
+    section ("Online payment" / "Pay at clinic") instead of the old
+    always-"At the Clinic" text — see setPaymentMethod() in
+    kal-booking-flow.js, which now also updates this alongside toggling
+    the selected card.
+  - "Before your visit" restyled from a bordered, inset card to a
+    full-bleed tinted band (edge-to-edge, top/bottom border only, no
+    corner radius) to match the export.
+
+  Patient Name, Mode, and Date & Time reuse the EXACT SAME data-kal-confirm-*
   hooks as the Confirmation (review) step — renderConfirmationSummary() in
   kal-booking-flow.js already does flow.querySelectorAll() for each of
   those, so this step's matching elements get populated for free with zero
   JS changes.
 
-  Reference No. is a static placeholder (data-kal-confirm-ref, currently
-  just dashes) — becomes the real appointment ID once backend integration
-  happens and an actual booking exists to reference. Payment is static
-  "At the Clinic" regardless of mode, matching the "pay at reception"
-  notice already shown on the Confirmation step for both modes.
+  "Reschedule or cancel" (data-kal-reschedule-cancel) is now removed —
+  explicit instruction, confirming it's genuinely absent from this
+  screen's design rather than just scrolled out of the earlier export.
+  It had no click handler wired up anyway (that's a separate,
+  already-designed feature — localStorage token + minimal-info lookup —
+  documented elsewhere, not part of this screen's build), so nothing else
+  depended on it.
 
-  "Reschedule or cancel" is a hook (data-kal-reschedule-cancel) with no
-  click handler yet — that's a separate, already-designed feature
-  (localStorage token + minimal-info lookup) documented elsewhere, not
-  part of this screen's build.
-
-  The Confirmation step's "Confirm Booking" button now also carries
+  The Confirmation step's "Confirm payment" button now also carries
   data-kal-goto="booking-confirmed" (alongside its existing
   data-kal-confirm-booking hook) so the full flow is clickable through to
   this screen for demo purposes, even though nothing is actually booked
@@ -32,15 +47,17 @@
   kal-booking-flow.css), same correction as the Confirmation step: the
   success icon, intro, and full Consultation Details card were
   byte-for-byte identical between the old mobile and desktop blocks. The
-  real differences are the "Before your visit" card and the
-  "Reschedule or cancel" link, which the desktop Figma export omits
-  entirely — both hidden at 750px+ via CSS
-  (.kal-step-booking-confirmed .kal-before-visit and
-  .kal-step-booking-confirmed__reschedule), the same technique used for
-  Confirmation's pay-notice. No header/progress-dots/back-button on this
+  one real difference left is the "Before your visit" card, which the
+  desktop Figma export omits entirely — hidden at 750px+ via CSS
+  (.kal-step-booking-confirmed .kal-before-visit), the same technique
+  used for Confirmation's pay-notice. No progress-dots/back-button on this
   step at any width (booking is done, nothing to navigate back to), so
   unlike the other consolidated steps there's no .kal-step-shell__header
-  here at all.
+  here — just a bare close button in the corner (.kal-step-booking-
+  confirmed__header), same treatment as Therapy Confirmed's own __header:
+  absolutely positioned rather than a normal-flow row, so it doesn't
+  reserve height above .kal-step-shell__scroll and unbalance that region's
+  justify-content:center (see kal-booking-flow.css's comment on that rule).
 {% endcomment %}
 
 <div class="kal-step-booking-confirmed kal-step-shell">
@@ -62,6 +79,12 @@
 
   <div class="kal-step-shell__panel">
 
+    <div class="kal-step-booking-confirmed__header">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">
+        {%- render 'kal-booking-icons', icon_name: 'close' -%}
+      </button>
+    </div>
+
     <div class="kal-step-shell__scroll">
       <div class="kal-confirmation-success-icon">
         <span class="kal-confirmation-success-icon__inner">
@@ -74,14 +97,13 @@
         <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
       </div>
 
+      {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
+
       <div class="kal-confirmation-details">
         <p class="kal-confirmation-details__label">Consultation Details</p>
         <div class="kal-confirmation-details__divider"></div>
         <div class="kal-confirmation-details__rows">
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Reference No.</span>
-            <span class="kal-confirmation-details__value" data-kal-confirm-ref>&mdash;</span>
-          </div>
           <div class="kal-confirmation-details__row">
             <span class="kal-confirmation-details__key">Patient Name</span>
             <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
@@ -91,12 +113,12 @@
             <span class="kal-confirmation-details__value" data-kal-confirm-mode>&mdash;</span>
           </div>
           <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Day &amp; Time</span>
+            <span class="kal-confirmation-details__key">Date &amp; Time</span>
             <span class="kal-confirmation-details__value" data-kal-confirm-datetime>&mdash;</span>
           </div>
           <div class="kal-confirmation-details__row">
             <span class="kal-confirmation-details__key">Payment</span>
-            <span class="kal-confirmation-details__value">At the Clinic</span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-payment>Online payment</span>
           </div>
         </div>
       </div>
@@ -120,11 +142,6 @@
         </ul>
       </div>
     </div>
-
-    {%- comment -%} Desktop-only omission handled in CSS, see this file's top comment {%- endcomment -%}
-    <button type="button" class="kal-step-booking-confirmed__reschedule" data-kal-reschedule-cancel>
-      Reschedule or cancel
-    </button>
 
   </div>
 
