@@ -1,0 +1,117 @@
+{% comment %}
+  Therapy flow — post-request success screen (node 539:2222), shown after
+  "Submit Request" is tapped on Therapy Details (Step 2 of 2). Analogous
+  to the consultation flow's Booking Confirmed screen, but simpler and
+  genuinely different content, not a restyle of it:
+  - No appointment/doctor card here — the export doesn't have one.
+  - Heading is "Request sent" (not "Appointment confirmed").
+  - Details card is titled "Consultation Details" (kept exactly as the
+    export has it, even in the therapy flow) and its rows are Reference
+    No. / Patient Name / Therapy / Payment — no Mode or Date & Time (the
+    therapy flow never collects a slot).
+  - Two action buttons below the card, "Shop Products" and
+    "Get directions" — new UI not present on any other step.
+  - Header is just a close button, right-aligned — no back button, no
+    facility badge, no progress bar (matches the export; also matches
+    Booking Confirmed's own "nothing to go back to" reasoning).
+
+  Reuses the shared .kal-confirmation-success-icon/__inner (green
+  checkmark badge) and .kal-confirmation-details__* classes from Booking
+  Confirmed's screen — those are already generic, not step-scoped.
+
+  Reference No. and Payment ("At the Clinic") are static/decorative, same
+  "visual match, not wired" treatment used elsewhere in this flow — no
+  backend call produces a real reference number, and there's no Payment
+  Method step in the therapy flow to reflect. Patient Name reuses the
+  EXACT SAME data-kal-confirm-name hook the consultation flow's
+  Confirmation/Booking Confirmed screens use (same shared patientDetails
+  state — see kal-booking-flow.js), so it needs no new JS to populate
+  correctly. "Therapy" (data-kal-therapy-confirm-summary) is new — set by
+  renderTherapyConfirmedSummary() in kal-booking-flow.js, which joins
+  whichever category checkboxes and/or dropdown therapies were selected
+  on Step 1 of 2 into one display string.
+
+  "Shop Products"/"Get directions" have no click handlers — decorative
+  per this build's scope, same as several other action-shaped buttons
+  elsewhere in this flow before their real destinations existed.
+{% endcomment %}
+
+<div class="kal-step-therapy-confirmed kal-step-shell">
+
+  <div class="kal-step-entry__info kal-step-shell__info">
+    <div class="kal-step-entry__info-content">
+      <h2 class="kal-step-entry__heading">Request sent</h2>
+      <p class="kal-step-entry__body-text">A confirmation is sent to your WhatsApp number.</p>
+    </div>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin (not received yet) -->
+      </span>
+      <span class="kal-step-entry__location-text">
+        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+      </span>
+    </div>
+  </div>
+
+  <div class="kal-step-shell__panel">
+
+    <div class="kal-step-therapy-confirmed__header">
+      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">
+        {%- render 'kal-booking-icons', icon_name: 'close' -%}
+      </button>
+    </div>
+
+    <div class="kal-step-shell__scroll">
+      <div class="kal-confirmation-success-icon">
+        <span class="kal-confirmation-success-icon__inner">
+          {%- render 'kal-booking-icons', icon_name: 'check' -%}
+        </span>
+      </div>
+
+      <div class="kal-step-therapy-confirmed__intro">
+        <h2 class="kal-step-doctor-select__heading">Request sent</h2>
+        <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
+      </div>
+
+      <div class="kal-confirmation-details">
+        <p class="kal-confirmation-details__label">Consultation Details</p>
+        <div class="kal-confirmation-details__divider"></div>
+        <div class="kal-confirmation-details__rows">
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Reference No.</span>
+            <span class="kal-confirmation-details__value">REF-4217</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Patient Name</span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Therapy</span>
+            <span class="kal-confirmation-details__value" data-kal-therapy-confirm-summary>&mdash;</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-details__key">Payment</span>
+            <span class="kal-confirmation-details__value">At the Clinic</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kal-therapy-confirmed-actions">
+        <button type="button" class="kal-therapy-confirmed-actions__btn">
+          <span class="kal-therapy-confirmed-actions__icon">
+            {%- render 'kal-booking-icons', icon_name: 'shopping-cart' -%}
+          </span>
+          <span>Shop Products</span>
+        </button>
+        <button type="button" class="kal-therapy-confirmed-actions__btn">
+          <span class="kal-therapy-confirmed-actions__icon">
+            {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+          </span>
+          <span>Get directions</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>

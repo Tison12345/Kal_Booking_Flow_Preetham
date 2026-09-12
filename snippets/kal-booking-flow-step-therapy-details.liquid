@@ -1,0 +1,180 @@
+{% comment %}
+  Therapy flow — Step 2 of 2, "Therapy Details" (node 543:1462). Reached
+  from the therapy Confirm/Continue button on Step 1 of 2 (see
+  kal-booking-flow-step-therapy-slot.liquid and kal-booking-flow.js's
+  therapyFlowState) once it's in "continue" mode.
+
+  Same shape as the consultation flow's Patient Details step (name,
+  gender, phone, email) — reuses that step's exact data attributes
+  (data-kal-field="name"/"whatsapp"/"email", data-kal-gender,
+  data-kal-patient-continue) so it shares the SAME patientDetails state
+  and isPatientDetailsValid()/updatePatientContinueButton() validation in
+  kal-booking-flow.js with zero new JS needed for the form itself — one
+  visit's details, collected once, regardless of which flow got here.
+  Field ids are still unique per step (kal-therapy-patient-* vs
+  kal-patient-*) since both steps' markup sits in the DOM at once (only
+  one is unhidden) and duplicate ids would break label-click focusing.
+
+  Gender is Male/Female only, matching Patient Details' own explicit
+  instruction (the Figma export for THIS node also showed a third
+  "Other" pill — dropped for the same reason, same instruction reused
+  here: "for now maintain only male and female").
+
+  The appointment card here is NOT the shared kal-booking-flow-appointment-
+  card.liquid — that one shows a mode+price row, but this node's card
+  shows degree/experience badges (reusing Doctor Select's doctor-education/
+  doctor-experience icons) and a description line about the therapy
+  starting with a short doctor consultation. Different enough content
+  shape that duplicating the shared card's photo+name structure inline
+  here (as .kal-therapy-appointment-card) was simpler than adding
+  optional/conditional slots to the shared one for a single caller.
+
+  Footer button is "Submit Request", not "Continue" — matches this node's
+  own export. It navigates to the new "therapy-confirmed" step (node
+  539:2222, the therapy flow's own success screen) once the form is
+  valid — a plain data-kal-goto is safe here (unlike Step 1 of 2's own
+  Confirm/Continue button) since this button has no separate "confirm
+  first" stage; it's just disabled until isPatientDetailsValid().
+{% endcomment %}
+
+<div class="kal-step-therapy-details kal-step-shell">
+
+  <div class="kal-step-entry__info kal-step-shell__info">
+    <div class="kal-step-entry__info-content">
+      <h2 class="kal-step-entry__heading">Who is this visit for?</h2>
+      <p class="kal-step-entry__body-text">
+        Book a consultation in under a minute in-clinic or video. Confirmation
+        arrives instantly, no account required.
+      </p>
+    </div>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin (not received yet) -->
+      </span>
+      <span class="kal-step-entry__location-text">
+        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+      </span>
+    </div>
+  </div>
+
+  <div class="kal-step-shell__panel">
+
+    {%- render 'kal-booking-flow-step-header', back_target: 'therapy-slot', step_number: 2, step_total: 2, next_label: 'Final step' -%}
+
+    <div class="kal-step-shell__scroll">
+      <div class="kal-step-doctor-select__intro">
+        <h2 class="kal-step-doctor-select__heading">Therapy Details</h2>
+      </div>
+
+      {%- assign therapy_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      <div class="kal-therapy-appointment-card">
+        <div class="kal-therapy-appointment-card__top">
+          <span class="kal-therapy-appointment-card__photo">
+            <img src="{{ therapy_photo_url }}" alt="Dr. Neethu Jayachandran" loading="lazy">
+          </span>
+          <span class="kal-therapy-appointment-card__body">
+            <span class="kal-therapy-appointment-card__name">Dr. Neethu Jayachandran</span>
+            <span class="kal-therapy-appointment-card__meta">
+              <span class="kal-therapy-appointment-card__meta-item">
+                <span class="kal-therapy-appointment-card__meta-icon">
+                  {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
+                </span>
+                BAMS
+              </span>
+              <span class="kal-therapy-appointment-card__divider" aria-hidden="true"></span>
+              <span class="kal-therapy-appointment-card__meta-item">
+                <span class="kal-therapy-appointment-card__meta-icon">
+                  {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
+                </span>
+                12 yrs experience
+              </span>
+            </span>
+          </span>
+        </div>
+        <span class="kal-therapy-appointment-card__desc">
+          Your therapy starts with a short <strong>doctor consultation</strong> and is performed by an expert therapist.
+        </span>
+      </div>
+
+      <div class="kal-step-doctor-select__intro">
+        <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
+      </div>
+
+      <div class="kal-form">
+        <div class="kal-form-field">
+          <label class="kal-form-label" for="kal-therapy-patient-name">Full name*</label>
+          <input
+            type="text"
+            id="kal-therapy-patient-name"
+            class="kal-form-input"
+            data-kal-field="name"
+            placeholder="Enter full name"
+            autocomplete="name"
+          >
+        </div>
+
+        <div class="kal-form-field">
+          <p class="kal-form-label">Gender*</p>
+          <div class="kal-gender-group" data-kal-gender-group>
+            <button type="button" class="kal-gender-btn" data-kal-gender="female">Female</button>
+            <button type="button" class="kal-gender-btn" data-kal-gender="male">Male</button>
+          </div>
+        </div>
+
+        <div class="kal-form-row">
+          <div class="kal-form-field">
+            <label class="kal-form-label" for="kal-therapy-patient-whatsapp">Phone Number*</label>
+            {%- comment -%}
+              Country-code chip is decorative — same "visual match, not
+              wired" treatment as Patient Details' own copy of this.
+            {%- endcomment -%}
+            <div class="kal-phone-input">
+              <span class="kal-phone-input__country" aria-hidden="true">
+                <span class="kal-phone-input__flag">
+                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--saffron"></span>
+                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--white"></span>
+                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--green"></span>
+                </span>
+                <span class="kal-phone-input__code">+91</span>
+                <span class="kal-phone-input__chevron">
+                  {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
+                </span>
+              </span>
+              <input
+                type="tel"
+                id="kal-therapy-patient-whatsapp"
+                class="kal-form-input kal-phone-input__field"
+                data-kal-field="whatsapp"
+                placeholder="10-digit mobile number"
+                autocomplete="tel"
+                inputmode="numeric"
+              >
+            </div>
+          </div>
+
+          <div class="kal-form-field">
+            <label class="kal-form-label" for="kal-therapy-patient-email">
+              Email <span class="kal-form-label__optional">Optional</span>
+            </label>
+            <input
+              type="email"
+              id="kal-therapy-patient-email"
+              class="kal-form-input"
+              data-kal-field="email"
+              placeholder="Enter email address"
+              autocomplete="email"
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kal-step-shell__footer">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue disabled>
+        Submit Request
+      </button>
+    </div>
+
+  </div>
+
+</div>

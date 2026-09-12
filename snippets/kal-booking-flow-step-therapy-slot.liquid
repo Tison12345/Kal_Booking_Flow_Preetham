@@ -1,93 +1,236 @@
 {% comment %}
-  Therapy booking — doctor + slot picker combined into ONE screen, no
-  separate Doctor Select step. Per the user: for therapy/offline bookings
-  there's normally only one doctor at a facility, so the doctor is just
-  shown directly rather than picked from a list. Multi-doctor handling is
-  an explicitly OPEN question, deferred — do not build a picker/fallback
-  for it without being asked; this screen only needs to handle the
-  single-doctor case for now.
+  Therapy booking — FLOW CHANGE per explicit instruction (node 539:2128):
+  this screen is no longer "pick the one doctor, then a date/time" — it's
+  now Step 1 of a new 2-step therapy flow, "Choose your therapy": either
+  pick a specific therapy from a (decorative, not-yet-wired) dropdown, OR
+  pick a broader therapy category from a checkbox list below an "OR"
+  divider. The old doctor card + date-strip + time-slot-grid content for
+  this step is deleted entirely, not hidden/kept around — this is a
+  genuinely different screen, not a restyle of the old one.
 
-  Always offline/in-clinic — no In-clinic/Video toggle here at all (the
-  Figma export includes one, but marked display:none; omitted from this
-  markup entirely rather than building a permanently-hidden dead toggle).
+  Consequences of deleting the old content, cleaned up alongside it:
+  - kal-booking-flow.js's whole therapy day/slot-picking machinery
+    (therapySlot state, renderTherapyDayStrip, renderTherapySlotPeriods,
+    fetchTherapySlotsForDate, loadTherapySlotDay, updateTherapyContinueButton)
+    is gone — nothing on this screen fetches or picks a date/time anymore.
+  - The calendar modal (kal-booking-flow.liquid's kal-calendar-modal) was
+    ONLY ever opened by this screen's old calendar-icon button (the
+    Consultation Slot Picker's own calendar icon is decorative-only, see
+    that step's liquid comment) — with this screen's button gone too,
+    nothing opens it anymore, so the modal markup/CSS/JS is removed
+    entirely rather than left dead.
+  - The date/slot helpers those functions were the only callers of
+    (toDateKey, formatDayChipLabel, DAY_LABELS, SLOT_PERIODS, STRIP_DAYS,
+    MAX_FUTURE_DAYS, maxFutureDate, periodForHour, generateMockSlots) are
+    removed from kal-booking-flow.js too — see that file's own comments.
+    addDays/todayStart/formatTime12h/formatConfirmationDate/
+    CONSULT_DURATION_MINUTES stay: Confirmation's summary and the
+    Consultation Slot Picker's static day-chip click handler still use
+    those.
+
+  Header uses the same shared kal-booking-flow-step-header.liquid as the
+  consultation flow (back/facility badge/close + step progress bar) —
+  step_total is 2 here, not 5, and next_label is "Personal details"
+  (Step 2 of 2, not yet built — see the Continue button's own comment
+  below).
+
+  Therapy category selection reuses the exact same checkbox-row pattern
+  and CSS as Concern Select (.kal-concern-row and friends) for visual
+  consistency, but with its own separate data attribute/state
+  (data-kal-therapy-concern, therapyConcernSelect in
+  kal-booking-flow.js) — deliberately not sharing Concern Select's own
+  concernSelect state, since these are two different selections in two
+  different flows that happen to look alike.
+
+  The "Select the therapy" dropdown is now a real multi-select (node
+  623:7334, the open-panel state of this same dropdown), not decorative —
+  explicit instruction. THERAPY_OPTIONS in kal-booking-flow.js is the
+  static list of ~17 named therapies (with a couple carrying a "Most
+  Booked"/"Featured" tag, matching the export); the panel itself
+  (data-kal-therapy-dropdown-list) is rendered client-side by
+  renderTherapyDropdownList() rather than hardcoded here, since its whole
+  point is to re-sort on every toggle — selected items move to the top of
+  the list (explicit instruction), which is far simpler as a re-render
+  than as DOM node reordering.
+
+  Confirm is hidden until at least one therapy is selected — EITHER a
+  specific one from this dropdown OR a category checkbox below (explicit
+  instruction: "minimum 1 concern should be selected to show the confirm
+  cta", same rule Concern Select already uses, just now checking two
+  selection sets instead of one — see updateTherapyConcernContinueButton()
+  in kal-booking-flow.js).
 
   Not yet wired into the main flow's navigation — there's no preceding
-  "which facility" step and no defined next step after Continue yet.
-  data-kal-back defaults to "entry" as a reasonable placeholder until the
-  actual preceding screen is defined. Registered as its own step
-  (data-kal-step="therapy-slot") so it's directly reachable for review/demo
-  in the meantime.
-
-  Deliberately NOT reusing .kal-step-slot-picker's class or JS state
-  (slotPicker/renderDayStrip/etc.) — that JS is bound to a single specific
-  element (flow.querySelector('.kal-step-slot-picker'), first-match only),
-  so two screens sharing that class would fight over whose doctor/facility
-  data actually gets used. This screen has its own small, separate state
-  object (therapySlot) and render functions in kal-booking-flow.js, reusing
-  only the pure date/formatting helpers (formatTime12h, toDateKey, etc.)
-  that don't depend on which element is "the" slot picker.
-
-  No day-strip slot-count badges here (unlike the Consultation Slot Picker)
-  — the Figma export doesn't show them, and this screen skips the
-  day-summaries fetch entirely rather than mimicking that UI.
-
-  Doctor card uses real placeholder data matching the same doctor already
-  used elsewhere as a placeholder (Neethu Jayachandran, Koramangala) — the
-  Figma's own example doctor happens to match.
+  "which facility" step and no defined Step 2 of 2 ("Personal details")
+  yet. data-kal-back defaults to "entry" as a reasonable placeholder
+  until the actual preceding screen is defined, same as before. The
+  Confirm button has no data-kal-goto yet for the same reason — it just
+  enables/shows once something is picked, with nowhere to navigate to
+  until Step 2 of 2 exists. Button text is "Confirm" (not "Continue"),
+  matching this node's own footer.
 {% endcomment %}
 
-<div class="kal-step-therapy-slot" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
+<div class="kal-step-therapy-slot kal-step-shell" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
 
-  {%- comment -%} ============ MOBILE ONLY (below 750px) ============ {%- endcomment -%}
-  <div class="kal-step-therapy-slot__mobile">
-
-    <div class="kal-therapy-slot__appbar">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-back="entry" aria-label="Back">
-        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
-      </button>
-      <button type="button" class="kal-therapy-slot__location">
-        {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
-        <span>Indiranagar Clinic</span>
-      </button>
-      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">&times;</button>
+  <div class="kal-step-entry__info kal-step-shell__info">
+    <div class="kal-step-entry__info-content">
+      <h2 class="kal-step-entry__heading">Choose your therapy</h2>
+      <p class="kal-step-entry__body-text">
+        Book a consultation in under a minute in-clinic or video. Confirmation
+        arrives instantly, no account required.
+      </p>
     </div>
-
-    <div class="kal-step-doctor-select__intro">
-      <h2 class="kal-step-doctor-select__heading">Book your consultation</h2>
-      <p class="kal-step-doctor-select__subtext">Here&rsquo;s the doctor you&rsquo;ll see &mdash; just pick a time.</p>
-    </div>
-
-    <div class="kal-therapy-doctor-card">
-      <span class="kal-therapy-doctor-card__avatar">NJ</span>
-      <span class="kal-therapy-doctor-card__info">
-        <span class="kal-therapy-doctor-card__name">Dr. Neethu Jayachandran</span>
-        <span class="kal-therapy-doctor-card__qualification">BAMS &middot; 9+ yrs</span>
-        <span class="kal-therapy-doctor-card__specialization">Skin &amp; hair, infertility &amp; lifestyle</span>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin (not received yet) -->
+      </span>
+      <span class="kal-step-entry__location-text">
+        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
       </span>
     </div>
+  </div>
 
-    <div class="kal-slot-section">
-      <div class="kal-slot-section__head">
-        <p class="kal-slot-section__label">Date</p>
-        <button type="button" class="kal-icon-button" data-kal-open-calendar aria-label="Open calendar">
-          {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+  <div class="kal-step-shell__panel">
+
+    {%- render 'kal-booking-flow-step-header', back_target: 'entry', step_number: 1, step_total: 2, next_label: 'Personal details' -%}
+
+    <div class="kal-step-shell__scroll">
+      {%- comment -%}
+        "Selected therapies" chip list (node 623:7592) — a summary of the
+        SAME therapyDropdownSelect state as the dropdown below, shown as
+        removable pills above the fold so a selection is visible without
+        opening the dropdown. Hidden entirely until ≥1 therapy is picked;
+        rendered/re-rendered client-side by renderTherapySelectedChips() in
+        kal-booking-flow.js, called alongside renderTherapyDropdownList()
+        everywhere the dropdown selection changes. "Clear all" here reuses
+        the exact same data-kal-therapy-dropdown-clear handler the
+        dropdown's own "Clear all" uses — both just call
+        clearTherapyDropdownSelection().
+      {%- endcomment -%}
+      <div class="kal-therapy-selected" data-kal-therapy-selected hidden>
+        <div class="kal-therapy-selected__head">
+          <p class="kal-therapy-selected__title">Selected therapies</p>
+          <button type="button" class="kal-therapy-selected__clear" data-kal-therapy-dropdown-clear>Clear all</button>
+        </div>
+        <div class="kal-therapy-selected__chips" data-kal-therapy-selected-chips></div>
+      </div>
+
+      <div class="kal-step-doctor-select__intro">
+        <h2 class="kal-step-doctor-select__heading">Choose your therapy</h2>
+      </div>
+
+      <div class="kal-therapy-select-wrapper" data-kal-therapy-dropdown>
+        <button type="button" class="kal-therapy-select" data-kal-therapy-dropdown-toggle aria-expanded="false" aria-label="Select the therapy">
+          <span class="kal-therapy-select__placeholder" data-kal-therapy-dropdown-label>Select the therapy</span>
+          <span class="kal-therapy-select__chevron" aria-hidden="true">
+            {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
+          </span>
+        </button>
+
+        {%- comment -%} Rows populated/re-sorted client-side — see this file's own top comment {%- endcomment -%}
+        <div class="kal-therapy-dropdown" data-kal-therapy-dropdown-panel hidden>
+          <div class="kal-therapy-dropdown__head">
+            <span class="kal-therapy-dropdown__title">All Therapies</span>
+            <span class="kal-therapy-dropdown__summary" data-kal-therapy-dropdown-summary hidden>
+              <span data-kal-therapy-dropdown-count>0 selected</span>
+              <span class="kal-therapy-dropdown__dot" aria-hidden="true"></span>
+              <button type="button" class="kal-therapy-dropdown__clear" data-kal-therapy-dropdown-clear>Clear all</button>
+            </span>
+          </div>
+          <div class="kal-therapy-dropdown__list" data-kal-therapy-dropdown-list></div>
+        </div>
+      </div>
+
+      <div class="kal-therapy-divider">
+        <span class="kal-therapy-divider__line" aria-hidden="true"></span>
+        <span class="kal-therapy-divider__text">OR</span>
+        <span class="kal-therapy-divider__line" aria-hidden="true"></span>
+      </div>
+
+      <div class="kal-step-doctor-select__intro">
+        <p class="kal-therapy-category-label">Choose a therapy category</p>
+      </div>
+
+      <div class="kal-concern-select__list">
+        <button type="button" class="kal-concern-row" data-kal-therapy-concern="relaxation-stress-relief" aria-pressed="false">
+          <span class="kal-concern-row__left">
+            <span class="kal-concern-row__icon">
+              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
+            </span>
+            <span class="kal-concern-row__name">Relaxation &amp; Stress Relief</span>
+          </span>
+          <span class="kal-concern-row__checkbox" aria-hidden="true">
+            {%- render 'kal-booking-icons', icon_name: 'check' -%}
+          </span>
+        </button>
+        <button type="button" class="kal-concern-row" data-kal-therapy-concern="pain-management" aria-pressed="false">
+          <span class="kal-concern-row__left">
+            <span class="kal-concern-row__icon">
+              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
+            </span>
+            <span class="kal-concern-row__name">Pain Management</span>
+          </span>
+          <span class="kal-concern-row__checkbox" aria-hidden="true">
+            {%- render 'kal-booking-icons', icon_name: 'check' -%}
+          </span>
+        </button>
+        <button type="button" class="kal-concern-row" data-kal-therapy-concern="beauty-skin-care" aria-pressed="false">
+          <span class="kal-concern-row__left">
+            <span class="kal-concern-row__icon">
+              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
+            </span>
+            <span class="kal-concern-row__name">Beauty &amp; Skin Care</span>
+          </span>
+          <span class="kal-concern-row__checkbox" aria-hidden="true">
+            {%- render 'kal-booking-icons', icon_name: 'check' -%}
+          </span>
+        </button>
+        <button type="button" class="kal-concern-row" data-kal-therapy-concern="physiotherapy-rehab" aria-pressed="false">
+          <span class="kal-concern-row__left">
+            <span class="kal-concern-row__icon">
+              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
+            </span>
+            <span class="kal-concern-row__name">Physiotherapy &amp; Rehab</span>
+          </span>
+          <span class="kal-concern-row__checkbox" aria-hidden="true">
+            {%- render 'kal-booking-icons', icon_name: 'check' -%}
+          </span>
+        </button>
+        <button type="button" class="kal-concern-row" data-kal-therapy-concern="therapeutic-massage" aria-pressed="false">
+          <span class="kal-concern-row__left">
+            <span class="kal-concern-row__icon">
+              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
+            </span>
+            <span class="kal-concern-row__name">Therapeutic Massage</span>
+          </span>
+          <span class="kal-concern-row__checkbox" aria-hidden="true">
+            {%- render 'kal-booking-icons', icon_name: 'check' -%}
+          </span>
         </button>
       </div>
-      {%- comment -%} Populated client-side by renderTherapyDayStrip() in kal-booking-flow.js — no slot-count badges {%- endcomment -%}
-      <div class="kal-day-strip" data-kal-therapy-day-strip></div>
     </div>
 
-    <div class="kal-slot-section">
-      <p class="kal-slot-section__label">Available time</p>
-      {%- comment -%} Populated client-side by renderTherapySlotPeriods() in kal-booking-flow.js {%- endcomment -%}
-      <div class="kal-slot-periods" data-kal-therapy-slot-periods>
-        <p class="kal-slot-periods__empty">Loading available times&hellip;</p>
-      </div>
-    </div>
+    {%- comment -%}
+      Hidden until a category or a specific therapy is picked, same
+      pattern as Concern Select's own footer (data-kal-concern-footer) —
+      see updateTherapyConcernContinueButton() in kal-booking-flow.js. No
+      data-kal-goto yet: Step 2 of 2 ("Personal details") for this flow
+      doesn't exist yet, so there's nowhere for this to navigate to.
 
-    <div class="kal-step-slot-picker__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-continue disabled>
-        Select a date and time
+      The summary line above the button is conditional, not just a plain
+      "N selected" — explicit instruction: it only appears once at least
+      one CATEGORY is picked (either alone, or combined with dropdown
+      therapies, e.g. "2 therapies & 1 therapy category selected"). When
+      only specific therapies are picked from the dropdown with no
+      category, this stays hidden — that case is already communicated by
+      the dropdown's own trigger label ("N therapy selected", see
+      updateTherapyDropdownSummary()), so a second count here would be
+      redundant. See updateTherapyConcernContinueButton() for the exact text.
+    {%- endcomment -%}
+    <div class="kal-step-shell__footer" data-kal-therapy-concern-footer hidden>
+      <p class="kal-therapy-concern-summary" data-kal-therapy-concern-summary hidden></p>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-concern-continue>
+        Confirm
       </button>
     </div>
 
