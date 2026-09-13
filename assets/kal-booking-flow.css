@@ -1452,9 +1452,10 @@ button.kal-step-header__location-badge {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-/* Wraps the photo+meta row AND the tag chips — the gradient (selected
-   only) spans both, with just the price/next-slot footer bar staying
-   plain white below it. */
+/* Wraps the photo+meta row AND the tag chips — the cream gradient
+   (selected only) spans both; the price/next-slot footer bar below has
+   its own separate default-vs-selected background swap, see
+   .kal-doctor-card__footer further down. */
 .kal-doctor-card__top {
   display: flex;
   flex-direction: column;
