@@ -9,6 +9,7 @@
   --kal-color-border: #dcdcdc;
   --kal-color-white: #ffffff;
   --kal-color-overlay: rgba(0, 0, 0, 0.5);
+  --kal-color-error: #d92d20;
 
   /* Typography */
   --kal-font-family: 'Avenir', -apple-system, 'Segoe UI', sans-serif;
@@ -2240,6 +2241,43 @@ button.kal-step-header__location-badge {
 .kal-form-input:focus {
   outline: none;
   border-color: var(--kal-color-primary);
+}
+
+/* Inline field-validation errors — same "submit attempt reveals it,
+   fixing the field clears it" behavior as the CMS's own forms (see this
+   step's own liquid comment). Toggled by kal-booking-flow.js, not shown
+   eagerly on page load. */
+.kal-form-input--error {
+  border-color: var(--kal-color-error);
+}
+
+.kal-phone-input--error .kal-phone-input__country,
+.kal-phone-input--error .kal-phone-input__field {
+  border-color: var(--kal-color-error);
+}
+
+.kal-form-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--kal-color-error);
+}
+
+.kal-form-error[hidden] {
+  display: none;
+}
+
+.kal-form-error__icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.kal-form-error__icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Phone Number field's country-code picker (node 438:7643 for the
