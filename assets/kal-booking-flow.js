@@ -1281,14 +1281,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Static day strip now (see this step's own liquid comment) — just
     // tracks selectedDate for Confirmation's summary and toggles the
-    // active card, no fetch/re-render.
+    // active card, no fetch/re-render. Reuses applyCalendarDateSelection
+    // (see CALENDAR above) so picking a day here and picking the same
+    // day via the calendar modal leave the flow in an identical state —
+    // including resetting the label if a further-out calendar date had
+    // been showing there.
     const slotDayTrigger = e.target.closest('.kal-day-chip[data-kal-slot-day-offset]:not(:disabled)');
     if (slotDayTrigger) {
       const offset = parseInt(slotDayTrigger.dataset.kalSlotDayOffset, 10);
-      slotPicker.selectedDate = addDays(todayStart(), offset);
-      flow.querySelectorAll('.kal-day-chip[data-kal-slot-day-offset]').forEach((chip) => {
-        chip.classList.toggle('kal-day-chip--active', chip === slotDayTrigger);
-      });
+      applyCalendarDateSelection(addDays(todayStart(), offset));
+    }
+
+    if (e.target.closest('[data-kal-open-calendar]')) {
+      openCalendarModal();
+    }
+
+    if (e.target.closest('[data-kal-close-calendar]')) {
+      closeCalendarModal();
+    }
+
+    if (e.target.closest('[data-kal-calendar-prev]:not(:disabled)')) {
+      slotPicker.calendarMonth = new Date(
+        slotPicker.calendarMonth.getFullYear(),
+        slotPicker.calendarMonth.getMonth() - 1,
+        1,
+      );
+      renderCalendarMonth();
+    }
+
+    if (e.target.closest('[data-kal-calendar-next]:not(:disabled)')) {
+      slotPicker.calendarMonth = new Date(
+        slotPicker.calendarMonth.getFullYear(),
+        slotPicker.calendarMonth.getMonth() + 1,
+        1,
+      );
+      renderCalendarMonth();
+    }
+
+    const calendarDayTrigger = e.target.closest('[data-kal-calendar-day]');
+    if (calendarDayTrigger) {
+      const dayNum = parseInt(calendarDayTrigger.dataset.kalCalendarDay, 10);
+      const picked = new Date(
+        slotPicker.calendarMonth.getFullYear(),
+        slotPicker.calendarMonth.getMonth(),
+        dayNum,
+      );
+      applyCalendarDateSelection(picked);
+      closeCalendarModal();
     }
 
     const slotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');
