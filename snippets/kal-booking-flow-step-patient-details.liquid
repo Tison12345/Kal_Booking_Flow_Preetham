@@ -97,6 +97,17 @@
       </div>
 
       <div class="kal-form">
+        {%- comment -%}
+          Inline field errors — same pattern as the CMS's own forms
+          (app/lib/validation-messages.ts's requiredText/requiredSelect
+          wording, errors shown on a submit attempt and cleared per-field
+          as the visitor corrects it, not shown eagerly on page load).
+          Each error <p> starts hidden; kal-booking-flow.js's
+          validatePatientDetailsAndShowErrors() (run when Continue is
+          clicked) fills in the message and un-hides it, and the input
+          delegation clears it again the moment that specific field
+          changes.
+        {%- endcomment -%}
         <div class="kal-form-field">
           <label class="kal-form-label" for="kal-patient-name">Full name*</label>
           <input
@@ -107,6 +118,10 @@
             placeholder="Enter full name"
             autocomplete="name"
           >
+          <p class="kal-form-error" data-kal-field-error="name" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
         </div>
 
         <div class="kal-form-field">
@@ -115,6 +130,10 @@
             <button type="button" class="kal-gender-btn" data-kal-gender="female">Female</button>
             <button type="button" class="kal-gender-btn" data-kal-gender="male">Male</button>
           </div>
+          <p class="kal-form-error" data-kal-field-error="gender" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
         </div>
 
         <div class="kal-form-row">
