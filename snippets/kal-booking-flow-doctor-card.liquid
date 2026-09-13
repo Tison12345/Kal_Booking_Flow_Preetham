@@ -8,13 +8,15 @@
   real API doesn't provide yet — it's a mockup, not live data.
 
   DEFAULT (unselected) appearance updated to match node 690:6562 —
-  120px photo (was 76px), degree+experience grouped on one line with
-  languages below (was all three stacked one-per-line), and a cream-
-  tinted meta icon badge (was plain white). Explicit instruction: the
-  existing --selected ("on click") treatment is untouched — see
-  .kal-doctor-card--selected .kal-doctor-card__meta-icon in the CSS,
-  which overrides the icon badge back to white so the selected look
-  stays exactly as it was.
+  120px photo (was 76px) and a cream-tinted meta icon badge (was plain
+  white). Degree/language/experience stay three stacked one-per-line
+  rows (an earlier pass briefly grouped degree+experience onto one line
+  with languages below, per a different reading of 690:6562 — reverted,
+  the three-stacked-rows layout is the correct one). Explicit
+  instruction: the existing --selected ("on click") treatment is
+  untouched — see .kal-doctor-card--selected .kal-doctor-card__meta-icon
+  in the CSS, which overrides the icon badge back to white so the
+  selected look stays exactly as it was.
 
   Accepts:
   - name: {String} e.g. "Dr. Neethu Jayachandran"
@@ -60,32 +62,23 @@
       </span>
       <span class="kal-doctor-card__info">
         <span class="kal-doctor-card__name">{{ name }}</span>
-        {%- comment -%}
-          Degree + experience side by side, languages on its own line
-          below — matches node 690:6562's Default state (this card
-          previously stacked all three, one per line).
-        {%- endcomment -%}
-        <span class="kal-doctor-card__meta">
-          <span class="kal-doctor-card__meta-line">
-            <span class="kal-doctor-card__meta-row">
-              <span class="kal-doctor-card__meta-icon">
-                {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
-              </span>
-              {{ degree }}
-            </span>
-            <span class="kal-doctor-card__meta-row">
-              <span class="kal-doctor-card__meta-icon">
-                {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
-              </span>
-              {{ experience }}
-            </span>
+        <span class="kal-doctor-card__meta-row">
+          <span class="kal-doctor-card__meta-icon">
+            {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
           </span>
-          <span class="kal-doctor-card__meta-row">
-            <span class="kal-doctor-card__meta-icon">
-              {%- render 'kal-booking-icons', icon_name: 'doctor-language' -%}
-            </span>
-            {{ languages }}
+          {{ degree }}
+        </span>
+        <span class="kal-doctor-card__meta-row">
+          <span class="kal-doctor-card__meta-icon">
+            {%- render 'kal-booking-icons', icon_name: 'doctor-language' -%}
           </span>
+          {{ languages }}
+        </span>
+        <span class="kal-doctor-card__meta-row">
+          <span class="kal-doctor-card__meta-icon">
+            {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
+          </span>
+          {{ experience }}
         </span>
       </span>
     </span>
