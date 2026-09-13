@@ -259,3 +259,7 @@ The goal of this section is to close the gap between "we built something" and "w
 - **BEM** — A class-naming convention: `block__element--modifier`.
 - **`data-kal-step`** — A label on each step's wrapper `<div>` that the JavaScript uses to know which step is currently showing.
 - **API / backend** — The separate system (CMS) that holds real clinics, doctors, and time slots, and that the booking flow fetches data from and submits bookings to.
+
+---
+
+*Last updated: 2026-09-13.*
