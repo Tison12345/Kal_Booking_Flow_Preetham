@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const whatsappNumber = flow.dataset.whatsappNumber || '';
 
   const openFlow = () => {
+    applyStoredFacility();
     flow.showModal();
     document.body.style.overflow = 'hidden';
   };
@@ -13,6 +14,55 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeFlow = () => {
     flow.close();
     document.body.style.overflow = '';
+  };
+
+  // ----------------------------------------------------------------------
+  // FACILITY SELECTION — see docs/facility-selection-plan.md. A visitor
+  // picks a real clinic on the separate "Find a Clinic" page
+  // (sections/kal-clinic-list.liquid), which stores it here in
+  // localStorage before opening this flow. applyStoredFacility() (called
+  // every time the flow opens, not just once) reads it back out and
+  // overwrites the hardcoded Kormangala defaults baked into every step's
+  // Liquid markup. If nothing was ever stored (e.g. the flow was opened
+  // directly, bypassing that page), the hardcoded defaults are left alone
+  // — that's the fallback, not an error case.
+  // ----------------------------------------------------------------------
+  const FACILITY_STORAGE_KEY = 'kalSelectedFacility';
+
+  const getStoredFacility = () => {
+    try {
+      const raw = localStorage.getItem(FACILITY_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const storeFacility = (facility) => {
+    try {
+      localStorage.setItem(FACILITY_STORAGE_KEY, JSON.stringify(facility));
+    } catch (err) {
+      // localStorage unavailable (private browsing, storage full, etc.) —
+      // the flow still works, it just falls back to the hardcoded defaults.
+    }
+  };
+
+  const applyStoredFacility = () => {
+    const facility = getStoredFacility();
+    if (!facility || !facility.id) return;
+
+    flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
+      el.textContent = facility.address ? `${facility.name} · ${facility.address}` : facility.name;
+    });
+
+    // Slot Picker's day-strip/slot-grid are static Liquid now (see that
+    // step's own comment) — nothing currently reads this attribute to
+    // drive a live fetch, so this has no visible effect on today's slots.
+    // Kept in sync anyway so it's already correct once real slot-fetching
+    // is rebuilt (a separate, larger task — see the architecture doc).
+    flow.querySelectorAll('[data-kal-facility-id]').forEach((el) => {
+      el.dataset.kalFacilityId = facility.id;
+    });
   };
 
   // Step navigation: each step screen is a direct child of #kal-booking-flow-content
@@ -568,6 +618,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Any CTA anywhere on the site with this class opens the flow
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
+      openFlow();
+      goToStep('entry');
+    }
+
+    // Facility selection, from the separate "Find a Clinic" page — see
+    // the FACILITY SELECTION block above. This runs on any page (the
+    // dialog itself is rendered sitewide via layout/theme.liquid), so it
+    // works on the clinic-list page even though that page has no other
+    // connection to the booking flow's own markup.
+    const facilityTrigger = e.target.closest('[data-kal-select-facility]');
+    if (facilityTrigger) {
+      storeFacility({
+        id: facilityTrigger.dataset.facilityId,
+        name: facilityTrigger.dataset.locationName,
+        address: facilityTrigger.dataset.clinicAddress,
+      });
       openFlow();
       goToStep('entry');
     }

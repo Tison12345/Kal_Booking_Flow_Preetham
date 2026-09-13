@@ -1,0 +1,115 @@
+{% comment %}
+  "Find a Clinic" list section — feeds the booking flow's facility selection.
+
+  Deliberately reuses the REAL site's existing block schema field names
+  (location_name, clinic_address, location_url_clnk, link_clinic_url) from
+  its sections/clinic-list.liquid, plus one new field this demo adds:
+  facility_id. See docs/facility-selection-plan.md for why — the goal is
+  that porting this to the real theme later is "add one field to the block
+  schema you already have", not "reconcile two different data shapes".
+
+  Clicking a clinic name doesn't navigate anywhere (link_clinic_url is kept
+  on the schema for parity with the real site, but isn't used here) —
+  instead it's a data-kal-select-facility trigger, handled in
+  kal-booking-flow.js's existing click-delegation listener, which stores
+  the facility to localStorage and opens the booking popup already scoped
+  to it.
+{% endcomment %}
+
+{{ 'kal-clinic-list.css' | asset_url | stylesheet_tag }}
+
+<div class="kal-clinic-list-page">
+  {%- if section.settings.section_heading != blank -%}
+    <h2 class="kal-clinic-list__heading">{{ section.settings.section_heading }}</h2>
+  {%- endif -%}
+
+  <ul class="kal-clinic-list">
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'clinics_list' -%}
+        <li class="kal-clinic-list__item" {{ block.shopify_attributes }}>
+          <button
+            type="button"
+            class="kal-clinic-list__name"
+            data-kal-select-facility
+            data-facility-id="{{ block.settings.facility_id }}"
+            data-location-name="{{ block.settings.location_name | escape }}"
+            data-clinic-address="{{ block.settings.clinic_address | strip_html | escape }}"
+          >
+            {{ block.settings.location_name }}
+          </button>
+          {%- if block.settings.clinic_address != blank -%}
+            <p class="kal-clinic-list__address">{{ block.settings.clinic_address }}</p>
+          {%- endif -%}
+          {%- if block.settings.location_url_clnk != blank -%}
+            <a href="{{ block.settings.location_url_clnk }}" class="kal-clinic-list__directions" target="_blank" rel="noopener">
+              Get Directions
+            </a>
+          {%- endif -%}
+        </li>
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
+
+  {%- if section.blocks.size == 0 -%}
+    <p class="kal-clinic-list__empty">No clinics added yet — add a "Clinic" block in the theme editor.</p>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Clinic list (Kal booking)",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "section_heading",
+      "label": "Section heading",
+      "default": "Our Clinics"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "clinics_list",
+      "name": "Clinic",
+      "settings": [
+        {
+          "type": "text",
+          "id": "location_name",
+          "label": "Clinic name",
+          "default": "Kerala Ayurveda, Koramangala"
+        },
+        {
+          "type": "richtext",
+          "id": "clinic_address",
+          "label": "Clinic address"
+        },
+        {
+          "type": "text",
+          "id": "facility_id",
+          "label": "Facility ID (from the CMS facilities table)",
+          "info": "Real UUID from Supabase. Required for this clinic to be bookable — the booking flow uses this to fetch real availability."
+        },
+        {
+          "type": "url",
+          "id": "location_url_clnk",
+          "label": "Get Directions link (Google Maps)"
+        },
+        {
+          "type": "url",
+          "id": "link_clinic_url",
+          "label": "Clinic's own page link (kept for parity with the real site — not used by the booking flow trigger)"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Clinic list (Kal booking)",
+      "blocks": [
+        { "type": "clinics_list" }
+      ]
+    }
+  ]
+}
+{% endschema %}
