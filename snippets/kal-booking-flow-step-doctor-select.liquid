@@ -3,25 +3,30 @@
   new Concern Select step, not directly from Entry — see that step's own
   comment for why.
 
-  MOBILE REDESIGN per a later Figma pass (node 544:3781), reverting the
-  prior backend-integration work on this screen — explicit instruction:
-  - The facility strip (4 clinics, picking which one's doctors to fetch)
-    is gone. The design shows no in-page clinic picker on this screen at
-    all, just the shared header's facility badge (see
-    kal-booking-flow-step-header.liquid) — the CMS facility-strip/
-    GET /api/public/doctors?facility_id=X wiring this replaced is removed
-    from kal-booking-flow.js too (setFacility, loadDoctorsForFacility,
-    renderDoctorCards, MOCK_DOCTORS, the data-kal-facility and
-    data-kal-doctor-option click handlers).
-  - The doctor card is a full static mockup again (name, degree,
-    languages, experience, specialty tags, next slot, price) — see
-    kal-booking-flow-doctor-card.liquid's own comment for why this
-    intentionally shows content the real API doesn't provide yet.
-  - Downstream steps (Slot Picker) aren't affected: they already read
-    their own hardcoded default data-kal-doctor-id/data-kal-facility-id
-    off .kal-step-slot-picker's root element (see that step's own
-    liquid), never actually depending on doctorSelect's old dynamic
-    selection state.
+  RE-WIRED TO THE REAL BACKEND (reversing the prior revert described
+  below): kal-booking-flow.js now calls GET /api/public/doctors?facility_id=
+  for the facility selected earlier in the flow (see
+  docs/facility-selection-plan.md), and renders one card per doctor it
+  gets back. Rich content (degree, languages, experience, tags, next
+  slot, price, photo) still doesn't come from that API — per the
+  decision that marketing enters it directly in Shopify — so each real
+  doctor is matched, by doctor_id, against blocks configured in
+  sections/kal-doctor-cards.liquid. A real, bookable doctor with no
+  matching block yet still shows (a minimal name-only fallback card),
+  rather than silently disappearing.
+
+  .kal-step-doctor-select__list below is intentionally empty in this
+  file now — kal-booking-flow.js populates it at runtime. Previously it
+  held one hardcoded {% render 'kal-booking-flow-doctor-card' %} call
+  (Dr. Neethu Jayachandran, static mockup values) — see git history if
+  that's ever needed as a reference again.
+
+  What was reverted before, for context: an earlier Figma pass (node
+  544:3781) removed a facility strip + this same GET /api/public/doctors
+  wiring in favor of a single fully static mockup card, explicitly
+  because the API "only returns { id, name }" and couldn't support the
+  richer card fields. The doctor_id-matched-Shopify-block approach above
+  is what closes that gap without needing new CMS schema work.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
@@ -87,19 +92,14 @@
         </button>
       </div>
 
-      {%- assign doctor_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
-      <div class="kal-step-doctor-select__list">
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Neethu Jayachandran',
-          degree: 'BAMS',
-          languages: 'English &middot; Hindi &middot; Malayalam',
-          experience: '12 yrs experience',
-          tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
-          next_slot: 'Today, 10:30 AM',
-          price: '&#8377;500',
-          selected: true,
-          photo_url: doctor_photo_url
-        -%}
+      {%- comment -%}
+        Populated by kal-booking-flow.js's loadDoctorsForFacility() —
+        see this file's own top comment. data-kal-doctor-list-empty is
+        the copy shown before any facility is even selected / while the
+        fetch is in flight / if it fails.
+      {%- endcomment -%}
+      <div class="kal-step-doctor-select__list" data-kal-doctor-list>
+        <p class="kal-step-doctor-select__list-empty" data-kal-doctor-list-empty>Loading doctors&hellip;</p>
       </div>
     </div>
 

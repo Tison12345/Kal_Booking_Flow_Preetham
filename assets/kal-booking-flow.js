@@ -78,6 +78,120 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // ----------------------------------------------------------------------
+  // DOCTOR SELECT — re-wired to the real backend (see this step's own
+  // liquid comment for the full history/reasoning). loadDoctorsForFacility()
+  // calls GET /api/public/doctors for the facility stored via FACILITY
+  // SELECTION above, and renders one card per doctor it gets back:
+  //   - a real match, cloned from sections/kal-doctor-cards.liquid's
+  //     hidden blocks (matched by doctor_id) — the exact same visual
+  //     component, so nothing to keep in sync by hand
+  //   - or a minimal fallback card, if that doctor_id has no block
+  //     configured yet — a real, bookable doctor should never just
+  //     disappear because marketing hasn't entered their card yet
+  // ----------------------------------------------------------------------
+  let selectedDoctorId = null;
+
+  const selectDoctorCard = (card) => {
+    const list = card.closest('[data-kal-doctor-list]');
+    if (list) {
+      list.querySelectorAll('.kal-doctor-card').forEach((el) => {
+        el.classList.toggle('kal-doctor-card--selected', el === card);
+      });
+    }
+    selectedDoctorId = card.dataset.doctorId || null;
+    if (selectedDoctorId) {
+      flow.querySelectorAll('[data-kal-doctor-id]').forEach((el) => {
+        el.dataset.kalDoctorId = selectedDoctorId;
+      });
+    }
+  };
+
+  const buildFallbackDoctorCard = (doctor) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'kal-doctor-card';
+    card.dataset.doctorId = doctor.id;
+    card.dataset.kalDoctorName = doctor.name;
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'kal-doctor-card__name';
+    nameEl.textContent = doctor.name;
+    card.appendChild(nameEl);
+
+    if (doctor.qualification) {
+      const metaEl = document.createElement('span');
+      metaEl.className = 'kal-doctor-card__meta-row';
+      metaEl.textContent = doctor.qualification;
+      card.appendChild(metaEl);
+    }
+
+    return card;
+  };
+
+  const loadDoctorsForFacility = async () => {
+    const list = flow.querySelector('[data-kal-doctor-list]');
+    if (!list) return;
+
+    const setEmptyState = (message) => {
+      list.innerHTML = '';
+      if (!message) return;
+      const p = document.createElement('p');
+      p.className = 'kal-step-doctor-select__list-empty';
+      p.textContent = message;
+      list.appendChild(p);
+    };
+
+    const facility = getStoredFacility();
+    if (!facility || !facility.id) {
+      setEmptyState('Pick a clinic first to see available doctors.');
+      return;
+    }
+
+    if (!apiBaseUrl) {
+      console.error('[kal-booking-flow] Missing data-api-base-url on #kal-booking-flow — cannot load doctors.');
+      setEmptyState('Unable to load doctors right now.');
+      return;
+    }
+
+    setEmptyState('Loading doctors…');
+
+    let doctors;
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/public/doctors?facility_id=${encodeURIComponent(facility.id)}`,
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      doctors = Array.isArray(data.doctors) ? data.doctors : [];
+    } catch (err) {
+      console.error('[kal-booking-flow] Failed to load doctors:', err);
+      setEmptyState('Unable to load doctors right now.');
+      return;
+    }
+
+    if (doctors.length === 0) {
+      setEmptyState('No doctors available at this clinic yet.');
+      return;
+    }
+
+    list.innerHTML = '';
+    doctors.forEach((doctor, index) => {
+      const source = document.querySelector(
+        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
+      );
+      const card = source ? source.cloneNode(true) : buildFallbackDoctorCard(doctor);
+      card.dataset.doctorId = doctor.id;
+      card.classList.toggle('kal-doctor-card--selected', index === 0);
+      list.appendChild(card);
+    });
+
+    selectedDoctorId = doctors[0].id;
+    flow.querySelectorAll('[data-kal-doctor-id]').forEach((el) => {
+      el.dataset.kalDoctorId = selectedDoctorId;
+    });
+  };
+
   // Step navigation: each step screen is a direct child of #kal-booking-flow-content
   // with data-kal-step="name". Clicking anything with data-kal-goto="name" (a card,
   // a continue button) or data-kal-back="name" (a back button) switches to that step.
@@ -102,6 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // whatever's currently in slotPicker/patientDetails.
     if (stepName === 'confirmation') {
       renderConfirmationSummary();
+    }
+
+    // Refreshed every time, not cached — the selected facility can change
+    // between visits to this step (pick a different clinic, go back).
+    if (stepName === 'doctor-select') {
+      loadDoctorsForFacility();
     }
 
     if (stepName === 'therapy-confirmed') {
@@ -669,6 +789,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeTrigger = e.target.closest('[data-kal-mode]');
     if (modeTrigger) {
       setMode(modeTrigger.dataset.kalMode);
+    }
+
+    const doctorCardTrigger = e.target.closest('[data-kal-doctor-list] .kal-doctor-card');
+    if (doctorCardTrigger) {
+      selectDoctorCard(doctorCardTrigger);
     }
 
     const genderTrigger = e.target.closest('[data-kal-gender]');

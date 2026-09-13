@@ -1,0 +1,121 @@
+{% comment %}
+  Doctor card content source for the booking flow's Doctor Select step.
+
+  Same pattern as sections/kal-clinic-list.liquid: rich marketing content
+  (photo, languages, tags, price, etc.) is entered here by whoever edits
+  the theme, each block tagged with a real doctor_id (UUID from the CMS
+  `staff` table) — the join key. GET /api/public/doctors?facility_id=
+  returns which doctors are real/active/bookable for the selected
+  facility (just id + name + qualification); this section supplies the
+  rest of what's shown, for any doctor_id it has a matching block for.
+
+  Each block renders through the EXISTING kal-booking-flow-doctor-card
+  snippet (same visual component Doctor Select already uses) so what's
+  configured here is exactly what appears in the popup — no separate
+  markup to keep in sync. Rendered hidden: this section is a data
+  source, not a page feature to browse (unlike kal-clinic-list, which is
+  both). kal-booking-flow.js finds a block by its data-doctor-id,
+  clones it, and inserts the clone into the popup's doctor list.
+
+  A doctor returned by the API with no matching block here still gets
+  shown — kal-booking-flow.js falls back to a minimal name-only card in
+  that case, so a real bookable doctor never just disappears because
+  nobody's entered their marketing content yet.
+{% endcomment %}
+
+<div class="kal-doctor-card-source-list" hidden>
+  {%- for block in section.blocks -%}
+    {%- if block.type == 'doctor_profile' -%}
+      <div class="kal-doctor-card-source" data-doctor-id="{{ block.settings.doctor_id }}" {{ block.shopify_attributes }}>
+        {%- render 'kal-booking-flow-doctor-card',
+          name: block.settings.name,
+          degree: block.settings.degree,
+          languages: block.settings.languages,
+          experience: block.settings.experience,
+          tags: block.settings.tags,
+          next_slot: block.settings.next_slot,
+          price: block.settings.price,
+          photo_url: block.settings.photo | image_url: width: 200
+        -%}
+      </div>
+    {%- endif -%}
+  {%- endfor -%}
+</div>
+
+{% schema %}
+{
+  "name": "Doctor cards (Kal booking)",
+  "tag": "section",
+  "class": "section",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "doctor_profile",
+      "name": "Doctor",
+      "settings": [
+        {
+          "type": "text",
+          "id": "doctor_id",
+          "label": "Doctor ID (from the CMS staff table)",
+          "info": "Real UUID from Supabase. This doctor's card only shows in the booking flow if this ID also comes back from GET /api/public/doctors for the selected facility."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Name",
+          "default": "Dr. Neethu Jayachandran"
+        },
+        {
+          "type": "text",
+          "id": "degree",
+          "label": "Degree",
+          "default": "BAMS"
+        },
+        {
+          "type": "text",
+          "id": "languages",
+          "label": "Languages (pre-joined, e.g. \"English · Hindi\")",
+          "default": "English &middot; Hindi &middot; Malayalam"
+        },
+        {
+          "type": "text",
+          "id": "experience",
+          "label": "Experience",
+          "default": "12 yrs experience"
+        },
+        {
+          "type": "text",
+          "id": "tags",
+          "label": "Specialty tags (comma-separated)",
+          "default": "Anxiety,Stress Management,Diabetes Care,Preventive Health"
+        },
+        {
+          "type": "text",
+          "id": "next_slot",
+          "label": "Next slot text (cosmetic — real slot data isn't wired to this yet)",
+          "default": "Today, 10:30 AM"
+        },
+        {
+          "type": "text",
+          "id": "price",
+          "label": "Price (pre-formatted, e.g. \"₹500\")",
+          "default": "&#8377;500"
+        },
+        {
+          "type": "image_picker",
+          "id": "photo",
+          "label": "Photo"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Doctor cards (Kal booking)",
+      "blocks": [
+        { "type": "doctor_profile" }
+      ]
+    }
+  ]
+}
+{% endschema %}

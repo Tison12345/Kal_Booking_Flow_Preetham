@@ -115,6 +115,25 @@
       },
       "block_order": ["clinic-1", "clinic-2", "clinic-3"]
     },
+    "kal_doctor_cards_test": {
+      "type": "kal-doctor-cards",
+      "blocks": {
+        "doctor-1": {
+          "type": "doctor_profile",
+          "settings": {
+            "doctor_id": "00000000-0000-0000-0000-0000000000d1",
+            "name": "Dr. Neethu Jayachandran",
+            "degree": "BAMS",
+            "languages": "English &middot; Hindi &middot; Malayalam",
+            "experience": "12 yrs experience",
+            "tags": "Anxiety,Stress Management,Diabetes Care,Preventive Health",
+            "next_slot": "Today, 10:30 AM",
+            "price": "&#8377;500"
+          }
+        }
+      },
+      "block_order": ["doctor-1"]
+    },
     "custom_liquid_tUmp8k": {
       "type": "custom-liquid",
       "name": "t:sections.custom-liquid.presets.name",
@@ -130,6 +149,7 @@
     "image_banner",
     "featured_collection",
     "kal_clinic_list_test",
+    "kal_doctor_cards_test",
     "custom_liquid_tUmp8k"
   ]
 }

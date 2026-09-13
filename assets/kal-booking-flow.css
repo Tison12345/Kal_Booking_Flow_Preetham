@@ -1247,6 +1247,13 @@
   padding: 0 24px;
 }
 
+.kal-step-doctor-select__list-empty {
+  font-size: 13px;
+  color: var(--kal-color-body);
+  margin: 0;
+  padding: 8px 0;
+}
+
 /* Doctor card, rebuilt per the updated Figma spec (node 544:3781) — a
    static mockup again (see kal-booking-flow-doctor-card.liquid's own
    comment for why), with a photo+meta row, a tag-chip section, and a
