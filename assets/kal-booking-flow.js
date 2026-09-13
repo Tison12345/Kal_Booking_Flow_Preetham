@@ -76,6 +76,103 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll('[data-kal-facility-id]').forEach((el) => {
       el.dataset.kalFacilityId = facility.id;
     });
+
+    updateFacilityPickerSelection(facility.id);
+  };
+
+  // ----------------------------------------------------------------------
+  // FACILITY SWITCHER — the header's facility badge is a real dropdown on
+  // Concern Select / Doctor Select / Slot Picker only (see
+  // kal-booking-flow-step-header.liquid's own comment for why not every
+  // step). Everything here is MOCK data: a static 6-clinic list, and a
+  // name -> home-clinic map for Doctor Select's 3 static mock doctor
+  // cards (see that step's own liquid comment for why those are
+  // hardcoded). This exists so the "doctor not available here" warning
+  // (Continue / Change Clinic) has something real-ish to compare
+  // against until actual per-clinic doctor data replaces the mock cards
+  // — at that point this map is the only piece that needs to go.
+  // ----------------------------------------------------------------------
+  const MOCK_DOCTOR_HOME_FACILITY = {
+    'Dr. Neethu Jayachandran': 'koramangala',
+    'Dr. Arjun Menon': 'indiranagar',
+    'Dr. Priya Nair': 'whitefield',
+  };
+
+  const getCurrentFacility = () => getStoredFacility() || { id: 'indiranagar', name: 'Indiranagar' };
+
+  // Doctor Select's own click handler (selectDoctorCard, above) already
+  // toggles kal-doctor-card--selected on the real card — reading that
+  // back is more reliable than tracking a second copy of "which doctor"
+  // in a separate variable, and it's correct even before any click ever
+  // fires (one card starts pre-selected via the selected:true param).
+  const getSelectedDoctorName = () => {
+    const card = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
+    return card ? card.dataset.kalDoctorName : null;
+  };
+
+  const setFacilityPickerOpen = (wrapper, open) => {
+    const toggle = wrapper.querySelector('[data-kal-facility-toggle]');
+    const panel = wrapper.querySelector('[data-kal-facility-panel]');
+    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (panel) panel.hidden = !open;
+  };
+
+  const updateFacilityPickerSelection = (facilityId) => {
+    flow.querySelectorAll('[data-kal-facility-option]').forEach((opt) => {
+      opt.setAttribute('aria-selected', String(opt.dataset.kalFacilityId === facilityId));
+    });
+  };
+
+  // Set right before the modal opens, read back if/when Continue is
+  // clicked — cleared on either button so a stale pick can't linger.
+  let pendingFacility = null;
+
+  const openFacilitySwitchModal = (facility, doctorName) => {
+    pendingFacility = facility;
+    const modal = flow.querySelector('[data-kal-facility-switch-modal]');
+    if (!modal) return;
+    modal.querySelectorAll('[data-kal-facility-switch-doctor]').forEach((el) => {
+      el.textContent = doctorName;
+    });
+    modal.querySelectorAll('[data-kal-facility-switch-facility]').forEach((el) => {
+      el.textContent = facility.name;
+    });
+    modal.hidden = false;
+  };
+
+  const closeFacilitySwitchModal = () => {
+    pendingFacility = null;
+    const modal = flow.querySelector('[data-kal-facility-switch-modal]');
+    if (modal) modal.hidden = true;
+  };
+
+  const applyFacilitySwitch = (facility) => {
+    storeFacility(facility);
+    applyStoredFacility();
+  };
+
+  const selectFacilityOption = (optionEl) => {
+    const wrapper = optionEl.closest('[data-kal-facility-picker]');
+    if (!wrapper) return;
+
+    const facility = { id: optionEl.dataset.kalFacilityId, name: optionEl.dataset.kalFacilityName };
+    setFacilityPickerOpen(wrapper, false);
+
+    if (facility.id === getCurrentFacility().id) return;
+
+    // Concern Select (step 1) has no doctor on screen yet, so switching
+    // there never needs the warning — only Doctor Select (2) and Slot
+    // Picker (3), where one of the 3 mock doctor cards is already
+    // selected.
+    const step = Number(wrapper.dataset.kalFacilityPickerStep);
+    const doctorName = step >= 2 ? getSelectedDoctorName() : null;
+    const doctorHomeFacility = doctorName ? MOCK_DOCTOR_HOME_FACILITY[doctorName] : null;
+
+    if (doctorHomeFacility && facility.id !== doctorHomeFacility) {
+      openFacilitySwitchModal(facility, doctorName);
+    } else {
+      applyFacilitySwitch(facility);
+    }
   };
 
   // ----------------------------------------------------------------------
@@ -988,6 +1085,46 @@ document.addEventListener('DOMContentLoaded', () => {
       if (wrapper && !wrapper.contains(e.target)) {
         setCountryPickerOpen(false);
       }
+    }
+
+    // Facility switcher — same toggle/option/click-outside pattern again,
+    // plus the two switch-confirmation modal buttons. The header renders
+    // this dropdown 3 times (once per switchable step, all in the DOM at
+    // once — see kal-booking-flow.liquid), so every lookup here is
+    // scoped to whichever wrapper/toggle the click actually happened in,
+    // never assumed to be "the only one".
+    const facilityToggle = e.target.closest('[data-kal-facility-toggle]');
+    const facilityOption = e.target.closest('[data-kal-facility-option]');
+    const facilitySwitchClinic = e.target.closest('[data-kal-facility-switch-clinic]');
+    const facilitySwitchOnline = e.target.closest('[data-kal-facility-switch-online]');
+    const facilitySwitchCancel = e.target.closest('[data-kal-facility-switch-cancel]');
+
+    if (facilitySwitchClinic || facilitySwitchOnline) {
+      // Both real actions apply the pending facility switch and send the
+      // visitor back to Doctor Select to pick a doctor again — whoever
+      // was selected only made sense for the old clinic/mode combination.
+      // Read pendingFacility before closeFacilitySwitchModal() clears it.
+      const facility = pendingFacility;
+      closeFacilitySwitchModal();
+      if (facility) applyFacilitySwitch(facility);
+      setMode(facilitySwitchClinic ? 'in-clinic' : 'video');
+      goToStep('doctor-select');
+    } else if (facilitySwitchCancel) {
+      closeFacilitySwitchModal();
+    } else if (facilityOption) {
+      selectFacilityOption(facilityOption);
+    } else if (facilityToggle) {
+      const wrapper = facilityToggle.closest('[data-kal-facility-picker]');
+      if (wrapper) {
+        const isOpen = facilityToggle.getAttribute('aria-expanded') === 'true';
+        setFacilityPickerOpen(wrapper, !isOpen);
+      }
+    } else {
+      flow.querySelectorAll('[data-kal-facility-picker]').forEach((wrapper) => {
+        if (!wrapper.contains(e.target)) {
+          setFacilityPickerOpen(wrapper, false);
+        }
+      });
     }
   });
 

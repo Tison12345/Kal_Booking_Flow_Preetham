@@ -78,9 +78,6 @@
     },
     "kal_clinic_list_test": {
       "type": "kal-clinic-list",
-      "settings": {
-        "section_heading": "Find a Clinic (test)"
-      },
       "blocks": {
         "clinic-1": {
           "type": "clinics_list",
@@ -113,7 +110,14 @@
           }
         }
       },
-      "block_order": ["clinic-1", "clinic-2", "clinic-3"]
+      "block_order": [
+        "clinic-1",
+        "clinic-2",
+        "clinic-3"
+      ],
+      "settings": {
+        "section_heading": "Find a Clinic (test)"
+      }
     },
     "kal_doctor_cards_test": {
       "type": "kal-doctor-cards",
@@ -132,7 +136,10 @@
           }
         }
       },
-      "block_order": ["doctor-1"]
+      "block_order": [
+        "doctor-1"
+      ],
+      "settings": {}
     },
     "custom_liquid_tUmp8k": {
       "type": "custom-liquid",
