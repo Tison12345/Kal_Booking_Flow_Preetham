@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const updateFacilityPickerSelection = (facilityId) => {
     flow.querySelectorAll('[data-kal-facility-option]').forEach((opt) => {
-      opt.setAttribute('aria-selected', String(opt.dataset.kalFacilityId === facilityId));
+      opt.setAttribute('aria-selected', String(opt.dataset.kalFacilityOptionId === facilityId));
     });
   };
 
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrapper = optionEl.closest('[data-kal-facility-picker]');
     if (!wrapper) return;
 
-    const facility = { id: optionEl.dataset.kalFacilityId, name: optionEl.dataset.kalFacilityName };
+    const facility = { id: optionEl.dataset.kalFacilityOptionId, name: optionEl.dataset.kalFacilityName };
     setFacilityPickerOpen(wrapper, false);
 
     if (facility.id === getCurrentFacility().id) return;
