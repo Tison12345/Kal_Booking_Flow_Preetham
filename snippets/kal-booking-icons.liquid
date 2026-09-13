@@ -350,6 +350,21 @@
     </svg>
 
   {%- comment -%}
+    'alert-circle' — Patient Details' inline field-validation errors
+    (kal-form-error). Same circle as 'info' above but the opposite way
+    up (line on top, dot at the bottom) — that's what actually reads as
+    an error/warning glyph rather than an info one; reusing 'info' as-is
+    here would have the dot in the wrong place for this meaning.
+  {%- endcomment -%}
+
+  {% when 'alert-circle' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 8v4"/>
+      <path d="M12 16h.01"/>
+    </svg>
+
+  {%- comment -%}
     'search' — the Concern Select "Not sure?" banner's icon per the updated
     Figma spec (a magnifying glass, not the old placeholder 'info' circle).
     Exported at its native 12x12, filled (not stroke), color baked into the
