@@ -262,6 +262,10 @@
                 maxlength="10"
               >
             </div>
+            <p class="kal-form-error" data-kal-field-error="whatsapp" hidden>
+              <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+              <span data-kal-field-error-text></span>
+            </p>
           </div>
 
           <div class="kal-form-field">
@@ -285,13 +289,26 @@
               placeholder="Enter email address"
               autocomplete="email"
             >
+            <p class="kal-form-error" data-kal-field-error="email" hidden>
+              <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+              <span data-kal-field-error-text></span>
+            </p>
           </div>
         </div>
       </div>
     </div>
 
+    {%- comment -%}
+      No longer disabled while invalid, and no longer a plain
+      data-kal-goto (which would navigate unconditionally on any click,
+      bypassing validation) — clicking now always runs
+      validatePatientDetailsAndShowErrors() first; it only calls
+      goToStep('confirmation') itself once every field passes. Matches
+      the CMS's own submit-then-validate pattern instead of a silent
+      disabled button with no explanation of what's missing.
+    {%- endcomment -%}
     <div class="kal-step-shell__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="confirmation" data-kal-patient-continue disabled>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-patient-continue>
         Continue
       </button>
     </div>
