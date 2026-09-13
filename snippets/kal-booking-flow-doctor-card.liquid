@@ -51,23 +51,32 @@
       </span>
       <span class="kal-doctor-card__info">
         <span class="kal-doctor-card__name">{{ name }}</span>
-        <span class="kal-doctor-card__meta-row">
-          <span class="kal-doctor-card__meta-icon">
-            {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
+        {%- comment -%}
+          Degree + experience side by side, languages on its own line
+          below — matches node 690:6562's Default state (this card
+          previously stacked all three, one per line).
+        {%- endcomment -%}
+        <span class="kal-doctor-card__meta">
+          <span class="kal-doctor-card__meta-line">
+            <span class="kal-doctor-card__meta-row">
+              <span class="kal-doctor-card__meta-icon">
+                {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
+              </span>
+              {{ degree }}
+            </span>
+            <span class="kal-doctor-card__meta-row">
+              <span class="kal-doctor-card__meta-icon">
+                {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
+              </span>
+              {{ experience }}
+            </span>
           </span>
-          {{ degree }}
-        </span>
-        <span class="kal-doctor-card__meta-row">
-          <span class="kal-doctor-card__meta-icon">
-            {%- render 'kal-booking-icons', icon_name: 'doctor-language' -%}
+          <span class="kal-doctor-card__meta-row">
+            <span class="kal-doctor-card__meta-icon">
+              {%- render 'kal-booking-icons', icon_name: 'doctor-language' -%}
+            </span>
+            {{ languages }}
           </span>
-          {{ languages }}
-        </span>
-        <span class="kal-doctor-card__meta-row">
-          <span class="kal-doctor-card__meta-icon">
-            {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
-          </span>
-          {{ experience }}
         </span>
       </span>
     </span>

@@ -1474,7 +1474,7 @@ button.kal-step-header__location-badge {
 
 .kal-doctor-card__photo {
   flex-shrink: 0;
-  width: 120px;
+  width: 76px;
   align-self: stretch;
   border-radius: 14px;
   background: linear-gradient(135deg, #d8d4c9, #aab89d);
@@ -1497,7 +1497,7 @@ button.kal-step-header__location-badge {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -1506,21 +1506,6 @@ button.kal-step-header__location-badge {
   font-weight: 400;
   line-height: 130%;
   color: var(--kal-color-heading);
-}
-
-/* Per node 690:6562's Default state: degree + experience sit side by
-   side on one line, with languages on its own line below — not all
-   three stacked one-per-line the way this card originally shipped. */
-.kal-doctor-card__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.kal-doctor-card__meta-line {
-  display: flex;
-  align-items: center;
-  gap: 36px;
 }
 
 .kal-doctor-card__meta-row {
@@ -1532,9 +1517,6 @@ button.kal-step-header__location-badge {
   text-transform: capitalize;
 }
 
-/* rgba(245,241,234,0.5) per node 690:6562's Default state — the
-   selected state below overrides this back to plain white, preserving
-   the card's existing "on click" appearance exactly as it already was. */
 .kal-doctor-card__meta-icon {
   flex-shrink: 0;
   display: flex;
@@ -1543,10 +1525,6 @@ button.kal-step-header__location-badge {
   width: 20px;
   height: 20px;
   border-radius: 999px;
-  background: rgba(245, 241, 234, 0.5);
-}
-
-.kal-doctor-card--selected .kal-doctor-card__meta-icon {
   background: var(--kal-color-white);
 }
 
