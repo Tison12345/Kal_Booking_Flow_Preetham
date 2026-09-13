@@ -99,4 +99,42 @@
     </div>
   </div>
 
+  {%- comment -%}
+    Calendar modal for Slot Picker's date picker — rebuilt after being
+    fully removed (see kal-booking-flow-step-slot-picker.liquid's own
+    comment for why) once the day-strip went fully static. Restrictions
+    match the real CMS's staff-side SlotPicker.tsx exactly (see
+    kal-booking-flow.js's CALENDAR comment for the specific constants/
+    citations): today is bookable, strictly past dates are not, and
+    nothing beyond today+90 days (MAX_FUTURE_DAYS) is selectable.
+
+    Deliberately a direct child of <dialog>, NOT nested inside
+    #kal-booking-flow-content — that div has overflow-y:hidden on
+    desktop and the dialog itself has a transform (for centering), which
+    makes the dialog the containing block for any position:fixed
+    descendant. Once that happens, any overflow-clipping ancestor
+    sitting between the fixed element and its containing block clips it
+    — nesting the modal inside the scrolling content area would silently
+    clip it on desktop, same reasoning as the facility-switch modal above.
+  {%- endcomment -%}
+  <div class="kal-calendar-modal" data-kal-calendar-modal hidden>
+    <div class="kal-calendar-modal__backdrop" data-kal-close-calendar></div>
+    <div class="kal-calendar-modal__panel">
+      <div class="kal-calendar-modal__header">
+        <button type="button" class="kal-icon-button" data-kal-calendar-prev aria-label="Previous month">
+          {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        </button>
+        <span class="kal-calendar-modal__month" data-kal-calendar-month>Month Year</span>
+        <button type="button" class="kal-icon-button" data-kal-calendar-next aria-label="Next month">
+          {%- render 'kal-booking-icons', icon_name: 'chevron-right' -%}
+        </button>
+      </div>
+      <div class="kal-calendar-modal__weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="kal-calendar-modal__grid" data-kal-calendar-grid></div>
+      <button type="button" class="kal-calendar-modal__close" data-kal-close-calendar>Done</button>
+    </div>
+  </div>
+
 </dialog>
