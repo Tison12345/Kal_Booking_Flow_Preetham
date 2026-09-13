@@ -1111,6 +1111,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gotoTrigger) {
       goToStep(gotoTrigger.dataset.kalGoto);
     }
+
+    // Patient Details' Continue — no longer a plain data-kal-goto (that
+    // would navigate on any click, bypassing validation) and no longer
+    // disabled while invalid (a disabled button with no message doesn't
+    // tell anyone what's wrong). Validates every field, shows whatever's
+    // wrong, and only navigates once everything passes.
+    const patientContinueTrigger = e.target.closest('[data-kal-patient-continue]');
+    if (patientContinueTrigger) {
+      if (validatePatientDetailsAndShowErrors()) {
+        goToStep('confirmation');
+      }
+    }
     const backTrigger = e.target.closest('[data-kal-back]');
     if (backTrigger) {
       goToStep(backTrigger.dataset.kalBack);
