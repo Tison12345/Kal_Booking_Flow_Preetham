@@ -1508,6 +1508,21 @@ button.kal-step-header__location-badge {
   color: var(--kal-color-heading);
 }
 
+/* Per node 690:6562's Default state: degree + experience sit side by
+   side on one line, with languages on its own line below — not all
+   three stacked one-per-line the way this card originally shipped. */
+.kal-doctor-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kal-doctor-card__meta-line {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
+
 .kal-doctor-card__meta-row {
   display: flex;
   align-items: center;
