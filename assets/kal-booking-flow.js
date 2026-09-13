@@ -891,6 +891,18 @@ document.addEventListener('DOMContentLoaded', () => {
       phoneField.maxLength = selectedCountry.max;
     }
 
+    // Email is optional for India, compulsory for every other country
+    // (explicit instruction) — re-evaluated immediately on every country
+    // switch, not just at submit time. See this field's own liquid
+    // comment.
+    const isIndia = selectedCountry.iso === 'IN';
+    flow.querySelectorAll('[data-kal-email-optional]').forEach((el) => {
+      el.hidden = !isIndia;
+    });
+    flow.querySelectorAll('[data-kal-email-required]').forEach((el) => {
+      el.hidden = isIndia;
+    });
+
     setCountryPickerOpen(false);
     updatePatientContinueButton();
   };
@@ -901,7 +913,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectedCountry.start && !matchesStartFully(selectedCountry.start, digits)) return false;
     return true;
   };
-  const isValidEmail = (value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const isValidEmail = (value) => {
+    const trimmed = value.trim();
+    if (trimmed === '') return selectedCountry.iso === 'IN';
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  };
 
   const isPatientDetailsValid = () =>
     patientDetails.name.trim() !== '' &&
