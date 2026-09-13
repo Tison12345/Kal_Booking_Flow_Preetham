@@ -932,11 +932,92 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // ----------------------------------------------------------------------
+  // PATIENT DETAILS — inline field errors, same pattern as the CMS's own
+  // forms (app/lib/validation-messages.ts's requiredText/requiredSelect
+  // wording): errors are computed and shown all at once when Continue is
+  // clicked, and each one clears the moment its own field changes — not
+  // shown eagerly on page load, the way a `disabled` button alone gives
+  // no explanation of what's missing.
+  // ----------------------------------------------------------------------
+
+  const showFieldError = (field, message) => {
+    flow.querySelectorAll(`[data-kal-field-error="${field}"]`).forEach((el) => {
+      const textEl = el.querySelector('[data-kal-field-error-text]');
+      if (textEl) textEl.textContent = message;
+      el.hidden = false;
+    });
+    if (field === 'whatsapp') {
+      flow.querySelectorAll('.kal-phone-input').forEach((el) => {
+        el.classList.add('kal-phone-input--error');
+      });
+    } else {
+      flow.querySelectorAll(`[data-kal-field="${field}"]`).forEach((el) => {
+        el.classList.add('kal-form-input--error');
+      });
+    }
+  };
+
+  const clearFieldError = (field) => {
+    flow.querySelectorAll(`[data-kal-field-error="${field}"]`).forEach((el) => {
+      el.hidden = true;
+    });
+    if (field === 'whatsapp') {
+      flow.querySelectorAll('.kal-phone-input').forEach((el) => {
+        el.classList.remove('kal-phone-input--error');
+      });
+    } else {
+      flow.querySelectorAll(`[data-kal-field="${field}"]`).forEach((el) => {
+        el.classList.remove('kal-form-input--error');
+      });
+    }
+  };
+
+  // Computes every current error and shows them all at once (matching
+  // the CMS's own validate()-on-submit pattern) — returns whether
+  // everything passed, so the Continue click handler knows whether to
+  // actually navigate.
+  const validatePatientDetailsAndShowErrors = () => {
+    let allValid = true;
+
+    if (patientDetails.name.trim() === '') {
+      showFieldError('name', 'Please enter your name.');
+      allValid = false;
+    } else {
+      clearFieldError('name');
+    }
+
+    if (patientDetails.gender !== 'male' && patientDetails.gender !== 'female') {
+      showFieldError('gender', 'Please select a gender.');
+      allValid = false;
+    } else {
+      clearFieldError('gender');
+    }
+
+    if (!isValidWhatsapp(patientDetails.whatsapp)) {
+      showFieldError('whatsapp', 'Please enter a valid WhatsApp Number');
+      allValid = false;
+    } else {
+      clearFieldError('whatsapp');
+    }
+
+    const emailTrimmed = patientDetails.email.trim();
+    if (!isValidEmail(patientDetails.email)) {
+      showFieldError('email', emailTrimmed === '' ? 'Please enter your email.' : 'Please enter a valid email address.');
+      allValid = false;
+    } else {
+      clearFieldError('email');
+    }
+
+    return allValid;
+  };
+
   const setGender = (gender) => {
     patientDetails.gender = gender;
     flow.querySelectorAll('[data-kal-gender]').forEach((btn) => {
       btn.classList.toggle('kal-gender-btn--active', btn.dataset.kalGender === gender);
     });
+    clearFieldError('gender');
     updatePatientContinueButton();
   };
 
