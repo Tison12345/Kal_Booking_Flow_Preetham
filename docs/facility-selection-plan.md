@@ -17,56 +17,72 @@ so it's a complete, working reference a senior developer can port into the real
 `keralaayurveda.com` theme later. This is being built and tested end-to-end here first, not
 directly in the live store.
 
-## 2. What we're copying from the real site (and what we're changing)
+## 2. Key decision: reuse the real site's exact schema, don't invent a parallel one
 
 The real site already has a "Find a Clinic" page for this exact purpose
 (`templates/page.clinic-list.json` → `sections/clinic-list.liquid`), a plain
 state-grouped list of clinic name links, each one a repeatable Shopify block of type
-`clinics_list` with fields: `location_name`, `clinic_address`, `location_url_clnk` (maps
-link), `link_clinic_url` (link to that clinic's own page).
+`clinics_list` with fields: `location_name` (text), `clinic_address` (richtext),
+`location_url_clnk` (url, "Get Directions"), `url_get_directions_clnk` (text, button label),
+`link_clinic_url` (url, link to that clinic's own page), `link_clinic_label` (text, button
+label).
 
-We're copying that visual/structural pattern (grouped headings + plain clinic-name links,
-not doctor-card-style cards), but:
+**To make this as easy as possible for your senior to port over, the demo will use the
+identical section filename, identical block type name, and identical field names as the real
+site** — not a differently-named parallel schema that would need translating later. The only
+change is **adding one new field to that same block: `facility_id`** (the real UUID from the
+CMS `facilities` table — the join key the architecture discussion identified as missing).
+Everything else about the block stays exactly as the real site already has it.
 
-- **Adding one field that doesn't exist on the real site's block today: `facility_id`** — the
-  real UUID from the CMS `facilities` table (Supabase). This is the missing join key identified
-  in the earlier architecture discussion — without it, a clicked clinic name has no way to tell
-  the booking flow which real facility it corresponds to.
-- **Scaling down to 3–4 test facilities**, not the real site's ~27, since this is for testing the
-  mechanism, not a production directory.
-- **Linking out to the booking popup instead of to a separate clinic detail page** — clicking a
-  facility here should carry its `facility_id` into the popup, not navigate to a clinic page.
+Practically, this means porting this feature to the real theme later should be: *add one field
+to the real `clinics_list` block schema, copy over the JS that reads it* — not reconciling two
+different data shapes.
+
+Other differences from the real page, both intentional and low-risk to reconcile later:
+- **Scaling down to 3–4 test facilities**, not the real site's ~27 — testing the mechanism, not
+  building a production directory.
+- **Clicking a facility opens the booking popup instead of navigating to that clinic's own
+  page** — `link_clinic_url` still exists on the block (kept for schema parity) but isn't used
+  for navigation here; the click handler is new behavior layered on top of the same data.
 
 ## 3. The two pieces being built
 
 ### 3a. New page: "Find a Clinic" (outside the popup)
 
-- A real Shopify page (own template/section), separate from `kal-booking-flow.liquid` — matches
-  what you confirmed: this sits *outside* the popup, exactly like the real site's page.
-- New section, e.g. `sections/kal-facility-select.liquid`, with a repeatable block type
-  `facility`:
-  - `facility_id` (text) — real UUID from Supabase `facilities`
-  - `facility_name` (text)
-  - `facility_address` (text)
-  - `opens_at` (text) — matches the "Opens 8 AM" copy already used everywhere in the popup
+- A real Shopify page (own template/section), separate from `kal-booking-flow.liquid` — sits
+  *outside* the popup, exactly like the real site's page.
+- New section file **`sections/clinic-list.liquid`** (same name as the real site's file), block
+  type **`clinics_list`** (same name), with the real site's existing fields plus one addition:
+  - `location_name` (text) — clinic name
+  - `clinic_address` (richtext) — full address
+  - `location_url_clnk` (url) — Google Maps link ("Get Directions")
+  - `link_clinic_url` (url) — kept for schema parity with the real site, unused by the click
+    handler here
+  - **`facility_id` (text) — NEW, the real UUID from Supabase `facilities`**
 - 3–4 test blocks added via the Shopify Theme Editor (no separate data file — same
   merchant-editable pattern the real site already uses).
 - Each facility renders as a plain link/list item (matching the screenshot's style), carrying
-  `data-facility-id="{{ block.settings.facility_id }}"`.
+  `data-facility-id="{{ block.settings.facility_id }}"`,
+  `data-location-name="{{ block.settings.location_name }}"`, and
+  `data-clinic-address="{{ block.settings.clinic_address | strip_html }}"` — field names on the
+  markup match the schema field names, so nothing needs renaming when this moves to the real
+  theme.
 - Clicking a facility:
-  1. Stores the chosen `facility_id` (and `facility_name`/`facility_address`, so the popup
-     doesn't need a second lookup) — plan is `localStorage`, scoped to this browser only, no
-     backend call needed for this step.
+  1. Stores the chosen `facility_id`/`location_name`/`clinic_address` — plan is `localStorage`,
+     scoped to this browser only, no backend call needed for this step.
   2. Triggers the existing "Request Appointment" flow that opens `kal-booking-flow.liquid`.
 
 ### 3b. Booking popup changes: consume the stored facility
 
 - On open, `kal-booking-flow.js` reads the stored facility info from `localStorage`.
 - Every step's location line (`.kal-step-entry__location-text`) gets populated from that stored
-  facility instead of the hardcoded string — one shared render function, since the same markup
-  pattern repeats across Entry/Doctor Select/Slot Picker/Patient Details/Confirmation.
-- Slot Picker's `data-kal-facility-id` gets set from the stored value instead of the hardcoded
-  UUID, so the real availability slots returned actually belong to the clinic the visitor picked.
+  `location_name`/`clinic_address` instead of the hardcoded string — one shared render function,
+  since the same markup pattern repeats across Entry/Doctor Select/Slot Picker/Patient
+  Details/Confirmation. No fabricated "Opens 8 AM" text — the real block doesn't have an hours
+  field today, so the popup only shows what real data actually provides (name + address).
+- Slot Picker's `data-kal-facility-id` gets set from the stored `facility_id` instead of the
+  hardcoded UUID, so the real availability slots returned actually belong to the clinic the
+  visitor picked.
 - If no facility was ever selected (e.g. someone opens the popup directly, bypassing the new
   page), fall back to today's hardcoded Kormangala default — so nothing breaks for existing entry
   points while this is being tested.
@@ -109,12 +125,30 @@ either paste them here, or authorize the Supabase connector so I can pull them d
    "Request Appointment" button elsewhere on the site) → confirm it falls back to the existing
    Kormangala default rather than erroring.
 
-## 7. Handoff notes (for whoever integrates this into the live store later)
+## 7. Handoff checklist (for whoever integrates this into the live store later)
 
-- The real site's `clinic-list.liquid` blocks would need the same `facility_id` field added to
-  make this pattern reusable there directly, rather than rebuilding it from scratch.
-- The real site currently has a *separate* clinic picker inside
-  `custom-clinic-consultation-form.liquid` (a `<select>` dropdown, independently hand-entered per
-  page) — integrating this properly would mean deciding whether that dropdown gets replaced by
-  this same `facility_id`-carrying mechanism, or left alone. Flagging this now so it isn't
-  missed later; not a decision for this demo-store task.
+Because the demo reuses the real site's exact section filename, block type, and field names,
+porting this over should be close to a copy-paste, not a rewrite:
+
+1. **Add one field to the real block schema** — open `sections/clinic-list.liquid` in the real
+   theme, find the `clinics_list` block's `{% schema %}`, add the same `facility_id` (text)
+   setting used in the demo.
+2. **Fill in `facility_id` on every existing real clinic block** — go through the ~27 already
+   -configured clinics in the Theme Editor and paste in each one's real UUID from Supabase
+   `facilities`. (The demo only had 3–4 to fill in; the real site has all of them already
+   authored, just missing this one new field.)
+3. **Copy the click-handler JS** (storing `facility_id`/`location_name`/`clinic_address` to
+   `localStorage` and opening the booking popup) from this demo's `kal-booking-flow.js` — no
+   translation needed since the field names already match.
+4. **Copy the popup-side changes** (reading the stored facility, populating the location line,
+   setting Slot Picker's `data-kal-facility-id`) the same way.
+5. **Decide what happens to the existing separate clinic picker** inside
+   `custom-clinic-consultation-form.liquid` (a `<select>` dropdown, independently hand-entered
+   per page, unrelated to `clinic-list.liquid`'s blocks) — integrating this properly means
+   deciding whether that dropdown gets replaced by this same `facility_id`-carrying mechanism, or
+   left alone. Flagging this now so it isn't missed later; not a decision for this demo-store
+   task.
+6. **Decide whether `link_clinic_url`** (link to a clinic's own detail page) should still fire
+   on click alongside opening the popup, or be fully replaced by it — the real site uses that
+   field today to navigate away from this page entirely, which conflicts with also opening a
+   popup from the same click.
