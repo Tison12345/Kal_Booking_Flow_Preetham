@@ -1,14 +1,16 @@
 # Plan: Facility Selection → Booking Flow (Demo Store)
 
-*Status: PLAN ONLY — nothing in this document has been built yet.*
+*Status: BUILT on branch `feature/facility-selection` (commit 4a01111) — not yet merged to `main`.*
 
 ## 1. Why this exists
 
 The booking popup currently assumes one fixed clinic everywhere — "Kerala Ayurveda Wellness
-Center, Kormangala" is hardcoded as plain text in every step's left-hand info column (see
-`.kal-step-entry__location-text` usages across `snippets/kal-booking-flow-step-*.liquid`).
-Slot Picker also has a real facility wired in, but as a hardcoded HTML attribute
-(`data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8"` in
+Center, Indiranagar" is hardcoded as plain text in two separate places on every step:
+`.kal-step-entry__location-text` (the full-sentence desktop info-column line, across
+`snippets/kal-booking-flow-step-*.liquid`) and `.kal-step-header__location-text` (a shorter
+mobile badge in the newer shared `kal-booking-flow-step-header.liquid`, currently used by
+Concern Select and Doctor Select). Slot Picker also has a real facility wired in, but as a
+hardcoded HTML attribute (`data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8"` in
 `kal-booking-flow-step-slot-picker.liquid`), not something a visitor actually chose.
 
 Goal: build the missing first step — **let a visitor pick their real clinic before the booking
@@ -105,12 +107,14 @@ known from existing demo code:
 
 | Facility name | facility_id | Source |
 |---|---|---|
-| Kerala Ayurveda, Koramangala | `185b85d7-fad2-405d-b8ea-13dc683fbde8` | already hardcoded in `kal-booking-flow-step-slot-picker.liquid` |
+| Kerala Ayurveda, Indiranagar | `185b85d7-fad2-405d-b8ea-13dc683fbde8` | already hardcoded in `kal-booking-flow-step-slot-picker.liquid` |
 | ? | ? | need 2–3 more |
 
 I don't currently have live access to query Supabase directly (the Supabase MCP connection
 isn't authenticated in this session), so the remaining facility IDs need to come from you —
-either paste them here, or authorize the Supabase connector so I can pull them directly.
+either paste them here, or authorize the Supabase connector so I can pull them directly. Until
+then, `templates/page.find-a-clinic.json` ships with two clearly-marked
+`(PLACEHOLDER — replace facility_id)` clinics alongside the one real one.
 
 ## 6. End-to-end test plan (once built)
 
