@@ -1517,9 +1517,9 @@ button.kal-step-header__location-badge {
   text-transform: capitalize;
 }
 
-/* rgba(245,241,234,0.5) per node 690:6562's Default state — the
-   selected state below overrides this back to plain white, preserving
-   the card's existing "on click" appearance exactly as it already was. */
+/* rgba(245,241,234,0.5) per node 625:9890's Default state, switching to
+   plain white once selected (node 625:9974) — see
+   .kal-doctor-card--selected below. */
 .kal-doctor-card__meta-icon {
   flex-shrink: 0;
   display: flex;
@@ -1558,11 +1558,21 @@ button.kal-step-header__location-badge {
   white-space: nowrap;
 }
 
+/* Sand-tinted gradient by default (node 625:9890) — the OPPOSITE of
+   .kal-doctor-card__top above: that one is plain by default and gains
+   the cream gradient only when selected, while this footer bar has the
+   gradient by default and goes plain white only when selected (node
+   625:9974) — a genuine color swap between the two states, not the
+   same treatment on both. */
 .kal-doctor-card__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
+  background: linear-gradient(to right, rgba(244, 237, 224, 0.5) 25%, rgba(255, 255, 255, 0.5) 100%);
+}
+
+.kal-doctor-card--selected .kal-doctor-card__footer {
   background: var(--kal-color-white);
 }
 
