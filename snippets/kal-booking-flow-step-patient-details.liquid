@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {% comment %}
   Step 5 (labeled "Step 4 of 5") — collects who the visit is for: full
   name, gender, phone number, and an optional email.
@@ -316,3 +317,323 @@
   </div>
 
 </div>
+=======
+{% comment %}
+  Step 5 (labeled "Step 4 of 5") — collects who the visit is for: full
+  name, gender, phone number, and an optional email.
+
+  MOBILE REDESIGN per a later Figma pass (node 438:7643), same instruction
+  as the previous two steps: stay with the design, ignore backend
+  integration.
+  - Header swapped to the shared kal-booking-flow-step-header.liquid
+    snippet, and the appointment summary card is now the shared
+    kal-booking-flow-appointment-card.liquid (same component Slot Picker
+    uses) instead of no summary at all.
+  - Top heading is now "Appointment Details" (matching the Figma page
+    title), with "Who is this visit for?" moved to its own heading right
+    above the form — previously that phrase was the ONLY heading, reused
+    for both the mobile intro and the desktop left-column copy.
+  - Phone Number field gained the Figma's country-code prefix (a
+    decorative +91/India-flag chip, not a working country picker — same
+    "visual match, not wired" treatment as the location badge's dropdown
+    chevron elsewhere in this flow). Label text changed from "WhatsApp
+    Number" to "Phone Number" to match the export; the underlying
+    data-kal-field="whatsapp" identifier is untouched (JS validation
+    keys off that, not the label).
+  - Labels/inputs restyled to match the export (sentence-case medium-
+    weight labels instead of bold uppercase eyebrow-style ones, #e5e1d9
+    borders instead of #e6e6e8) — see kal-booking-flow.css's own comments.
+
+  Gender is Male/Female only, not Male/Female/Other — explicit instruction,
+  even though the Figma export showed three pill options (Female/Male/Other).
+  patients.gender in the database accepts 'male'/'female'/'other', so this
+  is a UI choice, not a backend constraint. Unchanged by this pass.
+
+  NOT WIRED TO THE BACKEND YET (explicit instruction — "build the backend
+  too but dont integrate it"). The backend already exists and needs no new
+  code:
+    1. POST /api/public/availability/holds { doctor_id, date, time } -> holdId
+       (already called nowhere yet — would need to happen when a slot is
+       picked, i.e. on the Slot Picker step's Continue, not here)
+    2. POST /api/public/appointments { holdId, facilityId, doctorId,
+       appointmentDate, appointmentTime, consultationMode, patientName,
+       patientMobile, patientGender } -> books it and fires the WhatsApp
+       confirmation
+  This step's job when that's wired up: collect patientName/patientGender/
+  patientMobile/patientEmail into slotPicker.patientDetails (see JS) so
+  they're ready to send in step 2 above once the next step (booking
+  confirmation) actually triggers it.
+
+  Single shared markup, not a __mobile + __desktop split — see the "SHARED
+  STEP SHELL" comment in kal-booking-flow.css for why and how the layout
+  switches at 750px. Every input/button below uses the same data-kal-field/
+  data-kal-gender/data-kal-patient-continue hooks either way, so the JS
+  validation and input-delegation logic in kal-booking-flow.js needs no
+  changes to cover both sizes — it was already written expecting exactly
+  this (see the comment above the `input` listener in that file). WhatsApp
+  Number + Email are wrapped in .kal-form-row, which CSS stacks on mobile
+  and puts side by side on desktop — the one genuine layout-only difference
+  on this step.
+
+  Left column / header pattern matches the other steps (chevron-left back
+  button + progress dots, then eyebrow + heading via the same reused
+  kal-step-doctor-select__intro classes as Slot Picker).
+{% endcomment %}
+
+<div class="kal-step-patient-details kal-step-shell">
+
+  <div class="kal-step-entry__info kal-step-shell__info">
+    <div class="kal-step-entry__info-content">
+      <h2 class="kal-step-entry__heading">Who is this visit for?</h2>
+      <p class="kal-step-entry__body-text">
+        Book a consultation in under a minute in-clinic or video. Confirmation
+        arrives instantly, no account required.
+      </p>
+    </div>
+    <div class="kal-step-entry__location">
+      <span class="kal-icon kal-icon--location">
+        <!-- ICON: location-pin (not received yet) -->
+      </span>
+      <span class="kal-step-entry__location-text">
+        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+      </span>
+    </div>
+  </div>
+
+  <div class="kal-step-shell__panel">
+
+    {%- render 'kal-booking-flow-step-header', back_target: 'slot-picker', step_number: 4, step_total: 5, next_label: 'Review & Payment' -%}
+
+    <div class="kal-step-shell__scroll">
+      <div class="kal-step-doctor-select__intro">
+        <h2 class="kal-step-doctor-select__heading">Appointment Details</h2>
+      </div>
+
+      {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
+
+      <div class="kal-step-doctor-select__intro">
+        <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
+      </div>
+
+      <div class="kal-form">
+        {%- comment -%}
+          Inline field errors — same pattern as the CMS's own forms
+          (app/lib/validation-messages.ts's requiredText/requiredSelect
+          wording, errors shown on a submit attempt and cleared per-field
+          as the visitor corrects it, not shown eagerly on page load).
+          Each error <p> starts hidden; kal-booking-flow.js's
+          validatePatientDetailsAndShowErrors() (run when Continue is
+          clicked) fills in the message and un-hides it, and the input
+          delegation clears it again the moment that specific field
+          changes.
+        {%- endcomment -%}
+        <div class="kal-form-field">
+          <label class="kal-form-label" for="kal-patient-name">Full name*</label>
+          <input
+            type="text"
+            id="kal-patient-name"
+            class="kal-form-input"
+            data-kal-field="name"
+            placeholder="Enter full name"
+            autocomplete="name"
+          >
+          <p class="kal-form-error" data-kal-field-error="name" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
+        </div>
+
+        <div class="kal-form-field">
+          <p class="kal-form-label">Gender*</p>
+          <div class="kal-gender-group" data-kal-gender-group>
+            <button type="button" class="kal-gender-btn" data-kal-gender="female">Female</button>
+            <button type="button" class="kal-gender-btn" data-kal-gender="male">Male</button>
+          </div>
+          <p class="kal-form-error" data-kal-field-error="gender" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
+        </div>
+
+        <div class="kal-form-row">
+          <div class="kal-form-field">
+            <label class="kal-form-label" for="kal-patient-whatsapp">Phone Number*</label>
+            {%- comment -%}
+              Real, functional country-code picker — 9 countries, matching
+              the CMS's own single source of truth for phone handling
+              (app/lib/phone-validation.ts's COUNTRY_PHONE_OPTIONS) exactly,
+              so this list and its digit-count rules don't drift from what
+              the backend already validates. Replaces the earlier
+              decorative +91-only chip; same look/position, now wired up.
+
+              A native <select> can't render a flag graphic in its own
+              closed state, so this is a custom button + listbox dropdown
+              instead (explicit decision: keep the flag). Each option
+              carries its dial code, min/max digit count, and its
+              start-digit rule as data attributes. data-kal-country-start
+              ports the CMS's MOBILE_START_DIGITS as-is (not flattened) —
+              one allowed-character-set per numbering-plan position,
+              "|"-separated (e.g. Germany's two-position "1|567" means
+              position 0 must be "1" and position 1 one of "5"/"6"/"7";
+              single-position countries like India's "6789" need no
+              separator). kal-booking-flow.js ports the same
+              matchesStartSoFar/matchesStartFully/sanitizePhoneDigits
+              logic the CMS forms use, so typing here is restricted the
+              same way — max digit count enforced live (not just at
+              submit), and a leading digit that can never be valid for
+              the selected country is dropped as you type instead of
+              being left sitting in the field.
+
+              The field's own identifier (data-kal-field="whatsapp") is
+              unchanged, since JS validation keys off that.
+            {%- endcomment -%}
+            <div class="kal-phone-input">
+              <div class="kal-country-picker" data-kal-country-picker>
+                <button
+                  type="button"
+                  class="kal-phone-input__country"
+                  data-kal-country-toggle
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                >
+                  <span class="kal-phone-input__flag" data-kal-country-flag>
+                    {%- render 'kal-booking-icons', icon_name: 'flag-in' -%}
+                  </span>
+                  <span class="kal-phone-input__code" data-kal-country-code>+91</span>
+                  <span class="kal-phone-input__chevron">
+                    {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
+                  </span>
+                </button>
+                <ul class="kal-country-picker__panel" data-kal-country-panel hidden role="listbox" aria-label="Country code">
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="IN" data-kal-country-dial="+91" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="6789" role="option" aria-selected="true">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-in' -%}</span>
+                      <span class="kal-country-picker__label">India</span>
+                      <span class="kal-country-picker__dial">+91</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="US" data-kal-country-dial="+1" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-us' -%}</span>
+                      <span class="kal-country-picker__label">United States</span>
+                      <span class="kal-country-picker__dial">+1</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="GB" data-kal-country-dial="+44" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="7" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-gb' -%}</span>
+                      <span class="kal-country-picker__label">United Kingdom</span>
+                      <span class="kal-country-picker__dial">+44</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="AE" data-kal-country-dial="+971" data-kal-country-min="9" data-kal-country-max="9" data-kal-country-start="5" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-ae' -%}</span>
+                      <span class="kal-country-picker__label">United Arab Emirates</span>
+                      <span class="kal-country-picker__dial">+971</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="SG" data-kal-country-dial="+65" data-kal-country-min="8" data-kal-country-max="8" data-kal-country-start="89" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-sg' -%}</span>
+                      <span class="kal-country-picker__label">Singapore</span>
+                      <span class="kal-country-picker__dial">+65</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="MY" data-kal-country-dial="+60" data-kal-country-min="9" data-kal-country-max="10" data-kal-country-start="1" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-my' -%}</span>
+                      <span class="kal-country-picker__label">Malaysia</span>
+                      <span class="kal-country-picker__dial">+60</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="AU" data-kal-country-dial="+61" data-kal-country-min="9" data-kal-country-max="9" data-kal-country-start="4" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-au' -%}</span>
+                      <span class="kal-country-picker__label">Australia</span>
+                      <span class="kal-country-picker__dial">+61</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="DE" data-kal-country-dial="+49" data-kal-country-min="10" data-kal-country-max="11" data-kal-country-start="1|567" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-de' -%}</span>
+                      <span class="kal-country-picker__label">Germany</span>
+                      <span class="kal-country-picker__dial">+49</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="JP" data-kal-country-dial="+81" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="789|0" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-jp' -%}</span>
+                      <span class="kal-country-picker__label">Japan</span>
+                      <span class="kal-country-picker__dial">+81</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <input
+                type="tel"
+                id="kal-patient-whatsapp"
+                class="kal-form-input kal-phone-input__field"
+                data-kal-field="whatsapp"
+                placeholder="10-digit mobile number"
+                autocomplete="tel"
+                inputmode="numeric"
+                maxlength="10"
+              >
+            </div>
+            <p class="kal-form-error" data-kal-field-error="whatsapp" hidden>
+              <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+              <span data-kal-field-error-text></span>
+            </p>
+          </div>
+
+          <div class="kal-form-field">
+            {%- comment -%}
+              Email is optional for India, compulsory for every other
+              country — explicit instruction. data-kal-email-optional /
+              data-kal-email-required toggle in kal-booking-flow.js's
+              selectCountry() (and isValidEmail() gates the Continue
+              button the same way), so switching country re-evaluates
+              this immediately, not just on submit.
+            {%- endcomment -%}
+            <label class="kal-form-label" for="kal-patient-email">
+              Email<span class="kal-form-label__required" data-kal-email-required hidden>*</span>
+              <span class="kal-form-label__optional" data-kal-email-optional>Optional</span>
+            </label>
+            <input
+              type="email"
+              id="kal-patient-email"
+              class="kal-form-input"
+              data-kal-field="email"
+              placeholder="Enter email address"
+              autocomplete="email"
+            >
+            <p class="kal-form-error" data-kal-field-error="email" hidden>
+              <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+              <span data-kal-field-error-text></span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {%- comment -%}
+      No longer disabled while invalid, and no longer a plain
+      data-kal-goto (which would navigate unconditionally on any click,
+      bypassing validation) — clicking now always runs
+      validatePatientDetailsAndShowErrors() first; it only calls
+      goToStep('confirmation') itself once every field passes. Matches
+      the CMS's own submit-then-validate pattern instead of a silent
+      disabled button with no explanation of what's missing.
+    {%- endcomment -%}
+    <div class="kal-step-shell__footer">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-patient-continue>
+        Continue
+      </button>
+    </div>
+
+  </div>
+
+</div>
+>>>>>>> origin/main
