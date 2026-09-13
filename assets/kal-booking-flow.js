@@ -789,15 +789,53 @@ document.addEventListener('DOMContentLoaded', () => {
   // COUNTRY_PHONE_OPTIONS (app/lib/phone-validation.ts) exactly, so this
   // doesn't drift from what the backend already validates. Defaults to
   // India, matching the picker's own default-selected markup.
-  // `start` flattens the CMS's MOBILE_START_DIGITS into one allowed-
-  // first-digit set per country (see this step's own liquid comment) —
-  // an empty string means no starting-digit restriction (e.g. US).
+  // `start` is the same per-position MOBILE_START_DIGITS rule the CMS
+  // uses (an array of allowed-character-sets, one per numbering-plan
+  // position — see this step's own liquid comment) — null means no
+  // starting-digit restriction (e.g. US).
   const selectedCountry = {
     iso: 'IN',
     dial: '+91',
     min: 10,
     max: 10,
-    start: '6789',
+    start: ['6789'],
+  };
+
+  // Ported from the CMS's app/lib/phone-validation.ts (matchesStartSoFar /
+  // matchesStartFully / sanitizePhoneDigits) so typing here is restricted
+  // exactly the same way the CMS's own phone fields are, not by a
+  // simplified re-guess of the same rules.
+
+  // True if every position typed so far is still consistent with `rule` —
+  // even if `digits` is shorter than `rule` (so a number that's still
+  // mid-typing isn't rejected before it's had a chance to complete).
+  const matchesStartSoFar = (rule, digits) => {
+    const checkedLength = Math.min(rule.length, digits.length);
+    for (let i = 0; i < checkedLength; i++) {
+      if (!rule[i].includes(digits[i])) return false;
+    }
+    return true;
+  };
+
+  // True only once `digits` is long enough to satisfy every position of `rule`.
+  const matchesStartFully = (rule, digits) => {
+    if (digits.length < rule.length) return false;
+    return matchesStartSoFar(rule, digits);
+  };
+
+  // Strips non-digits and, when the selected country has a known mobile
+  // start-digit rule, drops any leading digits that can never be valid as
+  // the user types — so a number that can never validate isn't even
+  // enterable, rather than being caught later at submit time. Also
+  // truncates to maxDigits, same as the CMS's input maxLength.
+  const sanitizePhoneDigits = (raw, rule, maxDigits) => {
+    let digits = raw.replace(/\D/g, '');
+    if (rule) {
+      while (digits.length > 0 && !matchesStartSoFar(rule, digits)) {
+        digits = digits.slice(1);
+      }
+    }
+    return digits.slice(0, maxDigits);
   };
 
   const setCountryPickerOpen = (open) => {
@@ -817,7 +855,11 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedCountry.dial = optionEl.dataset.kalCountryDial;
     selectedCountry.min = Number(optionEl.dataset.kalCountryMin);
     selectedCountry.max = Number(optionEl.dataset.kalCountryMax);
-    selectedCountry.start = optionEl.dataset.kalCountryStart || '';
+    // "|"-separated positions (see this option's own liquid comment); no
+    // attribute value (US) means no starting-digit rule for this country.
+    selectedCountry.start = optionEl.dataset.kalCountryStart
+      ? optionEl.dataset.kalCountryStart.split('|')
+      : null;
 
     // Clones the picked option's own flag markup into the toggle's flag
     // slot instead of re-deriving an icon name in JS — keeps the SVG
