@@ -246,8 +246,17 @@
           </div>
 
           <div class="kal-form-field">
+            {%- comment -%}
+              Email is optional for India, compulsory for every other
+              country — explicit instruction. data-kal-email-optional /
+              data-kal-email-required toggle in kal-booking-flow.js's
+              selectCountry() (and isValidEmail() gates the Continue
+              button the same way), so switching country re-evaluates
+              this immediately, not just on submit.
+            {%- endcomment -%}
             <label class="kal-form-label" for="kal-patient-email">
-              Email <span class="kal-form-label__optional">Optional</span>
+              Email<span class="kal-form-label__required" data-kal-email-required hidden>*</span>
+              <span class="kal-form-label__optional" data-kal-email-optional>Optional</span>
             </label>
             <input
               type="email"
