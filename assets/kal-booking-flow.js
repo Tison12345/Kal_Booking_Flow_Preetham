@@ -1187,7 +1187,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('input', (e) => {
     const field = e.target.closest('[data-kal-field]');
     if (!field) return;
+    // Same restriction as the CMS's phone inputs: strip non-digits, drop
+    // a leading digit that can never be valid for the selected country
+    // as it's typed, and cap at that country's max digit count — rather
+    // than just checking the final value at submit time.
+    if (field.dataset.kalField === 'whatsapp') {
+      field.value = sanitizePhoneDigits(field.value, selectedCountry.start, selectedCountry.max);
+    }
     patientDetails[field.dataset.kalField] = field.value;
     updatePatientContinueButton();
+  });
+
+  // Blocks letters from ever appearing in the phone field — inputmode="numeric"
+  // only hints at a numeric mobile keyboard, it doesn't stop a physical
+  // keyboard, and the input handler above would otherwise strip a typed
+  // letter only after a visible flash of it. Same extra guard the CMS's
+  // own phone inputs use.
+  document.addEventListener('keydown', (e) => {
+    const field = e.target.closest('[data-kal-field="whatsapp"]');
+    if (!field) return;
+    if (!e.ctrlKey && !e.metaKey && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+      e.preventDefault();
+    }
   });
 });
