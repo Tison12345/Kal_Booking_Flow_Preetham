@@ -218,11 +218,14 @@ document.addEventListener('DOMContentLoaded', () => {
       renderConfirmationSummary();
     }
 
-    // Refreshed every time, not cached — the selected facility can change
-    // between visits to this step (pick a different clinic, go back).
-    if (stepName === 'doctor-select') {
-      loadDoctorsForFacility();
-    }
+    // DISCONNECTED for now — the backend branch (preetham) this calls
+    // isn't deployed anywhere yet, so there's nothing to fetch from.
+    // loadDoctorsForFacility() itself is untouched and ready; re-enable
+    // by uncommenting this block once that's deployed. Doctor Select's
+    // liquid is back to the static mockup card in the meantime.
+    // if (stepName === 'doctor-select') {
+    //   loadDoctorsForFacility();
+    // }
 
     if (stepName === 'therapy-confirmed') {
       renderTherapyConfirmedSummary();
@@ -773,6 +776,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('[data-kal-close]')) {
       closeFlow();
     }
+
+    // Concern Select's floating scroll hint (mobile only, see that
+    // step's own liquid comment) — scrolls its own step's scroll region
+    // down by roughly one page, rather than jumping straight to the
+    // bottom, so it reads as "there's more below" rather than "skip to
+    // the end".
+    const scrollHintTrigger = e.target.closest('[data-kal-scroll-hint]');
+    if (scrollHintTrigger) {
+      const scrollRegion = scrollHintTrigger.closest('.kal-step-shell__panel')?.querySelector('.kal-step-shell__scroll');
+      if (scrollRegion) {
+        scrollRegion.scrollBy({ top: scrollRegion.clientHeight * 0.8, behavior: 'smooth' });
+      }
+    }
+
     const gotoTrigger = e.target.closest('[data-kal-goto]');
     if (gotoTrigger) {
       goToStep(gotoTrigger.dataset.kalGoto);

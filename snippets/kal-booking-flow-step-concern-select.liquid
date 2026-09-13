@@ -111,14 +111,15 @@
     </div>
 
     {%- comment -%}
-      Mobile-only floating scroll hint — purely visual, signals more
-      concerns below without needing a click handler. Positioned relative
-      to the panel so it stays fixed near the bottom regardless of scroll
-      position. Hidden at 750px+, see CSS.
+      Mobile-only floating scroll hint — signals more concerns below AND
+      scrolls the list down a page when clicked (see
+      data-kal-scroll-hint's click handler in kal-booking-flow.js).
+      Positioned relative to the panel so it stays fixed near the bottom
+      regardless of scroll position. Hidden at 750px+, see CSS.
     {%- endcomment -%}
-    <div class="kal-concern-select__scroll-hint" aria-hidden="true">
+    <button type="button" class="kal-concern-select__scroll-hint" data-kal-scroll-hint aria-label="Scroll down">
       {%- render 'kal-booking-icons', icon_name: 'chevron-right' -%}
-    </div>
+    </button>
 
     {%- comment -%}
       Per the updated Figma spec, this footer isn't just a disabled button

@@ -3,30 +3,22 @@
   new Concern Select step, not directly from Entry — see that step's own
   comment for why.
 
-  RE-WIRED TO THE REAL BACKEND (reversing the prior revert described
-  below): kal-booking-flow.js now calls GET /api/public/doctors?facility_id=
-  for the facility selected earlier in the flow (see
-  docs/facility-selection-plan.md), and renders one card per doctor it
-  gets back. Rich content (degree, languages, experience, tags, next
-  slot, price, photo) still doesn't come from that API — per the
-  decision that marketing enters it directly in Shopify — so each real
-  doctor is matched, by doctor_id, against blocks configured in
-  sections/kal-doctor-cards.liquid. A real, bookable doctor with no
-  matching block yet still shows (a minimal name-only fallback card),
-  rather than silently disappearing.
+  BACKEND INTEGRATION BUILT, CURRENTLY DISCONNECTED: kal-booking-flow.js
+  has a working loadDoctorsForFacility() that calls
+  GET /api/public/doctors?facility_id= and matches results against
+  sections/kal-doctor-cards.liquid's blocks by doctor_id (see that
+  function's own comment for the full design — the doctor_id-join
+  approach that lets rich card content stay Shopify-editable without new
+  CMS schema work). It's just not being called right now — the backend
+  branch (`preetham` in the CMS repo) exists but isn't deployed anywhere
+  yet, so there's nothing for it to fetch from. The call site is
+  commented out in goToStep() in kal-booking-flow.js; search for
+  "loadDoctorsForFacility()" there to re-enable once that's deployed.
 
-  .kal-step-doctor-select__list below is intentionally empty in this
-  file now — kal-booking-flow.js populates it at runtime. Previously it
-  held one hardcoded {% render 'kal-booking-flow-doctor-card' %} call
-  (Dr. Neethu Jayachandran, static mockup values) — see git history if
-  that's ever needed as a reference again.
-
-  What was reverted before, for context: an earlier Figma pass (node
-  544:3781) removed a facility strip + this same GET /api/public/doctors
-  wiring in favor of a single fully static mockup card, explicitly
-  because the API "only returns { id, name }" and couldn't support the
-  richer card fields. The doctor_id-matched-Shopify-block approach above
-  is what closes that gap without needing new CMS schema work.
+  Until then, this list is back to the static mockup card it had before
+  that integration work (Dr. Neethu Jayachandran, hardcoded values) —
+  see kal-booking-flow-doctor-card.liquid's own comment for why a mockup
+  intentionally shows content no version of the real API provides.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
@@ -92,14 +84,19 @@
         </button>
       </div>
 
-      {%- comment -%}
-        Populated by kal-booking-flow.js's loadDoctorsForFacility() —
-        see this file's own top comment. data-kal-doctor-list-empty is
-        the copy shown before any facility is even selected / while the
-        fetch is in flight / if it fails.
-      {%- endcomment -%}
+      {%- assign doctor_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
       <div class="kal-step-doctor-select__list" data-kal-doctor-list>
-        <p class="kal-step-doctor-select__list-empty" data-kal-doctor-list-empty>Loading doctors&hellip;</p>
+        {%- render 'kal-booking-flow-doctor-card',
+          name: 'Dr. Neethu Jayachandran',
+          degree: 'BAMS',
+          languages: 'English &middot; Hindi &middot; Malayalam',
+          experience: '12 yrs experience',
+          tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
+          next_slot: 'Today, 10:30 AM',
+          price: '&#8377;500',
+          selected: true,
+          photo_url: doctor_photo_url
+        -%}
       </div>
     </div>
 

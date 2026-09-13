@@ -58,15 +58,26 @@
   }
 }
 
+/* Positioning only — appearance (circle/border/icon size) comes from the
+   shared .kal-step-doctor-select__back class also on this button now, so
+   Entry's close button matches every other step's instead of being a
+   plain "×" character. */
 .kal-booking-flow__close {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
   z-index: 2;
+}
+
+/* .kal-step-doctor-select__back's own `display: flex` (an author rule)
+   otherwise overrides the browser's `[hidden] { display: none }` default
+   regardless of the attribute — same class of bug as
+   .kal-step-shell__footer[hidden] elsewhere in this file. Without this,
+   goToStep()'s globalCloseBtn.hidden = (stepName !== 'entry') had no
+   visible effect once this button picked up that class, so it kept
+   showing on every step on top of that step's own close button. */
+.kal-booking-flow__close[hidden] {
+  display: none;
 }
 
 .kal-booking-flow__content {
@@ -888,6 +899,10 @@
 /* Mobile-only floating "more below" hint. Positioned against the panel
    (position:relative, set above) so it stays put regardless of the list's
    own scroll position, rather than scrolling away with the content. */
+/* Now a real <button> (was a decorative <div>) — clicking it scrolls the
+   list, see data-kal-scroll-hint's handler in kal-booking-flow.js. Needs
+   its own padding:0/font-family reset since those otherwise default from
+   the <button> element, not from this div-shaped design. */
 .kal-concern-select__scroll-hint {
   display: flex;
   align-items: center;
@@ -898,11 +913,13 @@
   transform: translateX(-50%) rotate(90deg);
   width: 36px;
   height: 36px;
+  padding: 0;
   border-radius: 999px;
   border: 0.5px solid #e5e5e5;
   background: rgba(242, 242, 242, 0.9);
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
-  pointer-events: none;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .kal-concern-select__scroll-hint svg {

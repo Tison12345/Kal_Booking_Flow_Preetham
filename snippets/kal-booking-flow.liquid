@@ -15,7 +15,17 @@
   data-whatsapp-number="{{ settings.kal_booking_whatsapp_number }}"
   data-doctor-photo-placeholder="{{ 'kal-doctor-photo-placeholder.jpg' | asset_url }}"
 >
-  <button class="kal-booking-flow__close" data-kal-close aria-label="Close">×</button>
+  {%- comment -%}
+    Only visible on Entry (see goToStep() in kal-booking-flow.js — hidden
+    on every other step, which render their own close button as part of
+    kal-booking-flow-step-header.liquid instead). Reuses that same
+    .kal-step-doctor-select__back circular/bordered treatment + 'close'
+    icon here too, instead of a plain "×" character, so Entry's close
+    button looks the same as every other step's.
+  {%- endcomment -%}
+  <button class="kal-booking-flow__close kal-step-doctor-select__back" data-kal-close aria-label="Close">
+    {%- render 'kal-booking-icons', icon_name: 'close' -%}
+  </button>
   <div class="kal-booking-flow__content" id="kal-booking-flow-content">
     <div data-kal-step="entry">
       {% render 'kal-booking-flow-step-entry' %}
