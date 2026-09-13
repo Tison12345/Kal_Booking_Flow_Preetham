@@ -884,6 +884,11 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedCountry.min === selectedCountry.max
           ? `${selectedCountry.min}-digit mobile number`
           : `${selectedCountry.min}-${selectedCountry.max} digit mobile number`;
+      // Same restriction the CMS's phone inputs enforce (maxLength +
+      // sanitize-on-input, see below) — doesn't retroactively touch
+      // whatever's already typed, only what can be typed from here on,
+      // matching the CMS's own country-switch behavior.
+      phoneField.maxLength = selectedCountry.max;
     }
 
     setCountryPickerOpen(false);
@@ -893,7 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const isValidWhatsapp = (value) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length < selectedCountry.min || digits.length > selectedCountry.max) return false;
-    if (selectedCountry.start && !selectedCountry.start.includes(digits.charAt(0))) return false;
+    if (selectedCountry.start && !matchesStartFully(selectedCountry.start, digits)) return false;
     return true;
   };
   const isValidEmail = (value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
