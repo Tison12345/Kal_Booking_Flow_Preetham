@@ -39,6 +39,7 @@
 }
 
 .kal-booking-flow {
+  position: relative;
   border: none;
   padding: 0;
   margin: 0;
@@ -835,6 +836,136 @@
   }
 }
 
+/* Facility switcher (Concern Select / Doctor Select / Slot Picker only,
+   see this header's own liquid comment) — the badge becomes a real
+   <button> inside a positioning wrapper, reusing the *same* dropdown-
+   panel/option classes (.kal-country-picker__*) as the Patient Details
+   phone field's country-code picker: both are just "click a badge, pick
+   from a short list", so one shared dropdown convention covers both
+   instead of two near-identical ones. */
+.kal-facility-picker {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+button.kal-step-header__location-badge {
+  font: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.kal-facility-picker__check {
+  display: none;
+  flex-shrink: 0;
+  color: var(--kal-color-primary);
+}
+
+.kal-facility-picker__check svg {
+  width: 16px;
+  height: 16px;
+}
+
+.kal-facility-picker__option[aria-selected="true"] .kal-facility-picker__check {
+  display: flex;
+}
+
+/* Facility-switch confirmation modal (kal-booking-flow.liquid) — a plain
+   absolutely-positioned overlay within the flow dialog rather than a
+   nested native <dialog> (nested top-layer dialogs aren't a solid
+   cross-browser pattern). .kal-booking-flow's own position:relative
+   (added above) is what scopes inset:0 to the flow's box instead of the
+   whole viewport. */
+.kal-facility-switch-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--kal-color-overlay);
+  box-sizing: border-box;
+}
+
+.kal-facility-switch-modal[hidden] {
+  display: none;
+}
+
+.kal-facility-switch-modal__card {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px 24px;
+  background: var(--kal-color-white);
+  border-radius: 20px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.kal-facility-switch-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  border: none;
+  background: none;
+  color: var(--kal-color-body);
+  cursor: pointer;
+  padding: 0;
+}
+
+.kal-facility-switch-modal__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.kal-facility-switch-modal__photo {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.kal-facility-switch-modal__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 30% 20%;
+}
+
+.kal-facility-switch-modal__text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--kal-color-heading);
+}
+
+.kal-facility-switch-modal__secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 24px;
+  border: 1px solid var(--kal-color-primary);
+  border-radius: 16px;
+  background: var(--kal-color-white);
+  color: var(--kal-color-primary);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
 /* Mobile-only step progress bar, directly below the header. Hidden
    entirely at 750px+ — desktop never had this element. */
 .kal-step-progress-bar {
@@ -1343,7 +1474,7 @@
 
 .kal-doctor-card__photo {
   flex-shrink: 0;
-  width: 76px;
+  width: 120px;
   align-self: stretch;
   border-radius: 14px;
   background: linear-gradient(135deg, #d8d4c9, #aab89d);
@@ -1366,7 +1497,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -1375,6 +1506,21 @@
   font-weight: 400;
   line-height: 130%;
   color: var(--kal-color-heading);
+}
+
+/* Per node 690:6562's Default state: degree + experience sit side by
+   side on one line, with languages on its own line below — not all
+   three stacked one-per-line the way this card originally shipped. */
+.kal-doctor-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kal-doctor-card__meta-line {
+  display: flex;
+  align-items: center;
+  gap: 36px;
 }
 
 .kal-doctor-card__meta-row {
@@ -1386,6 +1532,9 @@
   text-transform: capitalize;
 }
 
+/* rgba(245,241,234,0.5) per node 690:6562's Default state — the
+   selected state below overrides this back to plain white, preserving
+   the card's existing "on click" appearance exactly as it already was. */
 .kal-doctor-card__meta-icon {
   flex-shrink: 0;
   display: flex;
@@ -1394,6 +1543,10 @@
   width: 20px;
   height: 20px;
   border-radius: 999px;
+  background: rgba(245, 241, 234, 0.5);
+}
+
+.kal-doctor-card--selected .kal-doctor-card__meta-icon {
   background: var(--kal-color-white);
 }
 

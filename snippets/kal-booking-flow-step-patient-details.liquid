@@ -131,15 +131,20 @@
               A native <select> can't render a flag graphic in its own
               closed state, so this is a custom button + listbox dropdown
               instead (explicit decision: keep the flag). Each option
-              carries its dial code, min/max digit count, and an allowed-
-              first-digit set as data attributes — data-kal-country-start
-              flattens the CMS's MOBILE_START_DIGITS (which allows more
-              than one starting pattern for some countries, e.g. Germany's
-              "1" OR "567") into a single allowed-character set per
-              country. That's a reasonable client-side approximation for
-              this static picker, not a re-implementation of the full
-              multi-pattern validator — the backend remains the real
-              authority.
+              carries its dial code, min/max digit count, and its
+              start-digit rule as data attributes. data-kal-country-start
+              ports the CMS's MOBILE_START_DIGITS as-is (not flattened) —
+              one allowed-character-set per numbering-plan position,
+              "|"-separated (e.g. Germany's two-position "1|567" means
+              position 0 must be "1" and position 1 one of "5"/"6"/"7";
+              single-position countries like India's "6789" need no
+              separator). kal-booking-flow.js ports the same
+              matchesStartSoFar/matchesStartFully/sanitizePhoneDigits
+              logic the CMS forms use, so typing here is restricted the
+              same way — max digit count enforced live (not just at
+              submit), and a leading digit that can never be valid for
+              the selected country is dropped as you type instead of
+              being left sitting in the field.
 
               The field's own identifier (data-kal-field="whatsapp") is
               unchanged, since JS validation keys off that.
@@ -212,14 +217,14 @@
                     </button>
                   </li>
                   <li role="presentation">
-                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="DE" data-kal-country-dial="+49" data-kal-country-min="10" data-kal-country-max="11" data-kal-country-start="1567" role="option" aria-selected="false">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="DE" data-kal-country-dial="+49" data-kal-country-min="10" data-kal-country-max="11" data-kal-country-start="1|567" role="option" aria-selected="false">
                       <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-de' -%}</span>
                       <span class="kal-country-picker__label">Germany</span>
                       <span class="kal-country-picker__dial">+49</span>
                     </button>
                   </li>
                   <li role="presentation">
-                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="JP" data-kal-country-dial="+81" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="0789" role="option" aria-selected="false">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="JP" data-kal-country-dial="+81" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="789|0" role="option" aria-selected="false">
                       <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-jp' -%}</span>
                       <span class="kal-country-picker__label">Japan</span>
                       <span class="kal-country-picker__dial">+81</span>
@@ -235,6 +240,7 @@
                 placeholder="10-digit mobile number"
                 autocomplete="tel"
                 inputmode="numeric"
+                maxlength="10"
               >
             </div>
           </div>

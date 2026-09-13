@@ -26,6 +26,17 @@
 <div class="kal-doctor-card-source-list" hidden>
   {%- for block in section.blocks -%}
     {%- if block.type == 'doctor_profile' -%}
+      {%- comment -%}
+        The render tag's own keyword-argument parser doesn't accept a
+        filter chain inline (e.g. `photo_url: block.settings.photo |
+        image_url: width: 200` was a Liquid syntax error — "Expected
+        end_of_string but found pipe" — that failed this whole theme's
+        upload, taking every unrelated change down with it). Assigning
+        the filtered value to a variable first, then passing that plain
+        variable into render, works the same way every other filtered
+        value in this codebase is handled.
+      {%- endcomment -%}
+      {%- assign doctor_photo_url = block.settings.photo | image_url: width: 200 -%}
       <div class="kal-doctor-card-source" data-doctor-id="{{ block.settings.doctor_id }}" {{ block.shopify_attributes }}>
         {%- render 'kal-booking-flow-doctor-card',
           name: block.settings.name,
@@ -35,7 +46,7 @@
           tags: block.settings.tags,
           next_slot: block.settings.next_slot,
           price: block.settings.price,
-          photo_url: block.settings.photo | image_url: width: 200
+          photo_url: doctor_photo_url
         -%}
       </div>
     {%- endif -%}
@@ -44,7 +55,7 @@
 
 {% schema %}
 {
-  "name": "Doctor cards (Kal booking)",
+  "name": "Doctor cards (Kal)",
   "tag": "section",
   "class": "section",
   "settings": [],
@@ -111,7 +122,7 @@
   ],
   "presets": [
     {
-      "name": "Doctor cards (Kal booking)",
+      "name": "Doctor cards (Kal)",
       "blocks": [
         { "type": "doctor_profile" }
       ]

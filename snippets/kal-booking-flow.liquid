@@ -59,4 +59,44 @@
     </div>
   </div>
 
+  {%- comment -%}
+    Facility-switch confirmation — one shared instance for the whole flow,
+    not one per header render (kal-booking-flow-step-header.liquid's
+    facility dropdown renders 3x, once per switchable step, all
+    simultaneously in the DOM). Shown by kal-booking-flow.js's
+    openFacilitySwitchModal() when switching clinics on Doctor Select/Slot
+    Picker would move away from the currently-selected mock doctor's home
+    clinic — doctor/facility name text is filled in by JS right before
+    this becomes visible. MOCK data only (see kal-booking-flow.js's
+    FACILITY SWITCHER comment) until real per-clinic doctor data replaces
+    Doctor Select's 3 static mock doctor cards.
+
+    Both real actions (Change Clinic / Book an online slot) apply the
+    facility switch and send the visitor back to Doctor Select (step 2)
+    to pick a doctor again — the doctor they had selected was only valid
+    for their old clinic/mode combination, not the new one. The only
+    difference between the two is which consultation mode Doctor Select
+    lands on (in-clinic vs video), via the same setMode() the mode toggle
+    buttons there already use. The corner X is the sole "never mind, stay
+    on my current clinic" cancel action — no facility switch, no
+    navigation.
+  {%- endcomment -%}
+  <div class="kal-facility-switch-modal" data-kal-facility-switch-modal hidden>
+    <div class="kal-facility-switch-modal__card">
+      <button type="button" class="kal-facility-switch-modal__close" data-kal-facility-switch-cancel aria-label="Close">
+        {%- render 'kal-booking-icons', icon_name: 'close' -%}
+      </button>
+      <span class="kal-facility-switch-modal__photo">
+        <img src="{{ 'kal-doctor-photo-placeholder.jpg' | asset_url }}" alt="" width="56" height="56">
+      </span>
+      <p class="kal-facility-switch-modal__text">
+        <strong data-kal-facility-switch-doctor>Dr. Neethu Jayachandran</strong> is available in person only at the
+        <strong data-kal-facility-switch-facility>Koramangala</strong> Clinic.
+        Are you sure you want to switch clinics?
+      </p>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-facility-switch-clinic>Change Clinic</button>
+      <button type="button" class="kal-facility-switch-modal__secondary" data-kal-facility-switch-online>Book an online slot</button>
+    </div>
+  </div>
+
 </dialog>

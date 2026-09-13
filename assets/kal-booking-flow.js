@@ -76,6 +76,103 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll('[data-kal-facility-id]').forEach((el) => {
       el.dataset.kalFacilityId = facility.id;
     });
+
+    updateFacilityPickerSelection(facility.id);
+  };
+
+  // ----------------------------------------------------------------------
+  // FACILITY SWITCHER — the header's facility badge is a real dropdown on
+  // Concern Select / Doctor Select / Slot Picker only (see
+  // kal-booking-flow-step-header.liquid's own comment for why not every
+  // step). Everything here is MOCK data: a static 6-clinic list, and a
+  // name -> home-clinic map for Doctor Select's 3 static mock doctor
+  // cards (see that step's own liquid comment for why those are
+  // hardcoded). This exists so the "doctor not available here" warning
+  // (Continue / Change Clinic) has something real-ish to compare
+  // against until actual per-clinic doctor data replaces the mock cards
+  // — at that point this map is the only piece that needs to go.
+  // ----------------------------------------------------------------------
+  const MOCK_DOCTOR_HOME_FACILITY = {
+    'Dr. Neethu Jayachandran': 'koramangala',
+    'Dr. Arjun Menon': 'indiranagar',
+    'Dr. Priya Nair': 'whitefield',
+  };
+
+  const getCurrentFacility = () => getStoredFacility() || { id: 'indiranagar', name: 'Indiranagar' };
+
+  // Doctor Select's own click handler (selectDoctorCard, above) already
+  // toggles kal-doctor-card--selected on the real card — reading that
+  // back is more reliable than tracking a second copy of "which doctor"
+  // in a separate variable, and it's correct even before any click ever
+  // fires (one card starts pre-selected via the selected:true param).
+  const getSelectedDoctorName = () => {
+    const card = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
+    return card ? card.dataset.kalDoctorName : null;
+  };
+
+  const setFacilityPickerOpen = (wrapper, open) => {
+    const toggle = wrapper.querySelector('[data-kal-facility-toggle]');
+    const panel = wrapper.querySelector('[data-kal-facility-panel]');
+    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (panel) panel.hidden = !open;
+  };
+
+  const updateFacilityPickerSelection = (facilityId) => {
+    flow.querySelectorAll('[data-kal-facility-option]').forEach((opt) => {
+      opt.setAttribute('aria-selected', String(opt.dataset.kalFacilityOptionId === facilityId));
+    });
+  };
+
+  // Set right before the modal opens, read back if/when Continue is
+  // clicked — cleared on either button so a stale pick can't linger.
+  let pendingFacility = null;
+
+  const openFacilitySwitchModal = (facility, doctorName) => {
+    pendingFacility = facility;
+    const modal = flow.querySelector('[data-kal-facility-switch-modal]');
+    if (!modal) return;
+    modal.querySelectorAll('[data-kal-facility-switch-doctor]').forEach((el) => {
+      el.textContent = doctorName;
+    });
+    modal.querySelectorAll('[data-kal-facility-switch-facility]').forEach((el) => {
+      el.textContent = facility.name;
+    });
+    modal.hidden = false;
+  };
+
+  const closeFacilitySwitchModal = () => {
+    pendingFacility = null;
+    const modal = flow.querySelector('[data-kal-facility-switch-modal]');
+    if (modal) modal.hidden = true;
+  };
+
+  const applyFacilitySwitch = (facility) => {
+    storeFacility(facility);
+    applyStoredFacility();
+  };
+
+  const selectFacilityOption = (optionEl) => {
+    const wrapper = optionEl.closest('[data-kal-facility-picker]');
+    if (!wrapper) return;
+
+    const facility = { id: optionEl.dataset.kalFacilityOptionId, name: optionEl.dataset.kalFacilityName };
+    setFacilityPickerOpen(wrapper, false);
+
+    if (facility.id === getCurrentFacility().id) return;
+
+    // Concern Select (step 1) has no doctor on screen yet, so switching
+    // there never needs the warning — only Doctor Select (2) and Slot
+    // Picker (3), where one of the 3 mock doctor cards is already
+    // selected.
+    const step = Number(wrapper.dataset.kalFacilityPickerStep);
+    const doctorName = step >= 2 ? getSelectedDoctorName() : null;
+    const doctorHomeFacility = doctorName ? MOCK_DOCTOR_HOME_FACILITY[doctorName] : null;
+
+    if (doctorHomeFacility && facility.id !== doctorHomeFacility) {
+      openFacilitySwitchModal(facility, doctorName);
+    } else {
+      applyFacilitySwitch(facility);
+    }
   };
 
   // ----------------------------------------------------------------------
@@ -692,15 +789,53 @@ document.addEventListener('DOMContentLoaded', () => {
   // COUNTRY_PHONE_OPTIONS (app/lib/phone-validation.ts) exactly, so this
   // doesn't drift from what the backend already validates. Defaults to
   // India, matching the picker's own default-selected markup.
-  // `start` flattens the CMS's MOBILE_START_DIGITS into one allowed-
-  // first-digit set per country (see this step's own liquid comment) —
-  // an empty string means no starting-digit restriction (e.g. US).
+  // `start` is the same per-position MOBILE_START_DIGITS rule the CMS
+  // uses (an array of allowed-character-sets, one per numbering-plan
+  // position — see this step's own liquid comment) — null means no
+  // starting-digit restriction (e.g. US).
   const selectedCountry = {
     iso: 'IN',
     dial: '+91',
     min: 10,
     max: 10,
-    start: '6789',
+    start: ['6789'],
+  };
+
+  // Ported from the CMS's app/lib/phone-validation.ts (matchesStartSoFar /
+  // matchesStartFully / sanitizePhoneDigits) so typing here is restricted
+  // exactly the same way the CMS's own phone fields are, not by a
+  // simplified re-guess of the same rules.
+
+  // True if every position typed so far is still consistent with `rule` —
+  // even if `digits` is shorter than `rule` (so a number that's still
+  // mid-typing isn't rejected before it's had a chance to complete).
+  const matchesStartSoFar = (rule, digits) => {
+    const checkedLength = Math.min(rule.length, digits.length);
+    for (let i = 0; i < checkedLength; i++) {
+      if (!rule[i].includes(digits[i])) return false;
+    }
+    return true;
+  };
+
+  // True only once `digits` is long enough to satisfy every position of `rule`.
+  const matchesStartFully = (rule, digits) => {
+    if (digits.length < rule.length) return false;
+    return matchesStartSoFar(rule, digits);
+  };
+
+  // Strips non-digits and, when the selected country has a known mobile
+  // start-digit rule, drops any leading digits that can never be valid as
+  // the user types — so a number that can never validate isn't even
+  // enterable, rather than being caught later at submit time. Also
+  // truncates to maxDigits, same as the CMS's input maxLength.
+  const sanitizePhoneDigits = (raw, rule, maxDigits) => {
+    let digits = raw.replace(/\D/g, '');
+    if (rule) {
+      while (digits.length > 0 && !matchesStartSoFar(rule, digits)) {
+        digits = digits.slice(1);
+      }
+    }
+    return digits.slice(0, maxDigits);
   };
 
   const setCountryPickerOpen = (open) => {
@@ -720,7 +855,11 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedCountry.dial = optionEl.dataset.kalCountryDial;
     selectedCountry.min = Number(optionEl.dataset.kalCountryMin);
     selectedCountry.max = Number(optionEl.dataset.kalCountryMax);
-    selectedCountry.start = optionEl.dataset.kalCountryStart || '';
+    // "|"-separated positions (see this option's own liquid comment); no
+    // attribute value (US) means no starting-digit rule for this country.
+    selectedCountry.start = optionEl.dataset.kalCountryStart
+      ? optionEl.dataset.kalCountryStart.split('|')
+      : null;
 
     // Clones the picked option's own flag markup into the toggle's flag
     // slot instead of re-deriving an icon name in JS — keeps the SVG
@@ -745,6 +884,11 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedCountry.min === selectedCountry.max
           ? `${selectedCountry.min}-digit mobile number`
           : `${selectedCountry.min}-${selectedCountry.max} digit mobile number`;
+      // Same restriction the CMS's phone inputs enforce (maxLength +
+      // sanitize-on-input, see below) — doesn't retroactively touch
+      // whatever's already typed, only what can be typed from here on,
+      // matching the CMS's own country-switch behavior.
+      phoneField.maxLength = selectedCountry.max;
     }
 
     setCountryPickerOpen(false);
@@ -754,7 +898,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const isValidWhatsapp = (value) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length < selectedCountry.min || digits.length > selectedCountry.max) return false;
-    if (selectedCountry.start && !selectedCountry.start.includes(digits.charAt(0))) return false;
+    if (selectedCountry.start && !matchesStartFully(selectedCountry.start, digits)) return false;
     return true;
   };
   const isValidEmail = (value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -989,6 +1133,46 @@ document.addEventListener('DOMContentLoaded', () => {
         setCountryPickerOpen(false);
       }
     }
+
+    // Facility switcher — same toggle/option/click-outside pattern again,
+    // plus the two switch-confirmation modal buttons. The header renders
+    // this dropdown 3 times (once per switchable step, all in the DOM at
+    // once — see kal-booking-flow.liquid), so every lookup here is
+    // scoped to whichever wrapper/toggle the click actually happened in,
+    // never assumed to be "the only one".
+    const facilityToggle = e.target.closest('[data-kal-facility-toggle]');
+    const facilityOption = e.target.closest('[data-kal-facility-option]');
+    const facilitySwitchClinic = e.target.closest('[data-kal-facility-switch-clinic]');
+    const facilitySwitchOnline = e.target.closest('[data-kal-facility-switch-online]');
+    const facilitySwitchCancel = e.target.closest('[data-kal-facility-switch-cancel]');
+
+    if (facilitySwitchClinic || facilitySwitchOnline) {
+      // Both real actions apply the pending facility switch and send the
+      // visitor back to Doctor Select to pick a doctor again — whoever
+      // was selected only made sense for the old clinic/mode combination.
+      // Read pendingFacility before closeFacilitySwitchModal() clears it.
+      const facility = pendingFacility;
+      closeFacilitySwitchModal();
+      if (facility) applyFacilitySwitch(facility);
+      setMode(facilitySwitchClinic ? 'in-clinic' : 'video');
+      goToStep('doctor-select');
+    } else if (facilitySwitchCancel) {
+      closeFacilitySwitchModal();
+    } else if (facilityOption) {
+      selectFacilityOption(facilityOption);
+    } else if (facilityToggle) {
+      const wrapper = facilityToggle.closest('[data-kal-facility-picker]');
+      if (wrapper) {
+        const isOpen = facilityToggle.getAttribute('aria-expanded') === 'true';
+        setFacilityPickerOpen(wrapper, !isOpen);
+      }
+    } else {
+      flow.querySelectorAll('[data-kal-facility-picker]').forEach((wrapper) => {
+        if (!wrapper.contains(e.target)) {
+          setFacilityPickerOpen(wrapper, false);
+        }
+      });
+    }
   });
 
   // Click on the backdrop (outside the dialog box itself) closes it
@@ -1003,7 +1187,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('input', (e) => {
     const field = e.target.closest('[data-kal-field]');
     if (!field) return;
+    // Same restriction as the CMS's phone inputs: strip non-digits, drop
+    // a leading digit that can never be valid for the selected country
+    // as it's typed, and cap at that country's max digit count — rather
+    // than just checking the final value at submit time.
+    if (field.dataset.kalField === 'whatsapp') {
+      field.value = sanitizePhoneDigits(field.value, selectedCountry.start, selectedCountry.max);
+    }
     patientDetails[field.dataset.kalField] = field.value;
     updatePatientContinueButton();
+  });
+
+  // Blocks letters from ever appearing in the phone field — inputmode="numeric"
+  // only hints at a numeric mobile keyboard, it doesn't stop a physical
+  // keyboard, and the input handler above would otherwise strip a typed
+  // letter only after a visible flash of it. Same extra guard the CMS's
+  // own phone inputs use.
+  document.addEventListener('keydown', (e) => {
+    const field = e.target.closest('[data-kal-field="whatsapp"]');
+    if (!field) return;
+    if (!e.ctrlKey && !e.metaKey && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+      e.preventDefault();
+    }
   });
 });
