@@ -97,6 +97,28 @@
           selected: true,
           photo_url: doctor_photo_url
         -%}
+        {%- render 'kal-booking-flow-doctor-card',
+          name: 'Dr. Arjun Menon',
+          degree: 'BAMS, MD (Ayurveda)',
+          languages: 'English &middot; Malayalam &middot; Tamil',
+          experience: '8 yrs experience',
+          tags: 'Joint Pain,Skin Care,Weight Management',
+          next_slot: 'Today, 2:00 PM',
+          price: '&#8377;500',
+          selected: false,
+          photo_url: doctor_photo_url
+        -%}
+        {%- render 'kal-booking-flow-doctor-card',
+          name: 'Dr. Priya Nair',
+          degree: 'BAMS',
+          languages: 'English &middot; Hindi &middot; Malayalam',
+          experience: '15 yrs experience',
+          tags: "Women's Health,Digestive Care,Preventive Health",
+          next_slot: 'Tomorrow, 9:15 AM',
+          price: '&#8377;600',
+          selected: false,
+          photo_url: doctor_photo_url
+        -%}
       </div>
     </div>
 
