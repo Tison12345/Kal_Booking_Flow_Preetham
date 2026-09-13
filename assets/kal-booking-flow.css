@@ -23,6 +23,19 @@
   --kal-font-size-subtitle: 12px;
   --kal-line-height-subtitle: 20px;
   --kal-font-size-location: 12px;
+
+  /* Spacing — three roles this flow actually uses, not a full scale like
+     the real theme's --spacing-1..96. Every step's side-inset, footer, and
+     content-wrapper padding should reach for one of these instead of a
+     retyped pixel value, so a page can't quietly drift out of alignment
+     with its neighbors the way .kal-before-visit had (see its own comment,
+     removed once it switched to --kal-space-inset). New one-off values are
+     fine when there's a real, comment-worthy reason a spot needs to
+     differ — same discipline the real theme uses, just at this flow's
+     smaller scale. */
+  --kal-space-tight: 8px;
+  --kal-space-inset-sm: 16px;
+  --kal-space-inset: 24px;
 }
 
 .kal-booking-flow {
@@ -647,7 +660,7 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding: 24px 24px 0;
+  padding: var(--kal-space-inset) var(--kal-space-inset) 0;
 }
 
 @media screen and (min-width: 750px) {
@@ -669,7 +682,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 24px 24px;
+  padding: 0 var(--kal-space-inset) var(--kal-space-inset);
   flex-shrink: 0;
 }
 
@@ -886,14 +899,14 @@
    position was specified and duplicating it into a mobile-only /
    desktop-only pair for a single element wasn't worth the complexity. */
 .kal-concern-select__banner {
-  margin: 0 24px;
+  margin: 0 var(--kal-space-inset);
 }
 
 .kal-concern-select__list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 0 24px 24px;
+  gap: var(--kal-space-inset-sm);
+  padding: 0 var(--kal-space-inset) var(--kal-space-inset);
 }
 
 /* Mobile-only floating "more below" hint. Positioned against the panel
@@ -1040,8 +1053,8 @@
 .kal-concern-select__banner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
+  gap: var(--kal-space-tight);
+  padding: var(--kal-space-tight);
   border-radius: 4px;
   background: linear-gradient(to right, rgba(235, 242, 239, 0.5) 30.288%, rgba(255, 255, 255, 0.5));
   box-sizing: border-box;
@@ -1184,8 +1197,8 @@
 .kal-step-doctor-select__intro {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 24px;
+  gap: var(--kal-space-tight);
+  padding: 0 var(--kal-space-inset);
 }
 
 .kal-step-doctor-select__eyebrow {
@@ -1655,15 +1668,16 @@
    this section. 24px at desktop is also what keeps the calendar-icon
    button (inside .kal-slot-section__head) clear of the scrollbar — at
    0 right padding that icon sits flush against the scroll container's
-   edge, right where the scrollbar renders. */
-.kal-step-slot-picker .kal-slot-section {
-  padding: 0 16px;
-}
+   edge, right where the scrollbar renders.
 
-@media screen and (min-width: 750px) {
-  .kal-step-slot-picker .kal-slot-section {
-    padding: 0 24px;
-  }
+   Was 16px on mobile — an unexplained one-off that left "Choose a Slot"
+   and the day strip sitting narrower than the appointment card and intro
+   heading above them (both 24px). No comment ever justified that specific
+   mobile value (only the desktop 24px had a stated reason), so it reads
+   as drift rather than a deliberate choice — now matches everything else
+   at var(--kal-space-inset). */
+.kal-step-slot-picker .kal-slot-section {
+  padding: 0 var(--kal-space-inset);
 }
 
 .kal-slot-section__head {
@@ -1884,17 +1898,14 @@
    not shared with Therapy Slot (which has no tabs, no mode axis, just a
    single flat list). Only one [data-kal-slot-panel] is visible at a
    time, toggled by kal-booking-flow.js's setSlotTab. */
+/* Side padding was 16px on mobile / 24px on desktop — same unexplained
+   mobile drift as .kal-slot-section just above, now matching the 24px
+   every other element on this step uses at every width. */
 .kal-slot-tabs {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 0 16px;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-slot-tabs {
-    padding: 0 24px;
-  }
+  gap: var(--kal-space-inset-sm);
+  padding: 0 var(--kal-space-inset);
 }
 
 .kal-slot-tabs__bar {
@@ -2019,8 +2030,8 @@
 .kal-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 0 24px;
+  gap: var(--kal-space-inset);
+  padding: 0 var(--kal-space-inset);
 }
 
 /* Desktop: the panel already supplies 16px of horizontal padding (Figma's
@@ -2082,9 +2093,9 @@
   border-color: var(--kal-color-primary);
 }
 
-/* Phone Number field's decorative +91/India-flag prefix chip (node
-   438:7643) — see this step's own liquid comment for why it's
-   non-functional. Sits flush against the number input to read as one
+/* Phone Number field's country-code picker (node 438:7643 for the
+   overall pill look) — a real, functional 9-country dropdown, not a
+   fixed +91 display. Sits flush against the number input to read as one
    combined pill. */
 .kal-phone-input {
   display: flex;
@@ -2092,43 +2103,53 @@
   width: 100%;
 }
 
+/* Positions the dropdown panel relative to the toggle button — the
+   button itself keeps the exact pill styling the old decorative span
+   had, just as a real <button> now. */
+.kal-country-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Explicit height:40px, matching .kal-form-input's own fixed height,
+   rather than relying on the parent's align-items:stretch to happen to
+   compute the same number — that depended on this box's content
+   (flag/code text/chevron) plus its padding/border landing on exactly
+   40px, which it didn't quite, so this box rendered visibly shorter
+   than the phone number field beside it. */
 .kal-phone-input__country {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
+  height: 40px;
   padding: 8px;
   border: 1px solid #e5e1d9;
   border-right: none;
   border-radius: 12px 0 0 12px;
   background: #faf8f4;
   box-sizing: border-box;
+  font: inherit;
+  cursor: pointer;
 }
 
 .kal-phone-input__flag {
-  display: flex;
-  flex-direction: column;
-  width: 24px;
-  height: 16px;
+  display: block;
+  width: 20px;
+  height: 14px;
   border-radius: 2px;
   overflow: hidden;
   flex-shrink: 0;
 }
 
-.kal-phone-input__flag-stripe {
-  flex: 1;
-}
-
-.kal-phone-input__flag-stripe--saffron {
-  background: #f93;
-}
-
-.kal-phone-input__flag-stripe--white {
-  background: #ffffff;
-}
-
-.kal-phone-input__flag-stripe--green {
-  background: #138808;
+/* Flag SVGs (kal-booking-icons.liquid's flag-* cases) intentionally ship
+   with no width/height of their own — real flags have different aspect
+   ratios, so sizing is controlled here instead of baked into each icon.
+   Default preserveAspectRatio (xMidYMid meet) letterboxes rather than
+   distorting any flag that isn't exactly this box's ratio. */
+.kal-phone-input__flag svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .kal-phone-input__code {
@@ -2154,6 +2175,58 @@
   border-radius: 0 12px 12px 0;
 }
 
+.kal-country-picker__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  width: 240px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--kal-color-white);
+  border: 1px solid #e5e1d9;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.kal-country-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--kal-color-heading);
+  text-align: left;
+  cursor: pointer;
+}
+
+.kal-country-picker__option:hover,
+.kal-country-picker__option[aria-selected="true"] {
+  background: #faf8f4;
+}
+
+.kal-country-picker__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kal-country-picker__dial {
+  flex-shrink: 0;
+  color: #808080;
+  font-size: 13px;
+}
+
 .kal-gender-group {
   display: flex;
   gap: 8px;
@@ -2175,6 +2248,21 @@
 .kal-gender-btn--active {
   border-color: #191919;
   color: #0b0b0c;
+}
+
+/* 24px between each stacked block ("Appointment Details" heading -> the
+   appointment card -> "Who is this visit for?" heading -> the form),
+   matching Slot Picker's own .kal-step-shell__scroll gap and the Figma
+   export's spacing between these same sections. This rule was missing
+   entirely on mobile — despite the comment below claiming to follow
+   "the same page-level-scroll strategy as Slot Picker's mobile
+   composition", Slot Picker's own rule DOES set this gap unconditionally
+   (not just at 750px+); without it here these blocks sat flush against
+   each other with zero space between them. */
+.kal-step-patient-details .kal-step-shell__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 /* Mobile: the form sits directly after the intro, no internal scroll
@@ -2256,20 +2344,22 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--kal-space-inset-sm);
   /* Was 16px on mobile (an old value from before this step's Figma
      redesign pass) vs. 24px on desktop and vs. .kal-step-shell__footer's
      own 24px side padding — the 8px gap made the Continue button read as
      shifted/indented relative to the details card and payment cards
      above it. The redesign's own export insets everything at 24px on
      mobile too (see this step's own liquid comment), so this now just
-     matches the footer instead of fighting it. */
-  padding: 0 24px;
+     matches the footer instead of fighting it. Padding uses
+     --kal-space-inset directly (not the mobile-only gap variable above),
+     since it's the same 24px at every width here. */
+  padding: 0 var(--kal-space-inset);
 }
 
 @media screen and (min-width: 750px) {
   .kal-step-confirmation .kal-step-shell__scroll {
-    gap: 24px;
+    gap: var(--kal-space-inset);
   }
 }
 
@@ -2475,14 +2565,14 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 16px;
-  padding-top: 24px;
+  gap: var(--kal-space-inset-sm);
+  padding-top: var(--kal-space-inset);
 }
 
 @media screen and (min-width: 750px) {
   .kal-step-booking-confirmed .kal-step-shell__scroll {
     padding-top: 0;
-    gap: 24px;
+    gap: var(--kal-space-inset);
   }
 
   /* The one genuine content difference between mobile and desktop for

@@ -688,7 +688,75 @@ document.addEventListener('DOMContentLoaded', () => {
     email: '',
   };
 
-  const isValidWhatsapp = (value) => value.replace(/\D/g, '').length >= 10;
+  // Country-code picker — real 9-country list matching the CMS's own
+  // COUNTRY_PHONE_OPTIONS (app/lib/phone-validation.ts) exactly, so this
+  // doesn't drift from what the backend already validates. Defaults to
+  // India, matching the picker's own default-selected markup.
+  // `start` flattens the CMS's MOBILE_START_DIGITS into one allowed-
+  // first-digit set per country (see this step's own liquid comment) —
+  // an empty string means no starting-digit restriction (e.g. US).
+  const selectedCountry = {
+    iso: 'IN',
+    dial: '+91',
+    min: 10,
+    max: 10,
+    start: '6789',
+  };
+
+  const setCountryPickerOpen = (open) => {
+    const wrapper = flow.querySelector('[data-kal-country-picker]');
+    if (!wrapper) return;
+    const toggle = wrapper.querySelector('[data-kal-country-toggle]');
+    const panel = wrapper.querySelector('[data-kal-country-panel]');
+    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (panel) panel.hidden = !open;
+  };
+
+  const selectCountry = (optionEl) => {
+    const wrapper = optionEl.closest('[data-kal-country-picker]');
+    if (!wrapper) return;
+
+    selectedCountry.iso = optionEl.dataset.kalCountryIso;
+    selectedCountry.dial = optionEl.dataset.kalCountryDial;
+    selectedCountry.min = Number(optionEl.dataset.kalCountryMin);
+    selectedCountry.max = Number(optionEl.dataset.kalCountryMax);
+    selectedCountry.start = optionEl.dataset.kalCountryStart || '';
+
+    // Clones the picked option's own flag markup into the toggle's flag
+    // slot instead of re-deriving an icon name in JS — keeps the SVG
+    // markup itself single-sourced from the liquid render.
+    const toggleFlag = wrapper.querySelector('[data-kal-country-flag]');
+    const optionFlag = optionEl.querySelector('.kal-phone-input__flag');
+    if (toggleFlag && optionFlag) {
+      toggleFlag.innerHTML = optionFlag.innerHTML;
+    }
+
+    wrapper.querySelectorAll('[data-kal-country-code]').forEach((el) => {
+      el.textContent = selectedCountry.dial;
+    });
+
+    wrapper.querySelectorAll('[data-kal-country-option]').forEach((btn) => {
+      btn.setAttribute('aria-selected', String(btn === optionEl));
+    });
+
+    const phoneField = flow.querySelector('[data-kal-field="whatsapp"]');
+    if (phoneField) {
+      phoneField.placeholder =
+        selectedCountry.min === selectedCountry.max
+          ? `${selectedCountry.min}-digit mobile number`
+          : `${selectedCountry.min}-${selectedCountry.max} digit mobile number`;
+    }
+
+    setCountryPickerOpen(false);
+    updatePatientContinueButton();
+  };
+
+  const isValidWhatsapp = (value) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length < selectedCountry.min || digits.length > selectedCountry.max) return false;
+    if (selectedCountry.start && !selectedCountry.start.includes(digits.charAt(0))) return false;
+    return true;
+  };
   const isValidEmail = (value) => value === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const isPatientDetailsValid = () =>
@@ -901,6 +969,25 @@ document.addEventListener('DOMContentLoaded', () => {
           setTherapyDropdownOpen(wrapper, false);
         }
       });
+    }
+
+    // Patient Details' country-code picker — same toggle/option/
+    // click-outside pattern as the therapy dropdown above, kept as its
+    // own independent if/else-if chain rather than folded into that one
+    // since the two dropdowns are unrelated.
+    const countryToggle = e.target.closest('[data-kal-country-toggle]');
+    const countryOption = e.target.closest('[data-kal-country-option]');
+
+    if (countryOption) {
+      selectCountry(countryOption);
+    } else if (countryToggle) {
+      const isOpen = countryToggle.getAttribute('aria-expanded') === 'true';
+      setCountryPickerOpen(!isOpen);
+    } else {
+      const wrapper = flow.querySelector('[data-kal-country-picker]');
+      if (wrapper && !wrapper.contains(e.target)) {
+        setCountryPickerOpen(false);
+      }
     }
   });
 
