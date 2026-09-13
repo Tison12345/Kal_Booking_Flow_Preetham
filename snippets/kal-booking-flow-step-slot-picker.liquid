@@ -28,15 +28,19 @@
     data-kal-slot-start/-end attributes the existing click handler and
     Confirmation-summary formatting already expect, so slot selection
     still works with no JS rewrite needed for that part.
-  - The calendar icon next to "CHOOSE A SLOT" is decorative only now (no
-    data-kal-open-calendar) — the calendar MODAL flow doesn't fit a fully
-    static day strip. The calendar modal this used to share with Therapy
-    Slot's old date picker is gone entirely now — that screen was
-    replaced by a therapy-category checkbox list in its own later flow
-    change (node 539:2128, see that step's own liquid comment), so
-    nothing opens the modal anymore and it (kal-booking-flow.liquid's
-    kal-calendar-modal, its CSS, and its JS) was removed rather than left
-    dead.
+  - The calendar icon next to "CHOOSE A SLOT" (data-kal-open-calendar)
+    RE-OPENS the calendar modal again — rebuilt to enforce the same date
+    restrictions as the real CMS's staff-side SlotPicker.tsx (today
+    bookable, nothing before today or beyond today+90 days selectable —
+    see kal-booking-flow.js's CALENDAR comment for exact citations).
+    Picking a date within the static day-strip's 5-day window
+    (offsets 0-4) just activates that chip; picking one further out
+    updates the selected-date label instead, since the day-strip itself
+    is still static and has no real per-day data beyond those 5 days.
+    Therapy Slot's old date picker is unaffected by this — that screen
+    was replaced by a therapy-category checkbox list in its own later
+    flow change (node 539:2128, see that step's own liquid comment), and
+    still has no calendar of its own.
   - Continue is now a plain always-enabled button (a slot is already
     selected by default, matching the Figma screenshot), not a
     disabled-until-selected button with dynamic "Continue with <date>"
