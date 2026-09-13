@@ -76,6 +76,45 @@
         "padding_bottom": 36
       }
     },
+    "kal_clinic_list_test": {
+      "type": "kal-clinic-list",
+      "settings": {
+        "section_heading": "Find a Clinic (test)"
+      },
+      "blocks": {
+        "clinic-1": {
+          "type": "clinics_list",
+          "settings": {
+            "location_name": "Kerala Ayurveda, Indiranagar",
+            "clinic_address": "<p>100 Feet Road, Indiranagar, Bengaluru, Karnataka</p>",
+            "facility_id": "185b85d7-fad2-405d-b8ea-13dc683fbde8",
+            "location_url_clnk": "",
+            "link_clinic_url": ""
+          }
+        },
+        "clinic-2": {
+          "type": "clinics_list",
+          "settings": {
+            "location_name": "Kerala Ayurveda, HSR Layout (PLACEHOLDER — replace facility_id)",
+            "clinic_address": "<p>PLACEHOLDER ADDRESS — replace with a real facility from Supabase</p>",
+            "facility_id": "00000000-0000-0000-0000-000000000002",
+            "location_url_clnk": "",
+            "link_clinic_url": ""
+          }
+        },
+        "clinic-3": {
+          "type": "clinics_list",
+          "settings": {
+            "location_name": "Kerala Ayurveda, Koramangala (PLACEHOLDER — replace facility_id)",
+            "clinic_address": "<p>PLACEHOLDER ADDRESS — replace with a real facility from Supabase</p>",
+            "facility_id": "00000000-0000-0000-0000-000000000003",
+            "location_url_clnk": "",
+            "link_clinic_url": ""
+          }
+        }
+      },
+      "block_order": ["clinic-1", "clinic-2", "clinic-3"]
+    },
     "custom_liquid_tUmp8k": {
       "type": "custom-liquid",
       "name": "t:sections.custom-liquid.presets.name",
@@ -90,6 +129,7 @@
   "order": [
     "image_banner",
     "featured_collection",
+    "kal_clinic_list_test",
     "custom_liquid_tUmp8k"
   ]
 }
