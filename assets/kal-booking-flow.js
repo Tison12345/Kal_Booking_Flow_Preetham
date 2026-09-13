@@ -22,10 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // (sections/kal-clinic-list.liquid), which stores it here in
   // localStorage before opening this flow. applyStoredFacility() (called
   // every time the flow opens, not just once) reads it back out and
-  // overwrites the hardcoded Kormangala defaults baked into every step's
-  // Liquid markup. If nothing was ever stored (e.g. the flow was opened
-  // directly, bypassing that page), the hardcoded defaults are left alone
-  // — that's the fallback, not an error case.
+  // overwrites the hardcoded "Indiranagar" defaults baked into every
+  // step's Liquid markup. If nothing was ever stored (e.g. the flow was
+  // opened directly, bypassing that page), the hardcoded defaults are
+  // left alone — that's the fallback, not an error case.
+  //
+  // Two separate places currently show the facility, both updated here:
+  // .kal-step-entry__location-text (the full-sentence desktop info-column
+  // line, e.g. "Kerala Ayurveda Wellness Center, Indiranagar · Opens
+  // 8 AM") and .kal-step-header__location-text (the shorter mobile badge
+  // in kal-booking-flow-step-header.liquid, currently just "Indiranagar"
+  // — used by Concern Select and Doctor Select so far, not every step).
   // ----------------------------------------------------------------------
   const FACILITY_STORAGE_KEY = 'kalSelectedFacility';
 
@@ -53,6 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
       el.textContent = facility.address ? `${facility.name} · ${facility.address}` : facility.name;
+    });
+
+    // Shorter mobile badge — just the name, no address, matching its
+    // existing "Indiranagar"-only default (see kal-booking-flow-step-header.liquid).
+    flow.querySelectorAll('.kal-step-header__location-text').forEach((el) => {
+      el.textContent = facility.name;
     });
 
     // Slot Picker's day-strip/slot-grid are static Liquid now (see that

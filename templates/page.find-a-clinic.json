@@ -9,8 +9,8 @@
         "clinic-1": {
           "type": "clinics_list",
           "settings": {
-            "location_name": "Kerala Ayurveda, Koramangala",
-            "clinic_address": "<p>123 Koramangala 4th Block, Bengaluru, Karnataka</p>",
+            "location_name": "Kerala Ayurveda, Indiranagar",
+            "clinic_address": "<p>100 Feet Road, Indiranagar, Bengaluru, Karnataka</p>",
             "facility_id": "185b85d7-fad2-405d-b8ea-13dc683fbde8",
             "location_url_clnk": "",
             "link_clinic_url": ""
@@ -29,7 +29,7 @@
         "clinic-3": {
           "type": "clinics_list",
           "settings": {
-            "location_name": "Kerala Ayurveda, Indiranagar (PLACEHOLDER — replace facility_id)",
+            "location_name": "Kerala Ayurveda, Koramangala (PLACEHOLDER — replace facility_id)",
             "clinic_address": "<p>PLACEHOLDER ADDRESS — replace with a real facility from Supabase</p>",
             "facility_id": "00000000-0000-0000-0000-000000000003",
             "location_url_clnk": "",
