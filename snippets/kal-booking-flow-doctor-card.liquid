@@ -8,15 +8,13 @@
   real API doesn't provide yet — it's a mockup, not live data.
 
   DEFAULT (unselected) appearance updated to match node 690:6562 —
-  120px photo (was 76px) and a cream-tinted meta icon badge (was plain
-  white). Degree/language/experience stay three stacked one-per-line
-  rows (an earlier pass briefly grouped degree+experience onto one line
-  with languages below, per a different reading of 690:6562 — reverted,
-  the three-stacked-rows layout is the correct one). Explicit
-  instruction: the existing --selected ("on click") treatment is
-  untouched — see .kal-doctor-card--selected .kal-doctor-card__meta-icon
-  in the CSS, which overrides the icon badge back to white so the
-  selected look stays exactly as it was.
+  120px photo (was 76px), degree+experience grouped on one line with
+  languages below (was all three stacked one-per-line), and a cream-
+  tinted meta icon badge (was plain white). Explicit instruction: the
+  existing --selected ("on click") treatment is untouched — see
+  .kal-doctor-card--selected .kal-doctor-card__meta-icon in the CSS,
+  which overrides the icon badge back to white so the selected look
+  stays exactly as it was.
 
   Accepts:
   - name: {String} e.g. "Dr. Neethu Jayachandran"
