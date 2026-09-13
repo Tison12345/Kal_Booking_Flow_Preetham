@@ -903,6 +903,13 @@ document.addEventListener('DOMContentLoaded', () => {
       el.hidden = isIndia;
     });
 
+    // A country switch can resolve an already-shown whatsapp/email error
+    // (different digit rule, or email no longer required) — clear it
+    // immediately rather than leaving a stale message up until the next
+    // Continue click. Doesn't newly show one just from switching country.
+    if (isValidWhatsapp(patientDetails.whatsapp)) clearFieldError('whatsapp');
+    if (isValidEmail(patientDetails.email)) clearFieldError('email');
+
     setCountryPickerOpen(false);
     updatePatientContinueButton();
   };
@@ -1293,6 +1300,10 @@ document.addEventListener('DOMContentLoaded', () => {
       field.value = sanitizePhoneDigits(field.value, selectedCountry.start, selectedCountry.max);
     }
     patientDetails[field.dataset.kalField] = field.value;
+    // Matches the CMS's own clearError(field) on change — an error only
+    // ever gets set again by the next Continue click, not re-shown
+    // eagerly while the visitor is still typing.
+    clearFieldError(field.dataset.kalField);
     updatePatientContinueButton();
   });
 
