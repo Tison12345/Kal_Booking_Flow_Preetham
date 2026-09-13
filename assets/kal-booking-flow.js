@@ -771,6 +771,133 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
+  // CALENDAR — Slot Picker's full date picker, reopened via the calendar
+  // icon (data-kal-open-calendar). Restrictions match the real CMS's
+  // staff-side SlotPicker.tsx exactly:
+  //   - today is bookable; strictly past dates are not
+  //     (SlotPicker.tsx's getToday()/isPast checks)
+  //   - nothing beyond today + MAX_FUTURE_DAYS is selectable
+  //     (SlotPicker.tsx:50, MAX_FUTURE_DAYS = 90 — the same clamp used
+  //     for both the chevron nav and the calendar cells there)
+  //   - a fully-booked/unavailable day is disabled outright, not just
+  //     grayed with a "0 slots" label left clickable (SlotPicker.tsx's
+  //     DayCard/CalendarModal, backed by app/lib/db/availability.ts's
+  //     status field)
+  // There is deliberately no minimum-lead-time rule and no blanket
+  // day-of-week closure (e.g. no hardcoded "Sundays closed") — confirmed
+  // neither exists in the real system either; closed days there come
+  // from per-doctor weekly_availability/availability_overrides data, not
+  // a hardcoded rule, so none is hardcoded here either.
+  //
+  // The real system computes "unavailable" from that live per-doctor
+  // data; this demo has none (Slot Picker's day-strip/slot-grid are
+  // static, see that step's own comment), so
+  // MOCK_UNAVAILABLE_DAY_OFFSETS stands in for it — today+3 matches the
+  // day-strip's own existing disabled "Wed · 0 slots" chip, so the two
+  // stay visually consistent; today+15 is added purely to demonstrate
+  // the same disabled treatment further into a later month.
+  // ----------------------------------------------------------------------
+  const CALENDAR_MAX_FUTURE_DAYS = 90;
+  const MOCK_UNAVAILABLE_DAY_OFFSETS = [3, 15];
+
+  const dayOffsetFrom = (date) => Math.round((startOfDay(date) - todayStart()) / 86400000);
+
+  const isDateDisabled = (date) => {
+    const offset = dayOffsetFrom(date);
+    if (offset < 0) return true;
+    if (offset > CALENDAR_MAX_FUTURE_DAYS) return true;
+    return MOCK_UNAVAILABLE_DAY_OFFSETS.includes(offset);
+  };
+
+  const isSameDate = (a, b) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  const firstOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+  const canGoToPrevCalendarMonth = () => firstOfMonth(slotPicker.calendarMonth) > firstOfMonth(todayStart());
+
+  const canGoToNextCalendarMonth = () =>
+    firstOfMonth(slotPicker.calendarMonth) < firstOfMonth(addDays(todayStart(), CALENDAR_MAX_FUTURE_DAYS));
+
+  const renderCalendarMonth = () => {
+    const modal = flow.querySelector('[data-kal-calendar-modal]');
+    if (!modal) return;
+
+    const year = slotPicker.calendarMonth.getFullYear();
+    const month = slotPicker.calendarMonth.getMonth();
+
+    const monthLabel = modal.querySelector('[data-kal-calendar-month]');
+    if (monthLabel) monthLabel.textContent = `${MONTH_LABELS[month]} ${year}`;
+
+    const prevBtn = modal.querySelector('[data-kal-calendar-prev]');
+    const nextBtn = modal.querySelector('[data-kal-calendar-next]');
+    if (prevBtn) prevBtn.disabled = !canGoToPrevCalendarMonth();
+    if (nextBtn) nextBtn.disabled = !canGoToNextCalendarMonth();
+
+    const grid = modal.querySelector('[data-kal-calendar-grid]');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startWeekday = new Date(year, month, 1).getDay();
+
+    for (let i = 0; i < startWeekday; i += 1) {
+      const empty = document.createElement('span');
+      empty.className = 'kal-calendar-modal__cell kal-calendar-modal__cell--empty';
+      grid.appendChild(empty);
+    }
+
+    for (let dayNum = 1; dayNum <= daysInMonth; dayNum += 1) {
+      const date = new Date(year, month, dayNum);
+      const disabled = isDateDisabled(date);
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'kal-calendar-modal__cell';
+      cell.textContent = String(dayNum);
+      cell.disabled = disabled;
+      if (disabled) cell.classList.add('kal-calendar-modal__cell--disabled');
+      if (isSameDate(date, todayStart())) cell.classList.add('kal-calendar-modal__cell--today');
+      if (isSameDate(date, slotPicker.selectedDate)) cell.classList.add('kal-calendar-modal__cell--selected');
+      if (!disabled) cell.dataset.kalCalendarDay = String(dayNum);
+      grid.appendChild(cell);
+    }
+  };
+
+  const openCalendarModal = () => {
+    slotPicker.calendarMonth = firstOfMonth(slotPicker.selectedDate);
+    renderCalendarMonth();
+    const modal = flow.querySelector('[data-kal-calendar-modal]');
+    if (modal) modal.hidden = false;
+  };
+
+  const closeCalendarModal = () => {
+    const modal = flow.querySelector('[data-kal-calendar-modal]');
+    if (modal) modal.hidden = true;
+  };
+
+  // Syncs the day-strip and the "Choose a Slot" label with whatever date
+  // was picked in the calendar. Picking a date within the static
+  // day-strip's 5-day window (offsets 0-4) just activates that chip;
+  // there's no chip to activate for anything further out (the strip has
+  // no real per-day data beyond those 5 — see this step's own liquid
+  // comment), so the label reflects the picked date instead.
+  const applyCalendarDateSelection = (date) => {
+    slotPicker.selectedDate = date;
+
+    const offset = dayOffsetFrom(date);
+    const matchingChip = flow.querySelector(`.kal-day-chip[data-kal-slot-day-offset="${offset}"]`);
+
+    flow.querySelectorAll('.kal-day-chip[data-kal-slot-day-offset]').forEach((chip) => {
+      chip.classList.toggle('kal-day-chip--active', chip === matchingChip);
+    });
+
+    const label = flow.querySelector('.kal-slot-section__label');
+    if (label) {
+      label.textContent = matchingChip ? 'Choose a Slot' : `Choose a Slot — ${formatConfirmationDate(date)}`;
+    }
+  };
+
+  // ----------------------------------------------------------------------
   // PATIENT DETAILS — form state, validation, and the gender pill toggle.
   // NOT wired to the backend yet (explicit instruction). Once it is, this
   // state is exactly what POST /api/public/appointments needs for
