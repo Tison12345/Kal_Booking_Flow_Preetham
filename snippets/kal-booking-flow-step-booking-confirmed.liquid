@@ -125,12 +125,12 @@
 
       {%- comment -%}
         Desktop-only omission handled in CSS, see this file's top comment.
-        Also Experiment-A-only (see kal-booking-flow.js's BOOKING
-        EXPERIMENT comment) — Experiment B is online-payment-only, so
-        "Pay at reception cash or card" doesn't apply, and the checklist
-        as a whole isn't needed for that flow.
+        Also hidden for Video Consult (data-kal-mode-offline-only,
+        toggled by applyConsultationModeVisibility() in
+        kal-booking-flow.js) — "Pay at reception cash or card" and
+        "arrive 10 minutes early" don't apply to an online visit.
       {%- endcomment -%}
-      <div class="kal-before-visit" data-kal-experiment-a-only>
+      <div class="kal-before-visit" data-kal-mode-offline-only>
         <p class="kal-before-visit__label">Before your visit</p>
         <ul class="kal-before-visit__list">
           <li class="kal-before-visit__item">
