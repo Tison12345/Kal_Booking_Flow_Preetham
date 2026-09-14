@@ -403,9 +403,18 @@
   flex-shrink: 0;
 }
 
-/* Mobile: simple inline row, no bar/border/blur */
+/* Mobile: simple inline row, no bar/border/blur — this modifier is added
+   alongside (not instead of) the base .kal-step-entry__location class
+   above, so its border-top/background/blur had to be explicitly reset
+   here; they were never actually overridden before, leaving a visible
+   divider line and frosted background above the footer text that the
+   design doesn't call for on mobile. */
 .kal-step-entry__location--mobile {
   padding: 0 4px;
+  background: none;
+  border-top: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .kal-step-entry__location-text {
