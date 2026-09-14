@@ -329,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         el.dataset.kalDoctorId = selectedDoctorId;
       });
     }
+    updateDoctorSelectContinueButton();
   };
 
   const buildFallbackDoctorCard = (doctor) => {
