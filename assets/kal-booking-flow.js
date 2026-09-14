@@ -27,8 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
   //      currently just a same-page anchor jump to a legacy form; wire it
   //      to this class instead of that anchor) — skips Entry, opens
   //      straight to Concern Select as "Step 1 of 5", and Confirmation
-  //      shows only the "Pay now" card (₹450, Save 10%) — "Pay at clinic"
-  //      is hidden via data-kal-experiment-a-only.
+  //      shows a single non-selectable "Consultation Fee" info card
+  //      (node 625:8869, ₹450, "You save 10%") instead of Experiment
+  //      A's two selectable payment cards — data-kal-experiment-a-only
+  //      hides A's whole card group, data-kal-experiment-b-only hides
+  //      this one.
   // Everything else in both experiments is identical — same Doctor
   // Select / Slot Picker / Patient Details steps, no other differences.
   // ----------------------------------------------------------------------
@@ -37,6 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const applyBookingExperiment = () => {
     flow.querySelectorAll('[data-kal-experiment-a-only]').forEach((el) => {
       el.hidden = bookingExperiment !== 'A';
+    });
+    flow.querySelectorAll('[data-kal-experiment-b-only]').forEach((el) => {
+      el.hidden = bookingExperiment !== 'B';
     });
   };
 
@@ -335,8 +341,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refreshed every time (not just once) — unlike the slot picker, this
     // step has no state of its own to preserve, so it should always show
     // whatever's currently in slotPicker/patientDetails.
-    if (stepName === 'confirmation') {
+    if (stepName === 'confirmation' || stepName === 'booking-confirmed') {
       applyBookingExperiment();
+    }
+    if (stepName === 'confirmation') {
       renderConfirmationSummary();
     }
 
