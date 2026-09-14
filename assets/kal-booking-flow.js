@@ -1220,11 +1220,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Any CTA anywhere on the site with this class opens the flow
+  // Any CTA anywhere on the site with this class opens the flow (Experiment
+  // A — see BOOKING EXPERIMENT above). Resets the experiment flag to 'A'
+  // every time, in case a previous open in the same page session was via
+  // the Experiment B consult CTA below.
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
+      bookingExperiment = 'A';
       openFlow();
       goToStep('entry');
+    }
+
+    // Experiment B — a doctor card's own "Consult" CTA, skipping Entry
+    // straight to Concern Select. See BOOKING EXPERIMENT above for what
+    // this changes (start step + Confirmation's payment cards).
+    if (e.target.closest('.kal-consult-cta')) {
+      bookingExperiment = 'B';
+      openFlow();
+      goToStep('concern-select');
     }
 
     // Facility selection, from the separate "Find a Clinic" page — see
