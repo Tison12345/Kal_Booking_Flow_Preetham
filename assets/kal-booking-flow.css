@@ -2870,6 +2870,63 @@ button.kal-step-header__location-badge {
   color: var(--kal-color-heading);
 }
 
+/* Experiment B's single non-selectable "Consultation Fee" card (node
+   625:8869, "Option 2") — not a button, no border, no badge chip; a
+   sand/mint gradient info row instead of Experiment A's two selectable
+   pill cards. See this step's own liquid comment for the full
+   Experiment A/B split. */
+.kal-payment-fee-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 24px 16px;
+  border-radius: 12px;
+  background: linear-gradient(103deg, rgba(235, 242, 239, 0.8) 30.429%, rgba(255, 255, 255, 0.8) 99.419%);
+  box-sizing: border-box;
+}
+
+/* Same [hidden]-override note as .kal-payment-option[hidden] above. */
+.kal-payment-fee-card[hidden] {
+  display: none;
+}
+
+.kal-payment-fee-card__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--kal-color-white);
+}
+
+.kal-payment-fee-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kal-payment-fee-card__title {
+  font-size: 20px;
+  color: #122d24;
+}
+
+.kal-payment-fee-card__subtitle {
+  font-size: 14px;
+  color: #1e4b3c;
+}
+
+.kal-payment-fee-card__price {
+  flex-shrink: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--kal-color-heading);
+}
+
 /* ----------------------------------------
    STEP: BOOKING CONFIRMED
    Post-booking success screen. Consolidated into the shared step shell
