@@ -66,8 +66,17 @@
           aria-expanded="false"
         >
           <span class="kal-step-header__location-badge-left">
+            {%- comment -%}
+              Two icons, one hidden — Video Consult swaps the pin for the
+              monitor glyph (setOnlineHeaderState() in kal-booking-flow.js
+              toggles which is hidden) since there's no physical location
+              once online. Both live in the DOM rather than swapping
+              innerHTML from JS, matching this file's existing flag-swap
+              convention in the phone country picker.
+            {%- endcomment -%}
             <span class="kal-icon kal-icon--location">
-              {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+              <span data-kal-location-icon-offline>{%- render 'kal-booking-icons', icon_name: 'location-pin' -%}</span>
+              <span data-kal-location-icon-online hidden>{%- render 'kal-booking-icons', icon_name: 'mode-online' -%}</span>
             </span>
             <span class="kal-step-header__location-text">{{ location_text }}</span>
           </span>
