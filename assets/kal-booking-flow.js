@@ -140,6 +140,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // video doctor list doesn't exist in this mock, so "all of them" is
   // the closest stand-in). Called on arrival at Doctor Select, on every
   // mode toggle, and after every facility switch.
+  // Doctor Select's Continue is disabled until a card is actually
+  // selected (see that step's own liquid comment) — matters most for
+  // Video Consult, which deliberately starts with none selected, but
+  // also covers the empty-state facility case below where In-Clinic ends
+  // up with zero matching doctors too. Re-checked on every card click and
+  // every render pass here.
+  const updateDoctorSelectContinueButton = () => {
+    const hasSelection = getSelectedDoctorName() !== null;
+    flow.querySelectorAll('[data-kal-doctor-continue]').forEach((btn) => {
+      btn.disabled = !hasSelection;
+    });
+  };
+
   const renderMockDoctorsForCurrentState = () => {
     const list = flow.querySelector('[data-kal-doctor-list]');
     if (!list) return;
@@ -152,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.classList.remove('kal-doctor-card--selected');
       });
       if (emptyState) emptyState.hidden = true;
+      updateDoctorSelectContinueButton();
       return;
     }
 
@@ -163,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     if (matchingCards.length > 0) matchingCards[0].classList.add('kal-doctor-card--selected');
     if (emptyState) emptyState.hidden = matchingCards.length > 0;
+    updateDoctorSelectContinueButton();
   };
 
   // Confirmation's appointment card, "Doctor" row, and Payment Method
