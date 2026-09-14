@@ -801,6 +801,34 @@
   color: var(--kal-color-location-text);
 }
 
+/* The offline/online icon-swap wrapper spans (kal-booking-flow-step-header.liquid)
+   would otherwise sit as ordinary inline boxes around the svg — an extra
+   nesting level the single-icon markup this replaced didn't have, which
+   introduced its own inline-baseline offset on top of the svg's own,
+   visibly misaligning the icon in the badge row. display:contents drops
+   the wrapper out of the box model entirely (the svg lays out exactly as
+   if it were still a direct child of .kal-icon), while the [hidden]
+   override below still works normally since it's a more specific selector. */
+[data-kal-location-icon-offline],
+[data-kal-location-icon-online] {
+  display: contents;
+}
+
+[data-kal-location-icon-offline][hidden],
+[data-kal-location-icon-online][hidden] {
+  display: none;
+}
+
+/* mode-online's path carries its own hardcoded fill (#2B2926) for its
+   original usage — Doctor Select's Video Consult toggle button, which
+   has no color override of its own and relies on that exact dark tone.
+   Scoped to just the header-badge usage so that original usage is
+   untouched: here it should match the badge's own muted grey, same as
+   the location-pin icon does via currentColor. */
+.kal-step-header__location-badge [data-kal-location-icon-online] svg path {
+  fill: var(--kal-color-location-text);
+}
+
 .kal-step-header__location-text {
   font-size: 14px;
   color: var(--kal-color-location-text);
