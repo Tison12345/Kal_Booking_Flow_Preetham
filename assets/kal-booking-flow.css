@@ -416,6 +416,17 @@
   color: var(--kal-color-location-text);
 }
 
+/* The pin icon here was a TODO placeholder (empty span, no render call)
+   until now — sized down from the icon's native 24px to read as a small
+   footer marker rather than a full-size icon, matching the muted,
+   compact treatment in the reference design. */
+.kal-step-entry__location .kal-icon svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--kal-color-location-text);
+}
+
 .kal-step-entry__action-panel {
   display: flex;
   flex-direction: column;
