@@ -185,6 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll('[data-kal-facility-toggle]').forEach((btn) => {
       btn.disabled = isVideo;
     });
+    if (isVideo) {
+      flow.querySelectorAll('[data-kal-facility-picker]').forEach((wrapper) => {
+        setFacilityPickerOpen(wrapper, false);
+      });
+    }
   };
 
   const setFacilityPickerOpen = (wrapper, open) => {
@@ -1531,14 +1536,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const facilitySwitchCancel = e.target.closest('[data-kal-facility-switch-cancel]');
 
     if (facilitySwitchClinic || facilitySwitchOnline) {
-      // Both real actions apply the pending facility switch and send the
-      // visitor back to Doctor Select to pick a doctor again — whoever
-      // was selected only made sense for the old clinic/mode combination.
-      // Read pendingFacility before closeFacilitySwitchModal() clears it.
+      // Both send the visitor back to Doctor Select to pick a doctor
+      // again — whoever was selected only made sense for the old
+      // clinic/mode combination. Read pendingFacility before
+      // closeFacilitySwitchModal() clears it.
       const facility = pendingFacility;
       closeFacilitySwitchModal();
-      if (facility) applyFacilitySwitch(facility);
-      setMode(facilitySwitchClinic ? 'in-clinic' : 'video');
+      if (facilitySwitchClinic) {
+        // "Change Clinic" — a real physical-facility switch.
+        if (facility) applyFacilitySwitch(facility);
+        setMode('in-clinic');
+      } else {
+        // "Book an online slot" — the facility the visitor picked in the
+        // dropdown is irrelevant once going online (Video Consult has no
+        // physical clinic), so it's deliberately NOT applied here. Only
+        // the mode changes; setMode('video') is what actually swaps the
+        // header to "Online Consultation" and disables the facility
+        // dropdown (see setOnlineHeaderState()).
+        setMode('video');
+      }
       goToStep('doctor-select');
     } else if (facilitySwitchCancel) {
       closeFacilitySwitchModal();
