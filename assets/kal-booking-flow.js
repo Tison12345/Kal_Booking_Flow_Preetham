@@ -127,6 +127,66 @@ document.addEventListener('DOMContentLoaded', () => {
     return card ? card.dataset.kalDoctorName : null;
   };
 
+  // Drives Doctor Select's 3 static mock cards off the same
+  // MOCK_DOCTOR_HOME_FACILITY map the facility-switch warning uses —
+  // no fetching/cloning, just hiding/showing and (de)selecting what's
+  // already in the DOM. In-Clinic: only the doctor(s) whose home
+  // facility matches the current one are shown, and the sole match (our
+  // mock data never has more than one per facility) is pre-selected —
+  // this also doubles as "reset the previous doctor selection" after a
+  // facility switch, since every card's selected state is recomputed
+  // from scratch here rather than left over from before. Video Consult:
+  // every doctor shows, none pre-selected (a real per-mode/per-facility
+  // video doctor list doesn't exist in this mock, so "all of them" is
+  // the closest stand-in). Called on arrival at Doctor Select, on every
+  // mode toggle, and after every facility switch.
+  const renderMockDoctorsForCurrentState = () => {
+    const list = flow.querySelector('[data-kal-doctor-list]');
+    if (!list) return;
+    const cards = [...list.querySelectorAll('.kal-doctor-card')];
+    const emptyState = list.querySelector('[data-kal-doctor-list-empty]');
+
+    if (slotPicker.mode === 'video') {
+      cards.forEach((card) => {
+        card.hidden = false;
+        card.classList.remove('kal-doctor-card--selected');
+      });
+      if (emptyState) emptyState.hidden = true;
+      return;
+    }
+
+    const facilityId = getCurrentFacility().id;
+    const matchingCards = cards.filter((card) => MOCK_DOCTOR_HOME_FACILITY[card.dataset.kalDoctorName] === facilityId);
+    cards.forEach((card) => {
+      card.hidden = !matchingCards.includes(card);
+      card.classList.remove('kal-doctor-card--selected');
+    });
+    if (matchingCards.length > 0) matchingCards[0].classList.add('kal-doctor-card--selected');
+    if (emptyState) emptyState.hidden = matchingCards.length > 0;
+  };
+
+  // Video Consult has no physical facility, so the header badge across
+  // every switchable step (Concern Select/Doctor Select/Slot Picker)
+  // swaps to a plain "Online Consultation" label and its dropdown toggle
+  // is disabled (a disabled <button> doesn't fire click at all, so this
+  // alone is enough to stop the panel opening — no separate handling
+  // needed elsewhere). Switching back to In-Clinic restores whatever
+  // facility name was showing before, from the button's own dataset.
+  const setOnlineHeaderState = (isVideo) => {
+    flow.querySelectorAll('.kal-step-header__location-text').forEach((el) => {
+      if (isVideo) {
+        if (el.dataset.kalPrevFacilityText === undefined) el.dataset.kalPrevFacilityText = el.textContent;
+        el.textContent = 'Online Consultation';
+      } else if (el.dataset.kalPrevFacilityText !== undefined) {
+        el.textContent = el.dataset.kalPrevFacilityText;
+        delete el.dataset.kalPrevFacilityText;
+      }
+    });
+    flow.querySelectorAll('[data-kal-facility-toggle]').forEach((btn) => {
+      btn.disabled = isVideo;
+    });
+  };
+
   const setFacilityPickerOpen = (wrapper, open) => {
     const toggle = wrapper.querySelector('[data-kal-facility-toggle]');
     const panel = wrapper.querySelector('[data-kal-facility-panel]');
@@ -328,9 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refreshed every time (not just once) — unlike the slot picker, this
     // step has no state of its own to preserve, so it should always show
     // whatever's currently in slotPicker/patientDetails.
-    if (stepName === 'confirmation' || stepName === 'booking-confirmed') {
-      applyBookingExperiment();
-    }
     if (stepName === 'confirmation') {
       renderConfirmationSummary();
     }
@@ -1215,24 +1272,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Any CTA anywhere on the site with this class opens the flow (Experiment
-  // A — see BOOKING EXPERIMENT above). Resets the experiment flag to 'A'
-  // every time, in case a previous open in the same page session was via
-  // the Experiment B consult CTA below.
+  // Any CTA anywhere on the site with this class opens the flow at Entry
+  // (Experiment A — see BOOKING EXPERIMENT above).
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
-      bookingExperiment = 'A';
       openFlow();
       goToStep('entry');
     }
 
-    // Experiment B — a doctor card's own "Consult" CTA, skipping Entry
-    // straight to Concern Select. See BOOKING EXPERIMENT above for what
-    // this changes (start step + Confirmation's payment cards).
+    // Experiment B — a doctor card's own "Consult" CTA, skipping straight
+    // to Doctor Select. See BOOKING EXPERIMENT above.
     if (e.target.closest('.kal-consult-cta')) {
-      bookingExperiment = 'B';
       openFlow();
-      goToStep('concern-select');
+      goToStep('doctor-select');
     }
 
     // Facility selection, from the separate "Find a Clinic" page — see
