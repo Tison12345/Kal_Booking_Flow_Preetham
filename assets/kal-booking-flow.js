@@ -17,6 +17,30 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
+  // BOOKING EXPERIMENT — two separate real-site CTAs open this same
+  // popup at different points:
+  //   A: the existing "Request Consultation" CTA (.kal-request-appointment-cta,
+  //      e.g. the homepage hero's "Book Your Consultation" button) — opens
+  //      at Entry, same as always, both Confirmation payment cards show.
+  //   B: a doctor card's own "Consult" CTA (.kal-consult-cta — on the real
+  //      theme this is custom-clinic-doctors.liquid's consult-link,
+  //      currently just a same-page anchor jump to a legacy form; wire it
+  //      to this class instead of that anchor) — skips Entry, opens
+  //      straight to Concern Select as "Step 1 of 5", and Confirmation
+  //      shows only the "Pay now" card (₹450, Save 10%) — "Pay at clinic"
+  //      is hidden via data-kal-experiment-a-only.
+  // Everything else in both experiments is identical — same Doctor
+  // Select / Slot Picker / Patient Details steps, no other differences.
+  // ----------------------------------------------------------------------
+  let bookingExperiment = 'A';
+
+  const applyBookingExperiment = () => {
+    flow.querySelectorAll('[data-kal-experiment-a-only]').forEach((el) => {
+      el.hidden = bookingExperiment !== 'A';
+    });
+  };
+
+  // ----------------------------------------------------------------------
   // FACILITY SELECTION — see docs/facility-selection-plan.md. A visitor
   // picks a real clinic on the separate "Find a Clinic" page
   // (sections/kal-clinic-list.liquid), which stores it here in
@@ -312,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // step has no state of its own to preserve, so it should always show
     // whatever's currently in slotPicker/patientDetails.
     if (stepName === 'confirmation') {
+      applyBookingExperiment();
       renderConfirmationSummary();
     }
 
