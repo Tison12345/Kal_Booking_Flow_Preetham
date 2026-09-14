@@ -420,9 +420,8 @@
      box) stacks on TOP of those margins rather than accounting for them,
      pushing the element wider than its container and off-screen. The
      parent's default align-items:stretch already sizes this correctly
-     (stretch computes available space minus margins); this just pins
-     the horizontal alignment explicitly rather than leaving it implicit. */
-  justify-content: flex-start;
+     (stretch computes available space minus margins). */
+  justify-content: space-between;
 }
 
 .kal-step-entry__location-text {
