@@ -1,0 +1,9 @@
+# This repo's theme (Kal_Booking_Flow_Preetham/main) is connected to this
+# GitHub branch via Shopify's own GitHub integration — running `shopify
+# theme dev` against it auto-commits back to this branch, and that sync
+# only knows about actual theme files (assets/sections/snippets/
+# templates/config/locales/layout). It treats anything outside that as
+# not belonging to the theme and deletes it on the next auto-sync — which
+# kept erasing docs/*.md every time theme dev ran. Ignoring docs/ here
+# keeps reference notes local instead of fighting that sync every push.
+docs/
