@@ -2786,13 +2786,6 @@ button.kal-step-header__location-badge {
   width: 100%;
 }
 
-/* Same [hidden]-override note as .kal-payment-option[hidden] below —
-   data-kal-experiment-a-only now sits on this wrapper itself (see this
-   step's own liquid comment), so it needs its own override too. */
-.kal-payment-options[hidden] {
-  display: none;
-}
-
 .kal-payment-option {
   position: relative;
   flex: 1;
@@ -2807,16 +2800,6 @@ button.kal-step-header__location-badge {
   font-family: inherit;
   cursor: pointer;
   box-sizing: border-box;
-}
-
-/* Without this, this rule's own display:flex overrides the browser's
-   [hidden] { display: none } default regardless of the attribute — same
-   class of bug as .kal-booking-flow__close[hidden] elsewhere in this
-   file. Without it, Experiment B's data-kal-experiment-a-only hiding of
-   "Pay at clinic" (see kal-booking-flow.js's applyBookingExperiment())
-   had no visible effect. */
-.kal-payment-option[hidden] {
-  display: none;
 }
 
 .kal-payment-option--selected {
