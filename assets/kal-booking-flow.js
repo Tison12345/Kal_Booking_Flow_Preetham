@@ -739,13 +739,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTherapyDropdownList();
   renderTherapySelectedChips();
 
-  // In-clinic / Video consult toggle: switches the active button and keeps
-  // the summary badge on later steps in sync. Per the updated Figma spec,
-  // Doctor Select's card is a single static mockup shown for both modes
-  // (no more per-doctor mode-availability filtering — that relied on a
-  // data-kal-modes attribute the static card no longer sets), and the
-  // price banner this used to swap copy on is gone too (price now lives
-  // in the doctor card's own footer).
+  // In-clinic / Video consult toggle: switches the active button, keeps
+  // the summary badge on later steps in sync, and (per the facility-vs-
+  // doctor spec) re-derives which mock doctor cards show/are selected
+  // and whether the header reads as a physical clinic or "Online
+  // Consultation" — see renderMockDoctorsForCurrentState() and
+  // setOnlineHeaderState() above for what each of those actually does.
   const setMode = (mode) => {
     flow.querySelectorAll('.kal-toggle-btn').forEach((btn) => {
       btn.classList.toggle('kal-toggle-btn--active', btn.dataset.kalMode === mode);
@@ -759,6 +758,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // own liquid comment), so switching modes no longer re-fetches or
     // re-renders anything there — just tracked for Confirmation's summary.
     slotPicker.mode = mode;
+
+    setOnlineHeaderState(mode === 'video');
+    renderMockDoctorsForCurrentState();
   };
 
   // ----------------------------------------------------------------------
