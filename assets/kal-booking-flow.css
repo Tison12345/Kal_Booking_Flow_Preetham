@@ -421,7 +421,7 @@
      pushing the element wider than its container and off-screen. The
      parent's default align-items:stretch already sizes this correctly
      (stretch computes available space minus margins). */
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .kal-step-entry__location-text {
