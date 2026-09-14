@@ -401,6 +401,15 @@ document.addEventListener('DOMContentLoaded', () => {
     //   loadDoctorsForFacility();
     // }
 
+    // Mock stand-in for the above — re-derives which of the 3 static
+    // cards show/are selected from the current facility + mode every
+    // time Doctor Select is (re-)reached, regardless of how (Continue
+    // from Concern Select, or "Change Clinic"/"Book an online slot"
+    // sending the visitor back here).
+    if (stepName === 'doctor-select') {
+      renderMockDoctorsForCurrentState();
+    }
+
     if (stepName === 'therapy-confirmed') {
       renderTherapyConfirmedSummary();
     }
