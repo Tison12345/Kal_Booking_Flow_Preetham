@@ -119,13 +119,18 @@
         charged differently. "Pay now" starts selected, matching the
         export.
 
-        Same for both booking experiments (see kal-booking-flow.js's
-        BOOKING EXPERIMENT comment) — the only difference between them is
-        which step the flow opens on, not anything on this screen.
+        VIDEO CONSULT (node 625:8869) shows a single non-selectable
+        "Consultation Fee" info card instead — sand/mint gradient, no
+        border, no badge chip, card icon + title/subtitle on the left,
+        price on the right — since there's no "pay at clinic" option once
+        the visit itself is online. applyConsultationModeVisibility() in
+        kal-booking-flow.js toggles data-kal-mode-offline-only /
+        data-kal-mode-online-only based on slotPicker.mode, called on
+        goToStep('confirmation').
       {%- endcomment -%}
       <div class="kal-payment-section">
         <p class="kal-payment-section__label">Payment Method</p>
-        <div class="kal-payment-options">
+        <div class="kal-payment-options" data-kal-mode-offline-only>
           <button type="button" class="kal-payment-option kal-payment-option--selected" data-kal-payment-method="pay-now">
             <span class="kal-payment-option__badge">Save 10%</span>
             <span class="kal-payment-option__icon">
@@ -143,6 +148,16 @@
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
             <span class="kal-payment-option__price">&#8377;495</span>
           </button>
+        </div>
+        <div class="kal-payment-fee-card" data-kal-mode-online-only hidden>
+          <span class="kal-payment-fee-card__icon">
+            {%- render 'kal-booking-icons', icon_name: 'payment-card' -%}
+          </span>
+          <span class="kal-payment-fee-card__body">
+            <span class="kal-payment-fee-card__title">Consultation Fee</span>
+            <span class="kal-payment-fee-card__subtitle">You save 10%</span>
+          </span>
+          <span class="kal-payment-fee-card__price">&#8377;450</span>
         </div>
       </div>
     </div>
