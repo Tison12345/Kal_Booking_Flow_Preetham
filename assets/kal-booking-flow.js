@@ -17,34 +17,21 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
-  // BOOKING EXPERIMENT — two separate real-site CTAs open this same
-  // popup at different points:
+  // BOOKING EXPERIMENT — two separate real-site CTAs open this same popup
+  // at different starting steps, otherwise identical:
   //   A: the existing "Request Consultation" CTA (.kal-request-appointment-cta,
   //      e.g. the homepage hero's "Book Your Consultation" button) — opens
-  //      at Entry, same as always, both Confirmation payment cards show.
+  //      at Entry, same as always.
   //   B: a doctor card's own "Consult" CTA (.kal-consult-cta — on the real
   //      theme this is custom-clinic-doctors.liquid's consult-link,
   //      currently just a same-page anchor jump to a legacy form; wire it
-  //      to this class instead of that anchor) — skips Entry, opens
-  //      straight to Concern Select as "Step 1 of 5", and Confirmation
-  //      shows a single non-selectable "Consultation Fee" info card
-  //      (node 625:8869, ₹450, "You save 10%") instead of Experiment
-  //      A's two selectable payment cards — data-kal-experiment-a-only
-  //      hides A's whole card group, data-kal-experiment-b-only hides
-  //      this one.
-  // Everything else in both experiments is identical — same Doctor
-  // Select / Slot Picker / Patient Details steps, no other differences.
+  //      to this class instead of that anchor) — skips Entry and Concern
+  //      Select, opens straight to Doctor Select.
+  // Everything else — Concern Select (when reached via A)/Doctor Select/
+  // Slot Picker/Patient Details/Confirmation/Booking Confirmed — is
+  // identical between the two; no separate flag needed for anything past
+  // the initial goToStep() call below.
   // ----------------------------------------------------------------------
-  let bookingExperiment = 'A';
-
-  const applyBookingExperiment = () => {
-    flow.querySelectorAll('[data-kal-experiment-a-only]').forEach((el) => {
-      el.hidden = bookingExperiment !== 'A';
-    });
-    flow.querySelectorAll('[data-kal-experiment-b-only]').forEach((el) => {
-      el.hidden = bookingExperiment !== 'B';
-    });
-  };
 
   // ----------------------------------------------------------------------
   // FACILITY SELECTION — see docs/facility-selection-plan.md. A visitor
