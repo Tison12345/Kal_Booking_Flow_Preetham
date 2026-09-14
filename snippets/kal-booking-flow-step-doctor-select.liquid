@@ -136,8 +136,17 @@
       </div>
     </div>
 
+    {%- comment -%}
+      data-kal-doctor-continue, disabled by default — Video Consult
+      intentionally pre-selects no doctor (see this list's own comment),
+      so a plain always-clickable data-kal-goto would let the visitor
+      through with none picked. updateDoctorSelectContinueButton() in
+      kal-booking-flow.js keeps this in sync with whether a card is
+      currently selected, re-checked on every card click and every
+      facility/mode re-render.
+    {%- endcomment -%}
     <div class="kal-step-shell__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
         Continue
       </button>
     </div>
