@@ -118,6 +118,15 @@
         both prices are static mockup values, nothing is actually
         charged differently. "Pay now" starts selected, matching the
         export.
+
+        EXPERIMENT B (entered via .kal-consult-cta — a doctor card's own
+        "Consult" CTA, skipping Entry straight to Concern Select — see
+        kal-booking-flow.js's BOOKING EXPERIMENT comment) hides the
+        "Pay at clinic" card entirely, leaving only this one ("Pay now",
+        &#8377;450, Save 10%) — applyBookingExperiment() toggles
+        data-kal-experiment-a-only on goToStep('confirmation'). Experiment
+        A (the existing "Request Consultation" CTA, starting at Entry)
+        is unchanged — both cards show.
       {%- endcomment -%}
       <div class="kal-payment-section">
         <p class="kal-payment-section__label">Payment Method</p>
@@ -131,7 +140,7 @@
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
             <span class="kal-payment-option__price">&#8377;450</span>
           </button>
-          <button type="button" class="kal-payment-option" data-kal-payment-method="pay-at-clinic">
+          <button type="button" class="kal-payment-option" data-kal-payment-method="pay-at-clinic" data-kal-experiment-a-only>
             <span class="kal-payment-option__icon kal-payment-option__icon--tint">
               {%- render 'kal-booking-icons', icon_name: 'clinic-building' -%}
             </span>
