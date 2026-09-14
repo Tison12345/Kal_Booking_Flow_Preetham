@@ -165,6 +165,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (emptyState) emptyState.hidden = matchingCards.length > 0;
   };
 
+  // Confirmation's Payment Method and Booking Confirmed's "Before your
+  // visit" checklist both differ for Video Consult (node 625:8869 for
+  // the payment card — see each step's own liquid comment) — swapped by
+  // mode, not by which CTA opened the flow. data-kal-mode-offline-only
+  // elements show for In-Clinic, data-kal-mode-online-only for Video
+  // Consult. Called on arrival at either of those two steps.
+  const applyConsultationModeVisibility = () => {
+    const isVideo = slotPicker.mode === 'video';
+    flow.querySelectorAll('[data-kal-mode-offline-only]').forEach((el) => {
+      el.hidden = isVideo;
+    });
+    flow.querySelectorAll('[data-kal-mode-online-only]').forEach((el) => {
+      el.hidden = !isVideo;
+    });
+  };
+
   // Video Consult has no physical facility, so the header badge across
   // every switchable step (Concern Select/Doctor Select/Slot Picker)
   // swaps to a plain "Online Consultation" label and its dropdown toggle
@@ -408,6 +424,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // whatever's currently in slotPicker/patientDetails.
     if (stepName === 'confirmation') {
       renderConfirmationSummary();
+    }
+    if (stepName === 'confirmation' || stepName === 'booking-confirmed') {
+      applyConsultationModeVisibility();
     }
 
     // DISCONNECTED for now — the backend branch (preetham) this calls
