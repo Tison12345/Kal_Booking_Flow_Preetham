@@ -165,12 +165,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (emptyState) emptyState.hidden = matchingCards.length > 0;
   };
 
-  // Confirmation's Payment Method and Booking Confirmed's "Before your
-  // visit" checklist both differ for Video Consult (node 625:8869 for
-  // the payment card — see each step's own liquid comment) — swapped by
-  // mode, not by which CTA opened the flow. data-kal-mode-offline-only
-  // elements show for In-Clinic, data-kal-mode-online-only for Video
-  // Consult. Called on arrival at either of those two steps.
+  // Confirmation's appointment card, "Doctor" row, and Payment Method
+  // section, plus Booking Confirmed's "Before your visit" checklist, all
+  // differ for Video Consult (node 625:8818 for the whole Confirmation
+  // screen — see that step's own liquid comment) — swapped by mode, not
+  // by which CTA opened the flow. data-kal-mode-offline-only elements
+  // show for In-Clinic, data-kal-mode-online-only for Video Consult.
+  // Called on arrival at either of those two steps.
   const applyConsultationModeVisibility = () => {
     const isVideo = slotPicker.mode === 'video';
     flow.querySelectorAll('[data-kal-mode-offline-only]').forEach((el) => {
