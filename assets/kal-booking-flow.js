@@ -226,6 +226,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const applyFacilitySwitch = (facility) => {
     storeFacility(facility);
     applyStoredFacility();
+    // Re-derive Doctor Select's visible/selected mock cards for the new
+    // facility — a no-op if Doctor Select isn't the current step or the
+    // mode is Video Consult (that path shows every doctor regardless of
+    // facility), harmless either way since it only touches hidden DOM.
+    renderMockDoctorsForCurrentState();
   };
 
   const selectFacilityOption = (optionEl) => {
