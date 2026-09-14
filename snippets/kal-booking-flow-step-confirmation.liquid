@@ -119,22 +119,13 @@
         charged differently. "Pay now" starts selected, matching the
         export.
 
-        EXPERIMENT B (entered via .kal-consult-cta — a doctor card's own
-        "Consult" CTA, skipping Entry straight to Concern Select — see
-        kal-booking-flow.js's BOOKING EXPERIMENT comment): per node
-        625:8869 ("Option 2"), this isn't just Experiment A's two-card
-        layout with the second card hidden — it's a genuinely different,
-        non-selectable "Consultation Fee" info card (sand/mint gradient,
-        no border, no badge chip, icon + title/subtitle on the left,
-        price on the right). Experiment A's whole .kal-payment-options
-        group is now hidden in Experiment B (data-kal-experiment-a-only
-        moved up to that wrapper), and this new card is hidden in
-        Experiment A (data-kal-experiment-b-only) — applyBookingExperiment()
-        in kal-booking-flow.js toggles both on goToStep('confirmation').
+        Same for both booking experiments (see kal-booking-flow.js's
+        BOOKING EXPERIMENT comment) — the only difference between them is
+        which step the flow opens on, not anything on this screen.
       {%- endcomment -%}
       <div class="kal-payment-section">
         <p class="kal-payment-section__label">Payment Method</p>
-        <div class="kal-payment-options" data-kal-experiment-a-only>
+        <div class="kal-payment-options">
           <button type="button" class="kal-payment-option kal-payment-option--selected" data-kal-payment-method="pay-now">
             <span class="kal-payment-option__badge">Save 10%</span>
             <span class="kal-payment-option__icon">
@@ -152,16 +143,6 @@
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
             <span class="kal-payment-option__price">&#8377;495</span>
           </button>
-        </div>
-        <div class="kal-payment-fee-card" data-kal-experiment-b-only hidden>
-          <span class="kal-payment-fee-card__icon">
-            {%- render 'kal-booking-icons', icon_name: 'payment-card' -%}
-          </span>
-          <span class="kal-payment-fee-card__body">
-            <span class="kal-payment-fee-card__title">Consultation Fee</span>
-            <span class="kal-payment-fee-card__subtitle">You save 10%</span>
-          </span>
-          <span class="kal-payment-fee-card__price">&#8377;450</span>
         </div>
       </div>
     </div>
