@@ -190,6 +190,14 @@ document.addEventListener('DOMContentLoaded', () => {
         setFacilityPickerOpen(wrapper, false);
       });
     }
+    // Swaps the header badge's icon (pin -> monitor) alongside the text —
+    // there's no physical location once online.
+    flow.querySelectorAll('[data-kal-location-icon-offline]').forEach((el) => {
+      el.hidden = isVideo;
+    });
+    flow.querySelectorAll('[data-kal-location-icon-online]').forEach((el) => {
+      el.hidden = !isVideo;
+    });
   };
 
   const setFacilityPickerOpen = (wrapper, open) => {
