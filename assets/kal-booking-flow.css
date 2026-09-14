@@ -415,6 +415,13 @@
   border-top: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+  /* Explicit rather than relying on the parent flex column's default
+     stretch/flex-start — the row was rendering as a shrink-to-fit box
+     centered in the column instead of a full-width left-aligned bar. */
+  width: 100%;
+  box-sizing: border-box;
+  align-self: flex-start;
+  justify-content: flex-start;
 }
 
 .kal-step-entry__location-text {
