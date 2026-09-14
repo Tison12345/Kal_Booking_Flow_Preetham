@@ -2786,6 +2786,13 @@ button.kal-step-header__location-badge {
   width: 100%;
 }
 
+/* Same [hidden]-override note as .kal-payment-option[hidden] below —
+   data-kal-experiment-a-only now sits on this wrapper itself (see this
+   step's own liquid comment), so it needs its own override too. */
+.kal-payment-options[hidden] {
+  display: none;
+}
+
 .kal-payment-option {
   position: relative;
   flex: 1;
