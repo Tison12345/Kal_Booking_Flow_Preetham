@@ -2802,6 +2802,16 @@ button.kal-step-header__location-badge {
   box-sizing: border-box;
 }
 
+/* Without this, this rule's own display:flex overrides the browser's
+   [hidden] { display: none } default regardless of the attribute — same
+   class of bug as .kal-booking-flow__close[hidden] elsewhere in this
+   file. Without it, Experiment B's data-kal-experiment-a-only hiding of
+   "Pay at clinic" (see kal-booking-flow.js's applyBookingExperiment())
+   had no visible effect. */
+.kal-payment-option[hidden] {
+  display: none;
+}
+
 .kal-payment-option--selected {
   border-color: #d9cdba;
   background: linear-gradient(180deg, #fbf9f4 27.047%, #f6f1e8 71.937%);
