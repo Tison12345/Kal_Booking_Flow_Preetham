@@ -75,8 +75,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const facility = getStoredFacility();
     if (!facility || !facility.id) return;
 
+    // "Kerala Ayurveda Wellness Center, {facility}" — no address/hours
+    // suffix, matching the static default's own format exactly (see this
+    // element's own liquid comment).
     flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
-      el.textContent = facility.address ? `${facility.name} · ${facility.address}` : facility.name;
+      el.textContent = `Kerala Ayurveda Wellness Center, ${facility.name}`;
     });
 
     // Shorter mobile badge — just the name, no address, matching its
