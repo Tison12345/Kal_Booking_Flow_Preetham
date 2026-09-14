@@ -145,7 +145,7 @@
       "type": "custom-liquid",
       "name": "t:sections.custom-liquid.presets.name",
       "settings": {
-        "custom_liquid": "<button class=\"kal-request-appointment-cta\" style=\"padding:12px 24px;\">Test Request Appointment</button>",
+        "custom_liquid": "<button class=\"kal-request-appointment-cta\" style=\"padding:12px 24px;\">Test Request Appointment</button> <button class=\"kal-consult-cta\" style=\"padding:12px 24px;\">Test Consult (Experiment B)</button>",
         "color_scheme": "",
         "padding_top": 40,
         "padding_bottom": 52

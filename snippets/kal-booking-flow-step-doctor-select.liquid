@@ -84,8 +84,22 @@
         </button>
       </div>
 
+      {%- comment -%}
+        In-Clinic mode shows only the doctor(s) whose mock home facility
+        (kal-booking-flow.js's MOCK_DOCTOR_HOME_FACILITY — the same map
+        the facility-switch warning uses) matches the currently selected
+        facility, pre-selecting the one match; Video Consult shows all
+        three with none pre-selected. renderMockDoctorsForCurrentState()
+        drives this by hiding/showing and (de)selecting these same static
+        cards — it doesn't fetch or clone anything. This empty state
+        covers facilities with no assigned mock doctor (HSR layout,
+        Jayanagar, Sarjapur).
+      {%- endcomment -%}
       {%- assign doctor_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
       <div class="kal-step-doctor-select__list" data-kal-doctor-list>
+        <p class="kal-step-doctor-select__list-empty" data-kal-doctor-list-empty hidden>
+          No in-clinic doctors available at this clinic yet — try Video Consult, or switch clinics.
+        </p>
         {%- render 'kal-booking-flow-doctor-card',
           name: 'Dr. Neethu Jayachandran',
           degree: 'BAMS',

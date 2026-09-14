@@ -17,6 +17,23 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
+  // BOOKING EXPERIMENT — two separate real-site CTAs open this same popup
+  // at different starting steps, otherwise identical:
+  //   A: the existing "Request Consultation" CTA (.kal-request-appointment-cta,
+  //      e.g. the homepage hero's "Book Your Consultation" button) — opens
+  //      at Entry, same as always.
+  //   B: a doctor card's own "Consult" CTA (.kal-consult-cta — on the real
+  //      theme this is custom-clinic-doctors.liquid's consult-link,
+  //      currently just a same-page anchor jump to a legacy form; wire it
+  //      to this class instead of that anchor) — skips Entry and Concern
+  //      Select, opens straight to Doctor Select.
+  // Everything else — Concern Select (when reached via A)/Doctor Select/
+  // Slot Picker/Patient Details/Confirmation/Booking Confirmed — is
+  // identical between the two; no separate flag needed for anything past
+  // the initial goToStep() call below.
+  // ----------------------------------------------------------------------
+
+  // ----------------------------------------------------------------------
   // FACILITY SELECTION — see docs/facility-selection-plan.md. A visitor
   // picks a real clinic on the separate "Find a Clinic" page
   // (sections/kal-clinic-list.liquid), which stores it here in
@@ -110,6 +127,96 @@ document.addEventListener('DOMContentLoaded', () => {
     return card ? card.dataset.kalDoctorName : null;
   };
 
+  // Drives Doctor Select's 3 static mock cards off the same
+  // MOCK_DOCTOR_HOME_FACILITY map the facility-switch warning uses —
+  // no fetching/cloning, just hiding/showing and (de)selecting what's
+  // already in the DOM. In-Clinic: only the doctor(s) whose home
+  // facility matches the current one are shown, and the sole match (our
+  // mock data never has more than one per facility) is pre-selected —
+  // this also doubles as "reset the previous doctor selection" after a
+  // facility switch, since every card's selected state is recomputed
+  // from scratch here rather than left over from before. Video Consult:
+  // every doctor shows, none pre-selected (a real per-mode/per-facility
+  // video doctor list doesn't exist in this mock, so "all of them" is
+  // the closest stand-in). Called on arrival at Doctor Select, on every
+  // mode toggle, and after every facility switch.
+  const renderMockDoctorsForCurrentState = () => {
+    const list = flow.querySelector('[data-kal-doctor-list]');
+    if (!list) return;
+    const cards = [...list.querySelectorAll('.kal-doctor-card')];
+    const emptyState = list.querySelector('[data-kal-doctor-list-empty]');
+
+    if (slotPicker.mode === 'video') {
+      cards.forEach((card) => {
+        card.hidden = false;
+        card.classList.remove('kal-doctor-card--selected');
+      });
+      if (emptyState) emptyState.hidden = true;
+      return;
+    }
+
+    const facilityId = getCurrentFacility().id;
+    const matchingCards = cards.filter((card) => MOCK_DOCTOR_HOME_FACILITY[card.dataset.kalDoctorName] === facilityId);
+    cards.forEach((card) => {
+      card.hidden = !matchingCards.includes(card);
+      card.classList.remove('kal-doctor-card--selected');
+    });
+    if (matchingCards.length > 0) matchingCards[0].classList.add('kal-doctor-card--selected');
+    if (emptyState) emptyState.hidden = matchingCards.length > 0;
+  };
+
+  // Confirmation's appointment card, "Doctor" row, and Payment Method
+  // section, plus Booking Confirmed's "Before your visit" checklist, all
+  // differ for Video Consult (node 625:8818 for the whole Confirmation
+  // screen — see that step's own liquid comment) — swapped by mode, not
+  // by which CTA opened the flow. data-kal-mode-offline-only elements
+  // show for In-Clinic, data-kal-mode-online-only for Video Consult.
+  // Called on arrival at either of those two steps.
+  const applyConsultationModeVisibility = () => {
+    const isVideo = slotPicker.mode === 'video';
+    flow.querySelectorAll('[data-kal-mode-offline-only]').forEach((el) => {
+      el.hidden = isVideo;
+    });
+    flow.querySelectorAll('[data-kal-mode-online-only]').forEach((el) => {
+      el.hidden = !isVideo;
+    });
+  };
+
+  // Video Consult has no physical facility, so the header badge across
+  // every switchable step (Concern Select/Doctor Select/Slot Picker)
+  // swaps to a plain "Online Consultation" label and its dropdown toggle
+  // is disabled (a disabled <button> doesn't fire click at all, so this
+  // alone is enough to stop the panel opening — no separate handling
+  // needed elsewhere). Switching back to In-Clinic restores whatever
+  // facility name was showing before, from the button's own dataset.
+  const setOnlineHeaderState = (isVideo) => {
+    flow.querySelectorAll('.kal-step-header__location-text').forEach((el) => {
+      if (isVideo) {
+        if (el.dataset.kalPrevFacilityText === undefined) el.dataset.kalPrevFacilityText = el.textContent;
+        el.textContent = 'Online Consultation';
+      } else if (el.dataset.kalPrevFacilityText !== undefined) {
+        el.textContent = el.dataset.kalPrevFacilityText;
+        delete el.dataset.kalPrevFacilityText;
+      }
+    });
+    flow.querySelectorAll('[data-kal-facility-toggle]').forEach((btn) => {
+      btn.disabled = isVideo;
+    });
+    if (isVideo) {
+      flow.querySelectorAll('[data-kal-facility-picker]').forEach((wrapper) => {
+        setFacilityPickerOpen(wrapper, false);
+      });
+    }
+    // Swaps the header badge's icon (pin -> monitor) alongside the text —
+    // there's no physical location once online.
+    flow.querySelectorAll('[data-kal-location-icon-offline]').forEach((el) => {
+      el.hidden = isVideo;
+    });
+    flow.querySelectorAll('[data-kal-location-icon-online]').forEach((el) => {
+      el.hidden = !isVideo;
+    });
+  };
+
   const setFacilityPickerOpen = (wrapper, open) => {
     const toggle = wrapper.querySelector('[data-kal-facility-toggle]');
     const panel = wrapper.querySelector('[data-kal-facility-panel]');
@@ -149,6 +256,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const applyFacilitySwitch = (facility) => {
     storeFacility(facility);
     applyStoredFacility();
+    // Re-derive Doctor Select's visible/selected mock cards for the new
+    // facility — a no-op if Doctor Select isn't the current step or the
+    // mode is Video Consult (that path shows every doctor regardless of
+    // facility), harmless either way since it only touches hidden DOM.
+    renderMockDoctorsForCurrentState();
   };
 
   const selectFacilityOption = (optionEl) => {
@@ -314,6 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stepName === 'confirmation') {
       renderConfirmationSummary();
     }
+    if (stepName === 'confirmation' || stepName === 'booking-confirmed') {
+      applyConsultationModeVisibility();
+    }
 
     // DISCONNECTED for now — the backend branch (preetham) this calls
     // isn't deployed anywhere yet, so there's nothing to fetch from.
@@ -323,6 +438,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // if (stepName === 'doctor-select') {
     //   loadDoctorsForFacility();
     // }
+
+    // Mock stand-in for the above — re-derives which of the 3 static
+    // cards show/are selected from the current facility + mode every
+    // time Doctor Select is (re-)reached, regardless of how (Continue
+    // from Concern Select, or "Change Clinic"/"Book an online slot"
+    // sending the visitor back here).
+    if (stepName === 'doctor-select') {
+      renderMockDoctorsForCurrentState();
+    }
 
     if (stepName === 'therapy-confirmed') {
       renderTherapyConfirmedSummary();
@@ -662,13 +786,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTherapyDropdownList();
   renderTherapySelectedChips();
 
-  // In-clinic / Video consult toggle: switches the active button and keeps
-  // the summary badge on later steps in sync. Per the updated Figma spec,
-  // Doctor Select's card is a single static mockup shown for both modes
-  // (no more per-doctor mode-availability filtering — that relied on a
-  // data-kal-modes attribute the static card no longer sets), and the
-  // price banner this used to swap copy on is gone too (price now lives
-  // in the doctor card's own footer).
+  // In-clinic / Video consult toggle: switches the active button, keeps
+  // the summary badge on later steps in sync, and (per the facility-vs-
+  // doctor spec) re-derives which mock doctor cards show/are selected
+  // and whether the header reads as a physical clinic or "Online
+  // Consultation" — see renderMockDoctorsForCurrentState() and
+  // setOnlineHeaderState() above for what each of those actually does.
   const setMode = (mode) => {
     flow.querySelectorAll('.kal-toggle-btn').forEach((btn) => {
       btn.classList.toggle('kal-toggle-btn--active', btn.dataset.kalMode === mode);
@@ -682,6 +805,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // own liquid comment), so switching modes no longer re-fetches or
     // re-renders anything there — just tracked for Confirmation's summary.
     slotPicker.mode = mode;
+
+    setOnlineHeaderState(mode === 'video');
+    renderMockDoctorsForCurrentState();
   };
 
   // ----------------------------------------------------------------------
@@ -1195,11 +1321,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Any CTA anywhere on the site with this class opens the flow
+  // Any CTA anywhere on the site with this class opens the flow at Entry
+  // (Experiment A — see BOOKING EXPERIMENT above).
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
       openFlow();
       goToStep('entry');
+    }
+
+    // Experiment B — a doctor card's own "Consult" CTA, skipping straight
+    // to Doctor Select. See BOOKING EXPERIMENT above.
+    if (e.target.closest('.kal-consult-cta')) {
+      openFlow();
+      goToStep('doctor-select');
     }
 
     // Facility selection, from the separate "Find a Clinic" page — see
@@ -1430,14 +1564,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const facilitySwitchCancel = e.target.closest('[data-kal-facility-switch-cancel]');
 
     if (facilitySwitchClinic || facilitySwitchOnline) {
-      // Both real actions apply the pending facility switch and send the
-      // visitor back to Doctor Select to pick a doctor again — whoever
-      // was selected only made sense for the old clinic/mode combination.
-      // Read pendingFacility before closeFacilitySwitchModal() clears it.
+      // Both send the visitor back to Doctor Select to pick a doctor
+      // again — whoever was selected only made sense for the old
+      // clinic/mode combination. Read pendingFacility before
+      // closeFacilitySwitchModal() clears it.
       const facility = pendingFacility;
       closeFacilitySwitchModal();
-      if (facility) applyFacilitySwitch(facility);
-      setMode(facilitySwitchClinic ? 'in-clinic' : 'video');
+      if (facilitySwitchClinic) {
+        // "Change Clinic" — a real physical-facility switch.
+        if (facility) applyFacilitySwitch(facility);
+        setMode('in-clinic');
+      } else {
+        // "Book an online slot" — the facility the visitor picked in the
+        // dropdown is irrelevant once going online (Video Consult has no
+        // physical clinic), so it's deliberately NOT applied here. Only
+        // the mode changes; setMode('video') is what actually swaps the
+        // header to "Online Consultation" and disables the facility
+        // dropdown (see setOnlineHeaderState()).
+        setMode('video');
+      }
       goToStep('doctor-select');
     } else if (facilitySwitchCancel) {
       closeFacilitySwitchModal();

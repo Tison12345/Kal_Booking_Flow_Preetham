@@ -123,8 +123,14 @@
         </div>
       </div>
 
-      {%- comment -%} Desktop-only omission handled in CSS, see this file's top comment {%- endcomment -%}
-      <div class="kal-before-visit">
+      {%- comment -%}
+        Desktop-only omission handled in CSS, see this file's top comment.
+        Also hidden for Video Consult (data-kal-mode-offline-only,
+        toggled by applyConsultationModeVisibility() in
+        kal-booking-flow.js) — "Pay at reception cash or card" and
+        "arrive 10 minutes early" don't apply to an online visit.
+      {%- endcomment -%}
+      <div class="kal-before-visit" data-kal-mode-offline-only>
         <p class="kal-before-visit__label">Before your visit</p>
         <ul class="kal-before-visit__list">
           <li class="kal-before-visit__item">

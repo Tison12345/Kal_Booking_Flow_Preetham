@@ -87,11 +87,29 @@
         <p class="kal-step-doctor-select__subtext">Check the details before we hold it for you.</p>
       </div>
 
+      {%- comment -%}
+        Video Consult only (node 625:8818) — the same shared appointment
+        card Slot Picker/Patient Details/Booking Confirmed already use
+        (photo, "YOUR CONSULTATION" eyebrow, name, mode + price). In
+        Clinic's own Confirmation export (node 438:7468) has no such
+        card — just the "Doctor" row below — so this is gated to Video
+        Consult only, same data-kal-mode-online-only toggle as the
+        Payment Method section further down.
+      {%- endcomment -%}
+      {%- assign confirmation_appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      <div data-kal-mode-online-only hidden>
+        {%- render 'kal-booking-flow-appointment-card', photo_url: confirmation_appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
+      </div>
+
       <div class="kal-confirmation-details">
         <p class="kal-confirmation-details__label">Consultation Details</p>
         <div class="kal-confirmation-details__divider"></div>
         <div class="kal-confirmation-details__rows">
-          <div class="kal-confirmation-details__row">
+          {%- comment -%}
+            Omitted for Video Consult (node 625:8818 has no Doctor row —
+            the appointment card above already shows the doctor).
+          {%- endcomment -%}
+          <div class="kal-confirmation-details__row" data-kal-mode-offline-only>
             <span class="kal-confirmation-details__key">Doctor</span>
             <span class="kal-confirmation-details__value">Dr. Neethu Jayachandran</span>
           </div>
@@ -118,10 +136,19 @@
         both prices are static mockup values, nothing is actually
         charged differently. "Pay now" starts selected, matching the
         export.
+
+        VIDEO CONSULT (node 625:8869) shows a single non-selectable
+        "Consultation Fee" info card instead — sand/mint gradient, no
+        border, no badge chip, card icon + title/subtitle on the left,
+        price on the right — since there's no "pay at clinic" option once
+        the visit itself is online. applyConsultationModeVisibility() in
+        kal-booking-flow.js toggles data-kal-mode-offline-only /
+        data-kal-mode-online-only based on slotPicker.mode, called on
+        goToStep('confirmation').
       {%- endcomment -%}
       <div class="kal-payment-section">
         <p class="kal-payment-section__label">Payment Method</p>
-        <div class="kal-payment-options">
+        <div class="kal-payment-options" data-kal-mode-offline-only>
           <button type="button" class="kal-payment-option kal-payment-option--selected" data-kal-payment-method="pay-now">
             <span class="kal-payment-option__badge">Save 10%</span>
             <span class="kal-payment-option__icon">
@@ -139,6 +166,16 @@
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
             <span class="kal-payment-option__price">&#8377;495</span>
           </button>
+        </div>
+        <div class="kal-payment-fee-card" data-kal-mode-online-only hidden>
+          <span class="kal-payment-fee-card__icon">
+            {%- render 'kal-booking-icons', icon_name: 'payment-card' -%}
+          </span>
+          <span class="kal-payment-fee-card__body">
+            <span class="kal-payment-fee-card__title">Consultation Fee</span>
+            <span class="kal-payment-fee-card__subtitle">You save 10%</span>
+          </span>
+          <span class="kal-payment-fee-card__price">&#8377;450</span>
         </div>
       </div>
     </div>

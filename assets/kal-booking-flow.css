@@ -858,6 +858,18 @@ button.kal-step-header__location-badge {
   appearance: none;
 }
 
+/* Video Consult has no physical facility — the toggle button itself is
+   disabled (see kal-booking-flow.js's setOnlineHeaderState()), and the
+   chevron hides too since a disabled badge no longer implies a dropdown. */
+button.kal-step-header__location-badge:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+button.kal-step-header__location-badge:disabled .kal-step-header__location-chevron {
+  display: none;
+}
+
 .kal-facility-picker__check {
   display: none;
   flex-shrink: 0;
@@ -2685,6 +2697,20 @@ button.kal-step-header__location-badge {
   }
 }
 
+/* .kal-step-doctor-select__intro (shared with every other step) already
+   carries its own 24px side padding — fine on steps like Patient
+   Details, where the scroll region itself has none. Here, though, the
+   scroll region above ALSO applies 24px, so the "Confirm booking"
+   heading was getting 48px of inset while .kal-confirmation-details and
+   everything else below it (no padding of their own, just the scroll's)
+   only got 24px — reading as the heading being shifted noticeably
+   further right/toward center than every other step's own heading.
+   Zeroed out here so this step's heading gets the scroll's 24px only,
+   same as its siblings. */
+.kal-step-confirmation .kal-step-doctor-select__intro {
+  padding: 0;
+}
+
 /* Figma reference (both mobile and desktop) shows no bordered card around
    this block (.kal-confirmation-details, the outer wrapper div) — just
    the label and rows, flush with the rest of the panel, separated only by
@@ -2727,6 +2753,15 @@ button.kal-step-header__location-badge {
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--kal-color-border);
+}
+
+/* Same [hidden]-override note as .kal-payment-options[hidden] elsewhere
+   in this file — needed now that the "Doctor" row is conditionally
+   hidden for Video Consult (data-kal-mode-offline-only, node 625:8818
+   has no Doctor row once the appointment card above already shows the
+   doctor). */
+.kal-confirmation-details__row[hidden] {
+  display: none;
 }
 
 .kal-confirmation-details__row:last-child {
@@ -2772,6 +2807,15 @@ button.kal-step-header__location-badge {
   width: 100%;
 }
 
+/* Without this, this rule's own display:flex overrides the browser's
+   [hidden] { display: none } default regardless of the attribute — same
+   class of bug as .kal-booking-flow__close[hidden] elsewhere in this
+   file. Without it, hiding the two-card group for Video Consult (see
+   this step's own liquid comment) had no visible effect. */
+.kal-payment-options[hidden] {
+  display: none;
+}
+
 .kal-payment-option {
   position: relative;
   flex: 1;
@@ -2786,6 +2830,62 @@ button.kal-step-header__location-badge {
   font-family: inherit;
   cursor: pointer;
   box-sizing: border-box;
+}
+
+/* Video Consult's single non-selectable "Consultation Fee" card (node
+   625:8869) — not a button, no border, no badge chip; a sand/mint
+   gradient info row instead of the two selectable pill cards above. See
+   this step's own liquid comment for when each shows. */
+.kal-payment-fee-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 24px 16px;
+  border-radius: 12px;
+  background: linear-gradient(103deg, rgba(235, 242, 239, 0.8) 30.429%, rgba(255, 255, 255, 0.8) 99.419%);
+  box-sizing: border-box;
+}
+
+/* Same [hidden]-override note as .kal-payment-options[hidden] above. */
+.kal-payment-fee-card[hidden] {
+  display: none;
+}
+
+.kal-payment-fee-card__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--kal-color-white);
+}
+
+.kal-payment-fee-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kal-payment-fee-card__title {
+  font-size: 20px;
+  color: #122d24;
+}
+
+.kal-payment-fee-card__subtitle {
+  font-size: 14px;
+  color: #1e4b3c;
+}
+
+.kal-payment-fee-card__price {
+  flex-shrink: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--kal-color-heading);
 }
 
 .kal-payment-option--selected {
