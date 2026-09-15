@@ -760,6 +760,166 @@
   position: relative;
 }
 
+/* ----------------------------------------
+   CONCERN SELECT — DESKTOP REDESIGN
+   A real two-column desktop layout, unlike most other steps which still
+   just reuse their mobile composition at 750px+ (see this step's own
+   liquid comment, and .kal-booking-flow's own comment on why the shared
+   dialog grew to 1180x750 to fit it).
+----------------------------------------- */
+
+/* 472px/708px split (close to, not exactly, the shared 3fr/5fr default —
+   this step's own spec, not the general-purpose ratio every other step
+   still uses). */
+.kal-step-concern-select.kal-step-shell {
+  grid-template-columns: 472px 1fr;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-concern-select .kal-step-shell__info {
+    background: rgba(245, 241, 234, 0.5);
+    border-right: 1px solid #e5e1d9;
+    padding: 32px;
+    gap: 32px;
+    box-sizing: border-box;
+  }
+}
+
+.kal-concern-select__info-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kal-concern-select__eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #1e4b3c;
+  margin: 0;
+}
+
+.kal-concern-select__info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kal-concern-select__info-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #646464;
+  margin: 0;
+}
+
+.kal-concern-select__info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kal-concern-select__info-row .kal-icon svg {
+  width: 20px;
+  height: 20px;
+  color: #2b2926;
+}
+
+.kal-concern-select__info-divider {
+  height: 1px;
+  flex-shrink: 0;
+  background: #e5e1d9;
+}
+
+/* Hidden by default (see this section's own hidden attribute in the
+   liquid) — [hidden] works natively here since nothing sets its own
+   display on this element to override the UA default. */
+.kal-concern-select__info-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kal-concern-select__chip {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #e4f2eb;
+  color: #1e4b3c;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Pushes the help line to the bottom of the column regardless of how
+   much (or little) content sits above it — same auto-margin technique
+   used for every other step's footer. */
+.kal-concern-select__info-footer {
+  margin-top: auto;
+}
+
+.kal-concern-select__info-help {
+  font-size: 12px;
+  color: #646464;
+  margin: 0;
+}
+
+@media screen and (min-width: 750px) {
+  /* No back/close/badge row and no dot-progress in this design — just
+     the text stepper below, which the shared rule hides at 750px+ by
+     default (every other step still uses the dots there instead). */
+  .kal-step-concern-select .kal-step-shell__header {
+    display: none;
+  }
+
+  .kal-step-concern-select .kal-step-progress-bar {
+    display: flex;
+    padding: 0;
+  }
+
+  /* The panel's shared 16px/16px/0 (see SHARED STEP SHELL) becomes this
+     step's own 40px inset instead; the intro/banner/list's own mobile
+     side-padding is zeroed so it isn't applied twice on top of that. */
+  .kal-step-concern-select .kal-step-shell__panel {
+    padding: 40px 40px 24px;
+  }
+
+  .kal-step-concern-select .kal-step-doctor-select__intro,
+  .kal-step-concern-select .kal-concern-select__banner,
+  .kal-step-concern-select .kal-concern-select__list {
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* 11 concerns into 2 columns, first 6 down the left column then the
+     remaining 5 down the right — grid-auto-flow:column against a fixed
+     6-row template achieves that fill order from the *same* single list
+     of rows, no duplicated markup and no DOM reordering needed. */
+  .kal-step-concern-select .kal-concern-select__list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(6, auto);
+    grid-auto-flow: column;
+    gap: 16px;
+  }
+
+  /* Right-aligned, auto-width — not the mobile full-width bar. */
+  .kal-step-concern-select .kal-step-shell__footer {
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 12px 0 0;
+    margin-top: 0;
+  }
+
+  .kal-step-concern-select .kal-step-doctor-select__continue {
+    width: auto;
+    padding: 12px 24px;
+  }
+}
+
 /* One scroll region for intro + the concern list together, at every width
    — this step never had a different desktop scroll boundary (unlike
    Doctor Select, where only the doctor list itself scrolls on desktop). */
