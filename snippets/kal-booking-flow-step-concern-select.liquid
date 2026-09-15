@@ -35,12 +35,20 @@
     + progress bar underneath
   - A floating down-chevron scroll hint over the list
 
-  Explicit instruction: THIS PASS IS MOBILE-ONLY. The desktop composition
-  (progress dots in the header, no step-bar, no scroll hint) is
-  deliberately left exactly as it was — every new element below is hidden
-  at 750px+, and the pre-existing desktop elements are hidden below 750px
-  instead of removed. See kal-booking-flow.css's own comment on this
-  step for exactly which classes do which.
+  DESKTOP REDESIGN (later pass): a real two-column desktop layout —
+  472px left info column (eyebrow + "Consultation Booking" title,
+  Selected Clinic, Your Concerns chips once picked, a help phone line)
+  and a right column with a text stepper ("STEP 1 OF 5 / Next: Mode &
+  Doctor") instead of the old progress dots, a 2-column concern grid
+  (CSS grid-auto-flow:column against .kal-concern-select__list, not
+  duplicated markup — see kal-booking-flow.css's own comment), and a
+  right-aligned Continue button. This replaced the earlier "desktop
+  unchanged" approach (old dots/no-stepbar) — this step now has a real
+  desktop design of its own, unlike most other steps in this flow which
+  still share their mobile composition at 750px+ pending their own
+  redesign pass. The shared popup dialog itself was resized to 1180x750
+  (from 802x500) to fit this — see kal-booking-flow.css's own comment on
+  .kal-booking-flow for why other steps' desktop views look off for now.
 
   ICONS (updated to match a later Figma pass): each of the 11 concerns now
   has its own dedicated 'concern-*' icon in kal-booking-icons.liquid,
