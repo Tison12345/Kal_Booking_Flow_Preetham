@@ -487,6 +487,24 @@ document.addEventListener('DOMContentLoaded', () => {
     selected: new Set(),
   };
 
+  // concern_key -> display name, matching the 11 concern rows exactly
+  // as this step's own liquid renders them — only needed for the
+  // desktop "Your Concerns" chip summary, since the rows themselves
+  // already carry their own name as visible text.
+  const CONCERN_NAMES = {
+    'general-wellness': 'General Wellness',
+    'bone-joint-muscle-pain': 'Bone, Joint, Muscle Pain',
+    'gut-health': 'Gut Health',
+    'pcos-pcod-menopause': 'PCOS, PCOD, Menopause',
+    'skin-hair': 'Skin, Hair',
+    'diabetes-thyroid-bp': 'Diabetes, Thyroid, BP',
+    'reproductive-health-infertility': 'Reproductive Health, Infertility',
+    'liver-kidney-health': 'Liver, Kidney Health',
+    'sleep-general-lifestyle': 'Sleep, General Lifestyle',
+    'respiratory-general-immunity': 'Respiratory, General Immunity',
+    other: 'Other',
+  };
+
   const updateConcernContinueButton = () => {
     const hasSelection = concernSelect.selected.size > 0;
     // Per the updated Figma spec, the footer (not just the button) is
@@ -498,6 +516,22 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll('[data-kal-concern-continue]').forEach((btn) => {
       btn.disabled = !hasSelection;
     });
+  };
+
+  // Desktop-only "Your Concerns" chip summary in the left info column
+  // (see this step's own liquid comment) — one chip per selected
+  // concern, using its own real name, not a single combined label.
+  // Hidden entirely until at least one is picked.
+  const renderConcernSummaryChips = () => {
+    const wrapper = flow.querySelector('[data-kal-concern-summary]');
+    const chipsContainer = flow.querySelector('[data-kal-concern-summary-chips]');
+    if (!wrapper || !chipsContainer) return;
+
+    const names = [...concernSelect.selected].map((key) => CONCERN_NAMES[key] || key);
+    chipsContainer.innerHTML = names
+      .map((name) => `<span class="kal-concern-select__chip">${name}</span>`)
+      .join('');
+    wrapper.hidden = names.length === 0;
   };
 
   // Toggles one concern on/off, rather than replacing the whole selection —
@@ -514,6 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
       row.setAttribute('aria-pressed', String(isSelected));
     });
     updateConcernContinueButton();
+    renderConcernSummaryChips();
   };
 
   // ----------------------------------------------------------------------
