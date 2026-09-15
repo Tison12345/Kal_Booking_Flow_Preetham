@@ -64,8 +64,15 @@
     transform: translate(-50%, -50%);
     margin: 0;
     width: 90%;
-    max-width: 802px;
-    height: 500px;
+    /* Resized from 802x500 to match Concern Select's new desktop design
+       (node — see kal-booking-flow-step-concern-select.liquid's own
+       comment), a real 1180x750 two-column layout rather than the old
+       802x500 shared shell. Every other step's desktop view was tuned
+       for the old size and will look off (wrong proportions, excess
+       whitespace) until each gets its own desktop redesign pass in
+       turn — accepted explicitly rather than deferring this resize. */
+    max-width: 1180px;
+    height: 750px;
     max-height: 90vh;
     border: 1px solid var(--kal-color-border);
     border-radius: 16px;
