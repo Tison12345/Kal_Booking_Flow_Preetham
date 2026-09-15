@@ -61,21 +61,50 @@
 
 <div class="kal-step-concern-select kal-step-shell">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Choose your concern</h2>
-      <p class="kal-step-entry__body-text">
-        We&rsquo;ll match you with available doctors. Book a consultation
-        in under a minute in-clinic or video.
-      </p>
+  {%- comment -%}
+    Desktop-only content (this step's new two-column design) — hidden
+    below 750px exactly like every other step's .kal-step-shell__info,
+    so mobile is completely untouched. Reuses .kal-step-entry__heading
+    and .kal-step-entry__location-text (the latter so the existing
+    facility-switch JS, which already targets that class flow-wide,
+    keeps this in sync for free) — only the genuinely new pieces
+    (eyebrow, section labels, concern chips, help line) get their own
+    classes below.
+  {%- endcomment -%}
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    <div class="kal-concern-select__info-header">
+      <p class="kal-concern-select__eyebrow">Ayurveda Wellness</p>
+      <h2 class="kal-step-entry__heading">Consultation Booking</h2>
     </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar
-      </span>
+
+    <div class="kal-concern-select__info-section">
+      <p class="kal-concern-select__info-label">Selected Clinic</p>
+      <div class="kal-concern-select__info-row">
+        <span class="kal-icon kal-icon--location">
+          {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+        </span>
+        <span class="kal-step-entry__location-text">
+          Kerala Ayurveda Wellness Center, Indiranagar
+        </span>
+      </div>
+    </div>
+
+    <div class="kal-concern-select__info-divider"></div>
+
+    {%- comment -%}
+      Hidden until at least one concern is picked — renderConcernSummaryChips()
+      in kal-booking-flow.js fills data-kal-concern-summary-chips and
+      un-hides this on every toggleConcern() call. One chip per selected
+      concern (its own real name, e.g. "PCOS, PCOD, Menopause"), not a
+      single combined/abbreviated label.
+    {%- endcomment -%}
+    <div class="kal-concern-select__info-section" data-kal-concern-summary hidden>
+      <p class="kal-concern-select__info-label">Your Concerns</p>
+      <div class="kal-concern-select__info-chips" data-kal-concern-summary-chips></div>
+    </div>
+
+    <div class="kal-concern-select__info-footer">
+      <p class="kal-concern-select__info-help">Need assistance? Call us at +91 80 4012 3456</p>
     </div>
   </div>
 
