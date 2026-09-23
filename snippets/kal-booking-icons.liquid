@@ -553,6 +553,23 @@
   {%- endcomment -%}
 
   {% when 'flag-in' %}
+    {%- comment -%}
+      {% increment %} guarantees a fresh number on every single render of
+      this case, across every call site in the whole page — this icon
+      renders many times at once (once per country-picker trigger, once
+      per option row, across BOTH Patient Details' and Therapy Details'
+      pickers, all mounted in the DOM simultaneously, only one step
+      visible at a time). Its internal <use href="#kal-flag-in-a"> refs
+      used to be hardcoded, identical ids on every copy — browsers
+      resolve <use href="#id"> to the FIRST matching id in the whole
+      document regardless of which local copy was intended, and a <use>
+      whose target sits inside a hidden (display:none) step doesn't
+      paint. That's why the flag showed on whichever step rendered
+      first and stayed invisible everywhere else. Suffixing every id/
+      href with this counter makes each render's ids genuinely unique,
+      so every copy always resolves to itself.
+    {%- endcomment -%}
+    {%- capture uid -%}{% increment kal_icon_uid %}{%- endcapture -%}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="-45 -30 90 60" fill="#07038D" class="{{ class }}" aria-hidden="true" focusable="false">
       <path fill="#FFF" d="m-45-30h90v60h-90z"/>
       <path fill="#FF6820" d="m-45-30h90v20h-90z"/>
@@ -560,62 +577,66 @@
       <circle r="9.25"/>
       <circle fill="#FFF" r="8"/>
       <circle r="1.6"/>
-      <g id="kal-flag-in-d">
-        <g id="kal-flag-in-c">
-          <g id="kal-flag-in-b">
-            <g id="kal-flag-in-a">
+      <g id="kal-flag-in-d-{{ uid }}">
+        <g id="kal-flag-in-c-{{ uid }}">
+          <g id="kal-flag-in-b-{{ uid }}">
+            <g id="kal-flag-in-a-{{ uid }}">
               <path d="m0-8 .3 4.81409L0-.80235-.3-3.18591z"/>
               <circle transform="rotate(7.5)" r="0.35" cy="-8"/>
             </g>
-            <use href="#kal-flag-in-a" transform="scale(-1)"/>
+            <use href="#kal-flag-in-a-{{ uid }}" transform="scale(-1)"/>
           </g>
-          <use href="#kal-flag-in-b" transform="rotate(15)"/>
+          <use href="#kal-flag-in-b-{{ uid }}" transform="rotate(15)"/>
         </g>
-        <use href="#kal-flag-in-c" transform="rotate(30)"/>
+        <use href="#kal-flag-in-c-{{ uid }}" transform="rotate(30)"/>
       </g>
-      <use href="#kal-flag-in-d" transform="rotate(60)"/>
-      <use href="#kal-flag-in-d" transform="rotate(120)"/>
+      <use href="#kal-flag-in-d-{{ uid }}" transform="rotate(60)"/>
+      <use href="#kal-flag-in-d-{{ uid }}" transform="rotate(120)"/>
     </svg>
 
   {% when 'flag-us' %}
+    {%- comment -%} Same duplicate-id fix as flag-in above — see that case's comment. {%- endcomment -%}
+    {%- capture uid -%}{% increment kal_icon_uid %}{%- endcapture -%}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7410 3900" class="{{ class }}" aria-hidden="true" focusable="false">
       <path d="M0,0h7410v3900H0" fill="#b31942"/>
       <path d="M0,450H7410m0,600H0m0,600H7410m0,600H0m0,600H7410m0,600H0" stroke="#FFF" stroke-width="300"/>
       <path d="M0,0h2964v2100H0" fill="#0a3161"/>
       <g fill="#FFF">
-        <g id="kal-flag-us-s18">
-          <g id="kal-flag-us-s9">
-            <g id="kal-flag-us-s5">
-              <g id="kal-flag-us-s4">
-                <path id="kal-flag-us-s" d="M247,90 317.534230,307.082039 132.873218,172.917961H361.126782L176.465770,307.082039z"/>
-                <use href="#kal-flag-us-s" y="420"/>
-                <use href="#kal-flag-us-s" y="840"/>
-                <use href="#kal-flag-us-s" y="1260"/>
+        <g id="kal-flag-us-s18-{{ uid }}">
+          <g id="kal-flag-us-s9-{{ uid }}">
+            <g id="kal-flag-us-s5-{{ uid }}">
+              <g id="kal-flag-us-s4-{{ uid }}">
+                <path id="kal-flag-us-s-{{ uid }}" d="M247,90 317.534230,307.082039 132.873218,172.917961H361.126782L176.465770,307.082039z"/>
+                <use href="#kal-flag-us-s-{{ uid }}" y="420"/>
+                <use href="#kal-flag-us-s-{{ uid }}" y="840"/>
+                <use href="#kal-flag-us-s-{{ uid }}" y="1260"/>
               </g>
-              <use href="#kal-flag-us-s" y="1680"/>
+              <use href="#kal-flag-us-s-{{ uid }}" y="1680"/>
             </g>
-            <use href="#kal-flag-us-s4" x="247" y="210"/>
+            <use href="#kal-flag-us-s4-{{ uid }}" x="247" y="210"/>
           </g>
-          <use href="#kal-flag-us-s9" x="494"/>
+          <use href="#kal-flag-us-s9-{{ uid }}" x="494"/>
         </g>
-        <use href="#kal-flag-us-s18" x="988"/>
-        <use href="#kal-flag-us-s9" x="1976"/>
-        <use href="#kal-flag-us-s5" x="2470"/>
+        <use href="#kal-flag-us-s18-{{ uid }}" x="988"/>
+        <use href="#kal-flag-us-s9-{{ uid }}" x="1976"/>
+        <use href="#kal-flag-us-s5-{{ uid }}" x="2470"/>
       </g>
     </svg>
 
   {% when 'flag-gb' %}
+    {%- comment -%} Same duplicate-id fix as flag-in above — see that case's comment. {%- endcomment -%}
+    {%- capture uid -%}{% increment kal_icon_uid %}{%- endcapture -%}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 30" class="{{ class }}" aria-hidden="true" focusable="false">
-      <clipPath id="kal-flag-gb-s">
+      <clipPath id="kal-flag-gb-s-{{ uid }}">
         <path d="M0,0 v30 h45 v-30 z"/>
       </clipPath>
-      <clipPath id="kal-flag-gb-t">
+      <clipPath id="kal-flag-gb-t-{{ uid }}">
         <path d="M22.5,15 h22.5 v15 z v15 h-22.5 z h-22.5 v-15 z v-15 h22.5 z"/>
       </clipPath>
-      <g clip-path="url(#kal-flag-gb-s)">
+      <g clip-path="url(#kal-flag-gb-s-{{ uid }})">
         <path d="M0,0 v30 h45 v-30 z" fill="#012169"/>
         <path d="M0,0 L45,30 M45,0 L0,30" stroke="#fff" stroke-width="6"/>
-        <path d="M0,0 L45,30 M45,0 L0,30" clip-path="url(#kal-flag-gb-t)" stroke="#C8102E" stroke-width="4"/>
+        <path d="M0,0 L45,30 M45,0 L0,30" clip-path="url(#kal-flag-gb-t-{{ uid }})" stroke="#C8102E" stroke-width="4"/>
         <path d="M22.5,0 v30 M0,15 h45" stroke="#fff" stroke-width="10"/>
         <path d="M22.5,0 v30 M0,15 h45" stroke="#C8102E" stroke-width="6"/>
       </g>
@@ -630,17 +651,19 @@
     </svg>
 
   {% when 'flag-sg' %}
+    {%- comment -%} Same duplicate-id fix as flag-in above — see that case's comment. {%- endcomment -%}
+    {%- capture uid -%}{% increment kal_icon_uid %}{%- endcapture -%}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 36" class="{{ class }}" aria-hidden="true" focusable="false">
       <path d="M0 0h54v36H0z" fill="#fff"/>
       <path d="M0 0h54v18H0z" fill="#ed2939"/>
       <circle cx="11.405" cy="9" r="6.625" fill="#fff"/>
       <circle cx="15.03" cy="9" r="7.25" fill="#ed2939"/>
-      <path id="kal-flag-sg-s" d="m15.03 3.475-1.01393 3.120554 2.654502-1.928609h-3.281145l2.654502 1.928609z" fill="#fff"/>
-      <g id="kal-flag-sg-t">
-        <use href="#kal-flag-sg-s" transform="rotate(72 15.03 9)"/>
-        <use href="#kal-flag-sg-s" transform="rotate(216 15.03 9)"/>
+      <path id="kal-flag-sg-s-{{ uid }}" d="m15.03 3.475-1.01393 3.120554 2.654502-1.928609h-3.281145l2.654502 1.928609z" fill="#fff"/>
+      <g id="kal-flag-sg-t-{{ uid }}">
+        <use href="#kal-flag-sg-s-{{ uid }}" transform="rotate(72 15.03 9)"/>
+        <use href="#kal-flag-sg-s-{{ uid }}" transform="rotate(216 15.03 9)"/>
       </g>
-      <use href="#kal-flag-sg-t" transform="rotate(72 15.03 9)"/>
+      <use href="#kal-flag-sg-t-{{ uid }}" transform="rotate(72 15.03 9)"/>
     </svg>
 
   {% when 'flag-my' %}
@@ -655,31 +678,33 @@
     </svg>
 
   {% when 'flag-au' %}
+    {%- comment -%} Same duplicate-id fix as flag-in above — see that case's comment. {%- endcomment -%}
+    {%- capture uid -%}{% increment kal_icon_uid %}{%- endcapture -%}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10080 5040" class="{{ class }}" aria-hidden="true" focusable="false">
       <defs>
-        <clipPath id="kal-flag-au-c1">
+        <clipPath id="kal-flag-au-c1-{{ uid }}">
           <path d="M0,0H6V3H0z"/>
         </clipPath>
-        <clipPath id="kal-flag-au-c2">
+        <clipPath id="kal-flag-au-c2-{{ uid }}">
           <path d="M0,0V1.5H6V3H6zM6,0H3V3H0V3z"/>
         </clipPath>
-        <path id="kal-flag-au-Star7" d="M0,-360 69.421398,-144.155019 281.459334,-224.456329 155.988466,-35.603349 350.974048,80.107536 125.093037,99.758368 156.198146,324.348792 0,160 -156.198146,324.348792 -125.093037,99.758368 -350.974048,80.107536 -155.988466,-35.603349 -281.459334,-224.456329 -69.421398,-144.155019z"/>
-        <path id="kal-flag-au-Star5" d="M0,-210 54.859957,-75.508253 199.721868,-64.893569 88.765275,28.841586 123.434903,169.893569 0,93.333333 -123.434903,169.893569 -88.765275,28.841586 -199.721868,-64.893569 -54.859957,-75.508253z"/>
+        <path id="kal-flag-au-Star7-{{ uid }}" d="M0,-360 69.421398,-144.155019 281.459334,-224.456329 155.988466,-35.603349 350.974048,80.107536 125.093037,99.758368 156.198146,324.348792 0,160 -156.198146,324.348792 -125.093037,99.758368 -350.974048,80.107536 -155.988466,-35.603349 -281.459334,-224.456329 -69.421398,-144.155019z"/>
+        <path id="kal-flag-au-Star5-{{ uid }}" d="M0,-210 54.859957,-75.508253 199.721868,-64.893569 88.765275,28.841586 123.434903,169.893569 0,93.333333 -123.434903,169.893569 -88.765275,28.841586 -199.721868,-64.893569 -54.859957,-75.508253z"/>
       </defs>
       <g transform="scale(840)">
         <rect width="12" height="6" fill="#00008b"/>
-        <path d="M0,0 6,3M6,0 0,3" stroke="#fff" stroke-width="0.6" clip-path="url(#kal-flag-au-c1)"/>
-        <path d="M0,0 6,3M6,0 0,3" stroke="#f00" stroke-width="0.4" clip-path="url(#kal-flag-au-c2)"/>
+        <path d="M0,0 6,3M6,0 0,3" stroke="#fff" stroke-width="0.6" clip-path="url(#kal-flag-au-c1-{{ uid }})"/>
+        <path d="M0,0 6,3M6,0 0,3" stroke="#f00" stroke-width="0.4" clip-path="url(#kal-flag-au-c2-{{ uid }})"/>
         <path d="M3,0V3M0,1.5H6" stroke="#fff"/>
         <path d="M3,0V3M0,1.5H6" stroke="#f00" stroke-width="0.6"/>
       </g>
       <g fill="#fff">
-        <use id="kal-flag-au-Comwlth" href="#kal-flag-au-Star7" transform="translate(2520, 3780) scale(2.1)"/>
-        <use href="#kal-flag-au-Star7" x="7560" y="4200"/>
-        <use href="#kal-flag-au-Star7" x="6300" y="2205"/>
-        <use href="#kal-flag-au-Star7" x="7560" y="840"/>
-        <use href="#kal-flag-au-Star7" x="8680" y="1869"/>
-        <use href="#kal-flag-au-Star5" x="8064" y="2730"/>
+        <use id="kal-flag-au-Comwlth-{{ uid }}" href="#kal-flag-au-Star7-{{ uid }}" transform="translate(2520, 3780) scale(2.1)"/>
+        <use href="#kal-flag-au-Star7-{{ uid }}" x="7560" y="4200"/>
+        <use href="#kal-flag-au-Star7-{{ uid }}" x="6300" y="2205"/>
+        <use href="#kal-flag-au-Star7-{{ uid }}" x="7560" y="840"/>
+        <use href="#kal-flag-au-Star7-{{ uid }}" x="8680" y="1869"/>
+        <use href="#kal-flag-au-Star5-{{ uid }}" x="8064" y="2730"/>
       </g>
     </svg>
 

@@ -12,12 +12,14 @@
   --kal-booking-flow-color-text-disabled: #7d7d7d;  /* disabled-looking borders/backgrounds */
   --kal-booking-flow-color-label: #5d5e60;
   --kal-booking-flow-color-location-text: #4b4b4b;
-  --kal-booking-flow-color-border: #e5e1d9;         /* mobile-redesign default border — #dcdcdc has zero real uses left */
+  --kal-booking-flow-color-border: #e5e1d9;         /* mobile-redesign default border — #dcdcdc is a separate, genuine one-off (desktop dialog border only), not a leftover */
   --kal-booking-flow-color-border-subtle: #e6e6e8;  /* confirmed against Figma — back/close buttons + location badge, genuinely distinct from --kal-booking-flow-color-border, not drift */
   --kal-booking-flow-color-border-faint: #e5e5e5;   /* confirmed against Figma — slot-tab bar underline, also genuinely distinct */
   --kal-booking-flow-color-track-bg: #f2f2f2;       /* progress-bar track background, confirmed against Figma */
   --kal-booking-flow-color-divider: #d8e5de;        /* appointment-card divider line, confirmed against Figma */
   --kal-booking-flow-color-accent-tan: #d9cdba;     /* tan selected-state border accent */
+  --kal-booking-flow-color-highlight-tint: #f6f0e7; /* gentle tan card/badge background — stepper's current-step ring, therapy badges/cards, "Before your visit" panel */
+  --kal-booking-flow-color-highlight-text: #8a6e43; /* matching text/border color for the tint above */
   --kal-booking-flow-color-surface-cream: #fbf9f4;      /* gradient pair, start */
   --kal-booking-flow-color-surface-cream-deep: #f6f1e8; /* gradient pair, end */
   --kal-booking-flow-color-surface-tint: #faf8f4;       /* flat cream fill, distinct from the gradient pair above */
@@ -31,6 +33,15 @@
 
   /* Typography */
   --kal-booking-flow-font-family: 'Avenir', -apple-system, 'Segoe UI', sans-serif;
+  /* Font weights — the 6 real, repeated weights in this flow (2+ uses
+     each). 350 (used once, .kal-form-label__optional) is left as a
+     literal — genuinely one-off, same policy as the color tokens. */
+  --kal-booking-flow-font-weight-regular: 400;
+  --kal-booking-flow-font-weight-medium: 500;
+  --kal-booking-flow-font-weight-semibold: 600;
+  --kal-booking-flow-font-weight-bold: 700;
+  --kal-booking-flow-font-weight-heavy: 800;
+  --kal-booking-flow-font-weight-black: 900;
   --kal-booking-flow-font-size-name: 20px;          /* card names/titles — doctor card, appointment card, payment option */
   --kal-booking-flow-font-size-eyebrow: 12px;
   --kal-booking-flow-letter-spacing-eyebrow: 1.44px;
@@ -417,7 +428,7 @@
 .kal-step-entry__eyebrow,
 .kal-step-entry__label {
   font-size: var(--kal-booking-flow-font-size-eyebrow);
-  font-weight: 700;
+  font-weight: var(--kal-booking-flow-font-weight-bold);
   letter-spacing: var(--kal-booking-flow-letter-spacing-eyebrow);
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-heading);
@@ -433,13 +444,13 @@
 .kal-step-entry__label {
   font-size: 14px;
   line-height: 21px;
-  font-weight: 800;
+  font-weight: var(--kal-booking-flow-font-weight-heavy);
 }
 
 .kal-step-entry__heading {
   font-size: var(--kal-booking-flow-font-size-heading);
   line-height: var(--kal-booking-flow-line-height-heading);
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   color: var(--kal-booking-flow-color-heading);
   margin: 0 0 12px;
 }
@@ -456,7 +467,7 @@
   z-index: 1;
   font-size: 28px;
   line-height: 36px;
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-white);
   margin: 0;
   padding: 20px;
@@ -465,7 +476,7 @@
 .kal-step-entry__body-text {
   font-size: var(--kal-booking-flow-font-size-body);
   line-height: var(--kal-booking-flow-line-height-body);
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-body);
   margin: 0;
 }
@@ -545,7 +556,7 @@
 .kal-step-entry__location-text {
   font-size: var(--kal-booking-flow-font-size-location);
   line-height: 150%;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   text-transform: capitalize;
   color: var(--kal-booking-flow-color-location-text);
 }
@@ -598,7 +609,7 @@
 .kal-step-entry__help-text {
   font-size: var(--kal-booking-flow-font-size-caption);
   line-height: 150%;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-location-text);
 }
 
@@ -708,19 +719,19 @@
 }
 
 .kal-option-card--primary .kal-option-card__title {
-  font-weight: 900;
+  font-weight: var(--kal-booking-flow-font-weight-black);
   color: var(--kal-booking-flow-color-white);
 }
 
 .kal-option-card--secondary .kal-option-card__title {
-  font-weight: 800;
+  font-weight: var(--kal-booking-flow-font-weight-heavy);
   color: var(--kal-booking-flow-color-heading);
 }
 
 .kal-option-card__subtitle {
   font-size: var(--kal-booking-flow-font-size-subtitle);
   line-height: var(--kal-booking-flow-line-height-subtitle);
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
 }
 
 .kal-option-card--primary .kal-option-card__subtitle {
@@ -731,7 +742,7 @@
 .kal-option-card--secondary .kal-option-card__subtitle {
   font-size: 12px;
   line-height: 18px;
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-location-text);
 }
 
@@ -1012,7 +1023,7 @@
 .kal-concern-select__heading {
   font-size: 34px;
   line-height: 130%;
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
 }
 
 .kal-concern-select__info-section {
@@ -1024,7 +1035,7 @@
 
 .kal-concern-select__info-label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: 900;
+  font-weight: var(--kal-booking-flow-font-weight-black);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
@@ -1137,7 +1148,7 @@
    get. */
 .kal-concern-select__stepper-step--current .kal-concern-select__stepper-number {
   border-color: var(--kal-booking-flow-color-primary-dark);
-  background: #f6f0e7;
+  background: var(--kal-booking-flow-color-highlight-tint);
   color: var(--kal-booking-flow-color-primary-dark);
   box-shadow: 0 0 0 4px #e8efeb;
 }
@@ -1153,7 +1164,7 @@
 }
 
 .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-label {
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -1162,7 +1173,7 @@
 }
 
 .kal-concern-select__stepper-step--next .kal-concern-select__stepper-number {
-  border-color: #d9cdba;
+  border-color: var(--kal-booking-flow-color-accent-tan);
 }
 
 /* line-height:1.3 here (not the file's usual 150%) is what actually makes
@@ -1185,7 +1196,7 @@
 }
 
 .kal-concern-select__stepper-step--current .kal-concern-select__stepper-label {
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -1468,7 +1479,7 @@
     color: var(--kal-booking-flow-color-heading);
     font-size: var(--kal-booking-flow-font-size-base);
     line-height: 100%;
-    font-weight: 400;
+    font-weight: var(--kal-booking-flow-font-weight-regular);
   }
 
   .kal-step-shell--progress-panel .kal-concern-select__footer-back svg {
@@ -1493,7 +1504,7 @@
     padding: 12px 24px;
     border: 1px solid var(--kal-booking-flow-color-primary-dark);
     border-radius: 8px;
-    font-weight: 500;
+    font-weight: var(--kal-booking-flow-font-weight-medium);
     line-height: 150%;
   }
 }
@@ -1846,7 +1857,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   color: var(--kal-booking-flow-color-primary);
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -1911,7 +1922,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-calendar-modal__month {
   font-size: var(--kal-booking-flow-font-size-body);
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -1924,7 +1935,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-calendar-modal__weekdays span {
   text-align: center;
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: 700;
+  font-weight: var(--kal-booking-flow-font-weight-bold);
   color: var(--kal-booking-flow-color-body);
 }
 
@@ -1953,7 +1964,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 .kal-calendar-modal__cell--today {
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   color: var(--kal-booking-flow-color-primary);
 }
 
@@ -1982,7 +1993,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   color: var(--kal-booking-flow-color-heading);
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: 700;
+  font-weight: var(--kal-booking-flow-font-weight-bold);
   cursor: pointer;
 }
 
@@ -2016,7 +2027,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    correction. */
 .kal-step-progress-bar__step {
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   letter-spacing: 0.025em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
@@ -2031,7 +2042,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    prefix it sits next to — wrapped in its own span in the liquid so this
    can target it alone. */
 .kal-step-progress-bar__next-label {
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
 }
 
 .kal-step-progress-bar__track {
@@ -2174,6 +2185,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-concern-row__name {
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 140%;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
   min-width: 0;
 }
@@ -2380,7 +2392,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-step-doctor-select__eyebrow {
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-label);
@@ -2390,7 +2402,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-doctor-select__heading {
   font-size: var(--kal-booking-flow-font-size-heading);
   line-height: 130%;
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-heading);
   margin: 0;
 }
@@ -2398,7 +2410,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-doctor-select__subtext {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-body);
   margin: 0;
 }
@@ -2557,7 +2569,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-doctor-card__name {
   font-size: var(--kal-booking-flow-font-size-name);
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   line-height: 130%;
   color: var(--kal-booking-flow-color-heading);
 }
@@ -2568,7 +2580,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   gap: 8px;
   font-size: var(--kal-booking-flow-font-size-caption);
   line-height: 18px;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-location-text);
   text-transform: capitalize;
 }
@@ -2637,19 +2649,19 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-doctor-card__next-slot {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 14px;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-location-text);
 }
 
 .kal-doctor-card__next-slot strong {
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
 }
 
 .kal-doctor-card__price {
   font-size: 18px;
   line-height: 25px;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -2682,7 +2694,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 22px;
-  font-weight: 900;
+  font-weight: var(--kal-booking-flow-font-weight-black);
   /* Booking Confirmed's "Back to Homepage" reuses this class on an <a>
      rather than a <button> (a real navigation, not a JS-hooked action)
      — text-decoration:none undoes the browser's default anchor
@@ -2887,7 +2899,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-appointment-card__eyebrow {
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-primary-dark);
@@ -2910,7 +2922,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   gap: 16px;
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-location-text);
 }
 
@@ -2956,7 +2968,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-slot-section__label {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 21px;
-  font-weight: 900;
+  font-weight: var(--kal-booking-flow-font-weight-black);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
@@ -3061,7 +3073,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 11px;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   white-space: nowrap;
 }
 
@@ -3106,7 +3118,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-slot-picker .kal-day-chip__date {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-location-text);
 }
 
@@ -3118,7 +3130,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-step-slot-picker .kal-day-chip--active .kal-day-chip__label,
 .kal-step-slot-picker .kal-day-chip--active .kal-day-chip__date {
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -3151,15 +3163,21 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 /* Time slots */
 
+/* Mobile-first: 3 columns by default, 4 at desktop — matches the pattern
+   .kal-step-slot-picker's own scoped override already uses. This base
+   rule is currently dead in practice (Slot Picker is the only caller,
+   and its own more specific override always wins), kept mobile-first
+   anyway so any future caller of the bare class doesn't inherit a
+   desktop-first default. */
 .kal-slot-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
-@media screen and (max-width: 420px) {
+@media screen and (min-width: 750px) {
   .kal-slot-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -3183,7 +3201,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   border-color: var(--kal-booking-flow-color-accent-tan);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   color: var(--kal-booking-flow-color-heading);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
 }
 
 .kal-slot-chip:disabled {
@@ -3228,7 +3246,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-caption);
   line-height: 150%;
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-text-muted);
   cursor: pointer;
 }
@@ -3279,14 +3297,14 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   border-color: var(--kal-booking-flow-color-border);
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 14px;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
 }
 
 .kal-step-slot-picker .kal-slot-chip--active {
   background: linear-gradient(180deg, var(--kal-booking-flow-color-surface-cream) 27.047%, var(--kal-booking-flow-color-surface-cream-deep) 71.937%);
   border-color: var(--kal-booking-flow-color-accent-tan);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -3378,7 +3396,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-form-label {
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 22px;
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-location-text);
   margin: 0;
 }
@@ -3457,7 +3475,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   gap: 6px;
   margin: 0;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-error);
 }
 
@@ -3538,7 +3556,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-phone-input__code {
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 24px;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-location-text);
   white-space: nowrap;
 }
@@ -3628,7 +3646,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 22px;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   cursor: pointer;
 }
 
@@ -3823,7 +3841,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-confirmation-details__label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
@@ -3871,14 +3889,14 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-confirmation-details__key {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-text-muted);
 }
 
 .kal-confirmation-details__value {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
   text-align: right;
 }
@@ -4035,7 +4053,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-payment-section__label {
   font-size: 14px;
   line-height: 150%;
-  font-weight: 900;
+  font-weight: var(--kal-booking-flow-font-weight-black);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
@@ -4097,7 +4115,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   background: var(--kal-booking-flow-color-primary-dark);
   color: var(--kal-booking-flow-color-white);
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   white-space: nowrap;
 }
 
@@ -4493,7 +4511,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-confirmed-card__date-month {
   font-size: 12px;
   line-height: 1.3;
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   opacity: 0.8;
@@ -4516,7 +4534,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   margin: 0;
   font-size: var(--kal-booking-flow-font-size-heading);
   line-height: 1.3;
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -4530,8 +4548,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-confirmed-card__eta {
   padding: 4px 8px;
   border-radius: 99px;
-  background: #f6f0e7;
-  color: #8a6e43;
+  background: var(--kal-booking-flow-color-highlight-tint);
+  color: var(--kal-booking-flow-color-highlight-text);
   font-size: 12px;
 }
 
@@ -4600,8 +4618,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   width: 46px;
   height: 46px;
   border-radius: 10px;
-  background: #f6f0e7;
-  color: #8a6e43;
+  background: var(--kal-booking-flow-color-highlight-tint);
+  color: var(--kal-booking-flow-color-highlight-text);
   font-size: var(--kal-booking-flow-font-size-base);
 }
 
@@ -4615,7 +4633,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-confirmed-card__doctor-label {
   font-size: 12px;
   line-height: 1;
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-primary-dark);
@@ -4645,7 +4663,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-confirmed-card__cell-label {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
@@ -4827,7 +4845,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   padding: 14px 40px;
   border-top: 1px solid #ece3d3;
   border-bottom: 1px solid #ece3d3;
-  background: #f6f0e7;
+  background: var(--kal-booking-flow-color-highlight-tint);
   box-sizing: border-box;
 }
 
@@ -4847,10 +4865,10 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-before-visit__label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: 600;
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #8a6e43;
+  color: var(--kal-booking-flow-color-highlight-text);
   margin: 0 0 10px;
 }
 
@@ -4882,7 +4900,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   height: 28px;
   border-radius: 8px;
   background: var(--kal-booking-flow-color-white);
-  color: #8a6e43;
+  color: var(--kal-booking-flow-color-highlight-text);
   flex-shrink: 0;
 }
 
@@ -4917,6 +4935,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* 16px top padding, not the shared class's 0 — this step's footer
+   (Confirm button + optional "N selected" summary line) is 16px 24px
+   24px per Figma, distinct from the shared footer's default. */
+.kal-step-therapy-slot .kal-step-shell__footer {
+  padding-top: 16px;
 }
 
 /* "Selected therapies" chip summary (node 623:7592) — shown above the
@@ -4955,7 +4980,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   background: none;
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-primary);
   text-decoration: underline;
   cursor: pointer;
@@ -5019,15 +5044,18 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  border: 1px solid var(--kal-booking-flow-color-border);
+  border: 1px solid var(--kal-booking-flow-color-border-faint);
   border-radius: 12px;
   background: var(--kal-booking-flow-color-white);
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
+  line-height: 140%;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   cursor: pointer;
 }
 
 .kal-therapy-select__placeholder {
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-text-muted);
 }
 
@@ -5090,7 +5118,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   align-items: center;
   gap: 4px;
   font-size: var(--kal-booking-flow-font-size-base);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-primary);
   white-space: nowrap;
 }
@@ -5204,7 +5232,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   background: var(--kal-booking-flow-color-primary-tint);
   color: var(--kal-booking-flow-color-primary);
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: 500;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   letter-spacing: 0.025em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -5225,15 +5253,30 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-therapy-divider__text {
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: 500;
+  line-height: 150%;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-text-muted);
 }
 
 .kal-therapy-category-label {
   font-size: var(--kal-booking-flow-font-size-base);
-  font-weight: 500;
+  line-height: 140%;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-location-text);
   margin: 0;
+}
+
+/* This step's own category cards read taller (58px, matching Concern
+   Select's --selected state) and use a larger 24x24 checkbox than
+   Concern Select's own 20x20 default — scoped here so Concern Select's
+   own settled card height/checkbox size are untouched. */
+.kal-step-therapy-slot .kal-concern-row {
+  min-height: 58px;
+}
+
+.kal-step-therapy-slot .kal-concern-row__checkbox {
+  width: 24px;
+  height: 24px;
 }
 
 /* Footer summary line above Confirm (node 623:7592's "3 therapies
@@ -5245,6 +5288,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   margin: 0;
   padding: 0 8px;
   font-size: var(--kal-booking-flow-font-size-small);
+  line-height: 100%;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
   text-align: center;
 }
@@ -5449,20 +5494,49 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-therapy-confirmed__header {
   position: absolute;
   top: 16px;
-  right: 24px;
+  right: 16px;
   z-index: 1;
+}
+
+/* This screen's own close button reads smaller (24x24) than the shared
+   .kal-step-doctor-select__back's usual 32x32 — scoped here so every
+   other step's back/close button (still 32x32) is untouched. */
+@media screen and (max-width: 749.98px) {
+  .kal-step-therapy-confirmed__header .kal-step-doctor-select__back {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Desktop keeps the shared .kal-step-doctor-select__back's own 32x32
+   default (only mobile shrinks it to 24x24 above) — just the header's
+   own inset moves in slightly, to 15px per this export's own desktop
+   spec. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-confirmed__header {
+    top: 15px;
+    right: 15px;
+  }
 }
 
 .kal-step-therapy-confirmed__intro {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   padding: 0 24px;
 }
 
 .kal-step-therapy-confirmed__intro .kal-step-doctor-select__heading,
 .kal-step-therapy-confirmed__intro .kal-step-doctor-select__subtext {
   text-align: center;
+}
+
+/* This screen's own subtext reads slightly taller than the shared
+   .kal-step-doctor-select__subtext token (140% ≈ 19.6px) — 23px per
+   Figma, scoped here so every other usage of that shared class is
+   untouched. */
+.kal-step-therapy-confirmed__intro .kal-step-doctor-select__subtext {
+  line-height: 23px;
 }
 
 /* flex:1 + justify-content:center — the whole success screen (icon,
@@ -5495,8 +5569,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-therapy-confirmed-actions {
   display: flex;
-  gap: 24px;
-  padding: 0 24px;
+  gap: 16px;
+  padding: 16px 24px 24px;
 }
 
 /* Row (icon beside label), not stacked — matches this export's own
@@ -5510,6 +5584,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   align-items: center;
   justify-content: center;
   gap: 4px;
+  height: 46px;
   padding: 12px 16px;
   border: 1px solid var(--kal-booking-flow-color-border-faint);
   border-radius: 12px;
@@ -5517,6 +5592,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-small);
   color: var(--kal-booking-flow-color-location-text);
+  box-sizing: border-box;
   cursor: pointer;
 }
 
@@ -5551,28 +5627,35 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 32px 24px 24px;
-  margin-bottom: -24px;
+  /* min-height, not height — 300px is the Figma reference size, but a
+     longer subtext string needs more room than that. A hard height here
+     would clip/overflow instead of the hero growing to fit it, same
+     class of bug the Confirmation card's own appointment-card height
+     hit earlier. */
+  min-height: 300px;
+  padding: 36px 0;
+  margin-bottom: -48px;
   background: #fbf6ee;
   box-sizing: border-box;
 }
 
 .kal-therapy-awaiting-badge {
   align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 119px;
+  height: 22px;
   padding: 4px 12px;
-  border: 1px solid #8a6e43;
+  border: 1px solid var(--kal-booking-flow-color-highlight-text);
   border-radius: 12px;
   background: var(--kal-booking-flow-color-white);
-  color: #8a6e43;
+  color: var(--kal-booking-flow-color-highlight-text);
   font-size: var(--kal-booking-flow-font-size-caption);
+  line-height: 100%;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   white-space: nowrap;
-  /* .kal-step-therapy-confirmed__hero's own margin-bottom:-24px pulls the
-     "What happens next" card below up over the cream band by a FIXED
-     24px — this badge sits right at the hero's bottom edge, so that
-     fixed pull-up otherwise erases all visible space between it and the
-     card. Extra margin here adds real height to the hero beyond that
-     fixed overlap amount, which is what actually shows up as a gap. */
-  margin-bottom: 12px;
 }
 
 /* "What happens next" (node 539:2222) — fixed 3-step timeline card
@@ -5582,7 +5665,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    column instead), but the list itself reuses .kal-concern-select__stepper*
    directly — see this step's own liquid comment. */
 .kal-therapy-next-steps {
-  margin: 0 16px;
+  min-height: 224px;
+  margin: 0 25px;
   padding: 16px 24px;
   border: 1px solid var(--kal-booking-flow-color-border);
   border-radius: 16px;
@@ -5595,7 +5679,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      802px dialog — same treatment as Booking Confirmed's own
      .kal-before-visit card at this width. */
   .kal-therapy-next-steps {
-    max-width: 600px;
+    min-height: 134px;
+    max-width: 640px;
     margin: 0 auto;
   }
 
@@ -5658,11 +5743,19 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-therapy-next-steps__label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: 900;
+  font-weight: var(--kal-booking-flow-font-weight-black);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
   margin: 0 0 12px;
+}
+
+/* This card's own circles read 26x26 at every state (completed/current/
+   upcoming), not the shared component's 28x28 default — scoped here so
+   Concern Select's own "Your Progress" stepper keeps its 28x28. */
+.kal-therapy-next-steps .kal-concern-select__stepper-number {
+  width: 26px;
+  height: 26px;
 }
 
 /* Kept at their previous, larger size — the shared
@@ -5707,7 +5800,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    completed step's text no more prominent than the upcoming step below
    it — only the filled circle communicates "done". */
 .kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-label {
-  font-weight: 400;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-text-muted);
 }
 
@@ -5726,15 +5819,15 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    own, same as .kal-therapy-next-steps above). Nothing else about the
    shared card's own styling needs touching. */
 .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-  margin: 16px 16px 0;
+  margin: 16px 25px 0;
 }
 
 @media screen and (min-width: 750px) {
-  /* Capped and centered to the same 600px as "What happens next" above,
+  /* Capped and centered to the same 640px as "What happens next" above,
      so both cards line up at the same width instead of this one
      stretching edge to edge across the full dialog. */
   .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-    max-width: 600px;
+    max-width: 640px;
     margin-left: auto;
     margin-right: auto;
   }

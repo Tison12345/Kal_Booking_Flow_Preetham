@@ -1170,8 +1170,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return digits.slice(0, maxDigits);
   };
 
-  const setCountryPickerOpen = (open) => {
-    const wrapper = flow.querySelector('[data-kal-country-picker]');
+  // Takes the specific wrapper to open/close, not "the" picker — Patient
+  // Details and Therapy Details each render their own independent
+  // .kal-country-picker instance (both in the DOM at once, only one
+  // step ever visible), same "never assumed to be the only one" pattern
+  // the facility switcher below already uses for its 3 instances.
+  const setCountryPickerOpen = (wrapper, open) => {
     if (!wrapper) return;
     const toggle = wrapper.querySelector('[data-kal-country-toggle]');
     const panel = wrapper.querySelector('[data-kal-country-panel]');
@@ -1210,7 +1214,11 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.setAttribute('aria-selected', String(btn === optionEl));
     });
 
-    const phoneField = flow.querySelector('[data-kal-field="whatsapp"]');
+    // Scoped to this picker's own .kal-phone-input sibling, not
+    // flow-wide — Patient Details and Therapy Details each have their
+    // own whatsapp field, and switching country in one must never touch
+    // the other (hidden) step's field.
+    const phoneField = wrapper.closest('.kal-phone-input')?.querySelector('[data-kal-field="whatsapp"]');
     if (phoneField) {
       phoneField.placeholder =
         selectedCountry.min === selectedCountry.max
@@ -1242,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isValidWhatsapp(patientDetails.whatsapp)) clearFieldError('whatsapp');
     if (isValidEmail(patientDetails.email)) clearFieldError('email');
 
-    setCountryPickerOpen(false);
+    setCountryPickerOpen(wrapper, false);
     updatePatientContinueButton();
   };
 
@@ -1636,23 +1644,29 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Patient Details' country-code picker — same toggle/option/
-    // click-outside pattern as the therapy dropdown above, kept as its
-    // own independent if/else-if chain rather than folded into that one
-    // since the two dropdowns are unrelated.
+    // Patient Details' and Therapy Details' country-code pickers — same
+    // toggle/option/click-outside pattern as the therapy dropdown above,
+    // kept as its own independent if/else-if chain rather than folded
+    // into that one since the dropdowns are unrelated. Both steps' own
+    // .kal-country-picker instance sit in the DOM at once (only one
+    // step ever visible), so every lookup here is scoped to whichever
+    // wrapper the click actually happened in, same as the facility
+    // switcher below.
     const countryToggle = e.target.closest('[data-kal-country-toggle]');
     const countryOption = e.target.closest('[data-kal-country-option]');
 
     if (countryOption) {
       selectCountry(countryOption);
     } else if (countryToggle) {
+      const wrapper = countryToggle.closest('[data-kal-country-picker]');
       const isOpen = countryToggle.getAttribute('aria-expanded') === 'true';
-      setCountryPickerOpen(!isOpen);
+      setCountryPickerOpen(wrapper, !isOpen);
     } else {
-      const wrapper = flow.querySelector('[data-kal-country-picker]');
-      if (wrapper && !wrapper.contains(e.target)) {
-        setCountryPickerOpen(false);
-      }
+      flow.querySelectorAll('[data-kal-country-picker]').forEach((wrapper) => {
+        if (!wrapper.contains(e.target)) {
+          setCountryPickerOpen(wrapper, false);
+        }
+      });
     }
 
     // Facility switcher — same toggle/option/click-outside pattern again,

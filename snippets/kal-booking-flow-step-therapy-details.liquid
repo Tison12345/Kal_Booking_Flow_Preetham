@@ -119,6 +119,10 @@
             placeholder="Enter full name"
             autocomplete="name"
           >
+          <p class="kal-form-error" data-kal-field-error="name" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
         </div>
 
         <div class="kal-form-field">
@@ -127,27 +131,98 @@
             <button type="button" class="kal-gender-btn" data-kal-gender="female">Female</button>
             <button type="button" class="kal-gender-btn" data-kal-gender="male">Male</button>
           </div>
+          <p class="kal-form-error" data-kal-field-error="gender" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
         </div>
 
         <div class="kal-form-row">
           <div class="kal-form-field">
             <label class="kal-form-label" for="kal-therapy-patient-whatsapp">Phone Number*</label>
-            {%- comment -%}
-              Country-code chip is decorative — same "visual match, not
-              wired" treatment as Patient Details' own copy of this.
-            {%- endcomment -%}
             <div class="kal-phone-input">
-              <span class="kal-phone-input__country" aria-hidden="true">
-                <span class="kal-phone-input__flag">
-                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--saffron"></span>
-                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--white"></span>
-                  <span class="kal-phone-input__flag-stripe kal-phone-input__flag-stripe--green"></span>
-                </span>
-                <span class="kal-phone-input__code">+91</span>
-                <span class="kal-phone-input__chevron">
-                  {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
-                </span>
-              </span>
+              <div class="kal-country-picker" data-kal-country-picker>
+                <button
+                  type="button"
+                  class="kal-phone-input__country"
+                  data-kal-country-toggle
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                >
+                  <span class="kal-phone-input__flag" data-kal-country-flag>
+                    {%- render 'kal-booking-icons', icon_name: 'flag-in' -%}
+                  </span>
+                  <span class="kal-phone-input__code" data-kal-country-code>+91</span>
+                  <span class="kal-phone-input__chevron">
+                    {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
+                  </span>
+                </button>
+                <ul class="kal-country-picker__panel" data-kal-country-panel hidden role="listbox" aria-label="Country code">
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="IN" data-kal-country-dial="+91" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="6789" role="option" aria-selected="true">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-in' -%}</span>
+                      <span class="kal-country-picker__label">India</span>
+                      <span class="kal-country-picker__dial">+91</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="US" data-kal-country-dial="+1" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-us' -%}</span>
+                      <span class="kal-country-picker__label">United States</span>
+                      <span class="kal-country-picker__dial">+1</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="GB" data-kal-country-dial="+44" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="7" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-gb' -%}</span>
+                      <span class="kal-country-picker__label">United Kingdom</span>
+                      <span class="kal-country-picker__dial">+44</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="AE" data-kal-country-dial="+971" data-kal-country-min="9" data-kal-country-max="9" data-kal-country-start="5" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-ae' -%}</span>
+                      <span class="kal-country-picker__label">United Arab Emirates</span>
+                      <span class="kal-country-picker__dial">+971</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="SG" data-kal-country-dial="+65" data-kal-country-min="8" data-kal-country-max="8" data-kal-country-start="89" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-sg' -%}</span>
+                      <span class="kal-country-picker__label">Singapore</span>
+                      <span class="kal-country-picker__dial">+65</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="MY" data-kal-country-dial="+60" data-kal-country-min="9" data-kal-country-max="10" data-kal-country-start="1" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-my' -%}</span>
+                      <span class="kal-country-picker__label">Malaysia</span>
+                      <span class="kal-country-picker__dial">+60</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="AU" data-kal-country-dial="+61" data-kal-country-min="9" data-kal-country-max="9" data-kal-country-start="4" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-au' -%}</span>
+                      <span class="kal-country-picker__label">Australia</span>
+                      <span class="kal-country-picker__dial">+61</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="DE" data-kal-country-dial="+49" data-kal-country-min="10" data-kal-country-max="11" data-kal-country-start="1|567" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-de' -%}</span>
+                      <span class="kal-country-picker__label">Germany</span>
+                      <span class="kal-country-picker__dial">+49</span>
+                    </button>
+                  </li>
+                  <li role="presentation">
+                    <button type="button" class="kal-country-picker__option" data-kal-country-option data-kal-country-iso="JP" data-kal-country-dial="+81" data-kal-country-min="10" data-kal-country-max="10" data-kal-country-start="789|0" role="option" aria-selected="false">
+                      <span class="kal-phone-input__flag">{%- render 'kal-booking-icons', icon_name: 'flag-jp' -%}</span>
+                      <span class="kal-country-picker__label">Japan</span>
+                      <span class="kal-country-picker__dial">+81</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
               <input
                 type="tel"
                 id="kal-therapy-patient-whatsapp"
@@ -156,13 +231,19 @@
                 placeholder="10-digit mobile number"
                 autocomplete="tel"
                 inputmode="numeric"
+                maxlength="10"
               >
             </div>
+            <p class="kal-form-error" data-kal-field-error="whatsapp" hidden>
+              <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+              <span data-kal-field-error-text></span>
+            </p>
           </div>
 
           <div class="kal-form-field">
             <label class="kal-form-label" for="kal-therapy-patient-email">
-              Email <span class="kal-form-label__optional">Optional</span>
+              Email<span class="kal-form-label__required" data-kal-email-required hidden>*</span>
+              <span class="kal-form-label__optional" data-kal-email-optional>Optional</span>
             </label>
             <input
               type="email"
@@ -172,6 +253,10 @@
               placeholder="Enter email address"
               autocomplete="email"
             >
+            <p class="kal-form-error" data-kal-field-error="email" hidden>
+              <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+              <span data-kal-field-error-text></span>
+            </p>
           </div>
         </div>
       </div>
