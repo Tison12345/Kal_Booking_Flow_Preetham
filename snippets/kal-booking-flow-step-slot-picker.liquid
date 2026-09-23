@@ -53,27 +53,30 @@
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
-  switches at 750px. Left column reuses .kal-step-entry__info, same as the
-  other steps; this pass is mobile-only, so that copy is left as-is.
+  switches at 750px.
+
+  DESKTOP REDESIGN: same left column + full-width footer as Concern
+  Select/Doctor Select now (see kal-booking-flow.css's
+  .kal-step-shell--progress-panel section and kal-booking-flow-step-progress.liquid),
+  current_step: 3 here — "Health concerns" and "Mode & doctor" both show
+  completed, "Date & time" current. Mobile keeps its own "Pick your
+  visit" composition untouched below.
 {% endcomment %}
 
-<div class="kal-step-slot-picker kal-step-shell" data-kal-doctor-id="2a3340b9-79d2-4d50-ba28-817f61ce327e" data-kal-facility-id="bfa7bd70-428b-4fd3-80c3-2c7f0106497d">
+<div class="kal-step-slot-picker kal-step-shell kal-step-shell--progress-panel" data-kal-doctor-id="2a3340b9-79d2-4d50-ba28-817f61ce327e" data-kal-facility-id="bfa7bd70-428b-4fd3-80c3-2c7f0106497d">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Pick your visit</h2>
-      <p class="kal-step-entry__body-text">
-        Book a consultation in under a minute in-clinic or video. Confirmation
-        arrives instantly, no account required.
-      </p>
-    </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-      </span>
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    <div class="kal-concern-select__info-scroll">
+      <div class="kal-concern-select__info-header">
+        <h2 class="kal-step-entry__heading kal-concern-select__heading">Consultation Booking</h2>
+      </div>
+
+      <div class="kal-concern-select__info-section">
+        <p class="kal-concern-select__info-label">Selected Clinic</p>
+        {%- render 'kal-booking-flow-facility-picker', step_number: 3, location_text: 'Indiranagar', extra_class: 'kal-concern-select__info-pill' -%}
+      </div>
+
+      {%- render 'kal-booking-flow-step-progress', current_step: 3 -%}
     </div>
   </div>
 
@@ -81,11 +84,19 @@
 
     {%- render 'kal-booking-flow-step-header', back_target: 'doctor-select', step_number: 3, step_total: 5, next_label: 'Personal details', location_switchable: true -%}
 
-    <div class="kal-step-shell__scroll">
-      <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Choose a date &amp; time</h2>
-      </div>
+    {%- comment -%}
+      Heading moved OUTSIDE .kal-step-shell__scroll (still a sibling
+      within .kal-step-shell__panel) per explicit instruction — only the
+      heading stays fixed right below the progress bar; the appointment
+      card scrolls together with the day-strip/time-slot content below
+      it (unlike Patient Details' copy of this same card, which stays
+      fixed — explicit instruction to treat this step differently).
+    {%- endcomment -%}
+    <div class="kal-step-doctor-select__intro">
+      <h2 class="kal-step-doctor-select__heading">Choose appointment date and time</h2>
+    </div>
 
+    <div class="kal-step-shell__scroll">
       {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
       {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
 
@@ -173,12 +184,38 @@
       </div>
     </div>
 
-    <div class="kal-step-shell__footer">
+    <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
       <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
         Continue
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%}
+    Desktop-only full-width footer bar, same pattern as Concern Select/
+    Doctor Select's (see their own liquid comments) — help text + Back
+    (to Doctor Select)/Continue split across the shared 300px/1fr grid
+    columns. Continue stays a plain always-enabled button here too (a
+    slot is pre-selected by default, per this step's own top comment),
+    not tied to any disabled/hidden toggle.
+  {%- endcomment -%}
+  <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
+    <div class="kal-concern-select__footer-help kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
+      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
+    </div>
+    <div class="kal-concern-select__footer-actions">
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="doctor-select" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details">
+        Continue
+      </button>
+    </div>
   </div>
 
 </div>

@@ -11,8 +11,10 @@
   up the same live text.
 
   Accepts:
-  - photo_url: {String} doctor photo URL — DUMMY/placeholder, no real
-    doctor photos exist yet
+  - photo_url: {String} doctor photo URL — no longer used, kept as a
+    param so existing render calls don't need updating; the photo is a
+    plain placeholder box for now (see .kal-doctor-photo-placeholder in
+    the CSS), removed everywhere in this flow per explicit instruction
   - name: {String} e.g. "Dr. Neethu Jayachandran"
   - price: {String} pre-formatted, e.g. "&#8377;500"
 
@@ -21,16 +23,16 @@
 {% endcomment %}
 
 <div class="kal-appointment-card">
-  <span class="kal-appointment-card__photo">
-    <img src="{{ photo_url }}" alt="{{ name }}" loading="lazy">
+  <span class="kal-appointment-card__photo" data-kal-doctor-photo-display>
+    <span class="kal-doctor-photo-placeholder"></span>
   </span>
   <span class="kal-appointment-card__body">
     <span class="kal-appointment-card__eyebrow">Your Consultation</span>
-    <span class="kal-appointment-card__name">{{ name }}</span>
+    <span class="kal-appointment-card__name" data-kal-doctor-name-display>{{ name }}</span>
     <span class="kal-appointment-card__meta">
       <span data-kal-summary-mode>In-Clinic</span>
       <span class="kal-appointment-card__divider" aria-hidden="true"></span>
-      <span>{{ price }}</span>
+      <span data-kal-doctor-price-display>{{ price }}</span>
     </span>
   </span>
 </div>

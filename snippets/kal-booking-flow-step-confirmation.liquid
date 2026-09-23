@@ -58,22 +58,33 @@
   overrides this left behind (the doctor-summary-card margin, the
   pay-notice display:none) are addressed in kal-booking-flow.css's own
   comment.
+
+  DESKTOP REDESIGN: same left column + full-width footer as the previous
+  four steps now (see kal-booking-flow.css's .kal-step-shell--progress-panel
+  section and kal-booking-flow-step-progress.liquid), current_step: 5 —
+  every earlier step shows completed, "Review & payment" current (the
+  last step, so there's no "Up next" row after it). This DOES replace
+  the left column's content on mobile too, unlike the other four steps —
+  see the note above on why this step has no separate desktop-only
+  content to leave untouched; .kal-step-shell__info itself still stays
+  display:none below 750px regardless (SHARED STEP SHELL), so nothing
+  changes on mobile in practice.
 {% endcomment %}
 
-<div class="kal-step-confirmation kal-step-shell">
+<div class="kal-step-confirmation kal-step-shell kal-step-shell--progress-panel">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Confirm your slot</h2>
-      <p class="kal-step-entry__body-text">Check the details before we hold it for you.</p>
-    </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-      </span>
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    <div class="kal-concern-select__info-scroll">
+      <div class="kal-concern-select__info-header">
+        <h2 class="kal-step-entry__heading kal-concern-select__heading">Consultation Booking</h2>
+      </div>
+
+      <div class="kal-concern-select__info-section">
+        <p class="kal-concern-select__info-label">Selected Clinic</p>
+        {%- render 'kal-booking-flow-facility-picker', step_number: 5, location_text: 'Indiranagar', extra_class: 'kal-concern-select__info-pill' -%}
+      </div>
+
+      {%- render 'kal-booking-flow-step-progress', current_step: 5 -%}
     </div>
   </div>
 
@@ -81,111 +92,188 @@
 
     {%- render 'kal-booking-flow-step-header', back_target: 'patient-details', step_number: 5, step_total: 5 -%}
 
+    {%- comment -%}
+      Heading + appointment card moved BACK inside .kal-step-shell__scroll
+      (reverting the earlier "only Payment Method scrolls" restructuring)
+      per explicit instruction — on Step 5 of 5 specifically, only the
+      progress bar stays fixed; the heading and everything below it
+      (appointment card, Payment Method) scroll together, unlike every
+      other step in this flow.
+    {%- endcomment -%}
     <div class="kal-step-shell__scroll">
+      {%- comment -%}
+        Unified to one heading for both modes — "Review your appointment
+        details" (previously Video Consult-only per node 625:8818) now
+        replaces the older "Confirm booking" copy the In-Clinic path had
+        kept, per explicit instruction to make Step 5 of 5 read the same
+        across every flow/mode/width instead of a per-mode split.
+      {%- endcomment -%}
       <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Confirm booking</h2>
+        <h2 class="kal-step-doctor-select__heading">Review your appointment details</h2>
         <p class="kal-step-doctor-select__subtext">Check the details before we hold it for you.</p>
       </div>
 
       {%- comment -%}
-        Video Consult only (node 625:8818) — the same shared appointment
-        card Slot Picker/Patient Details/Booking Confirmed already use
-        (photo, "YOUR CONSULTATION" eyebrow, name, mode + price). In
-        Clinic's own Confirmation export (node 438:7468) has no such
-        card — just the "Doctor" row below — so this is gated to Video
-        Consult only, same data-kal-mode-online-only toggle as the
-        Payment Method section further down.
+        Now shown for BOTH modes — this bordered card combining the
+        doctor photo/name (top, same gradient/eyebrow treatment as the
+        shared .kal-appointment-card elsewhere) with Mode/Date & Time/
+        Patient rows below it was Video Consult only (node 625:8818);
+        In-Clinic used a separate plain "Consultation Details" list with
+        its own "Doctor" row (node 438:7468). Per explicit instruction,
+        In-Clinic now gets this exact same card too, so that plain list
+        is gone — the doctor's identity already reads from the card's own
+        photo/name header, so there's no separate "Doctor" row here.
+        Mode/Date & Time/Patient reuse the exact same
+        data-kal-confirm-mode/-datetime/-name hooks the old list used, so
+        renderConfirmationSummary() in kal-booking-flow.js populates these
+        for free with zero JS changes.
       {%- endcomment -%}
-      {%- assign confirmation_appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
-      <div data-kal-mode-online-only hidden>
-        {%- render 'kal-booking-flow-appointment-card', photo_url: confirmation_appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
-      </div>
-
-      <div class="kal-confirmation-details">
-        <p class="kal-confirmation-details__label">Consultation Details</p>
-        <div class="kal-confirmation-details__divider"></div>
-        <div class="kal-confirmation-details__rows">
-          {%- comment -%}
-            Omitted for Video Consult (node 625:8818 has no Doctor row —
-            the appointment card above already shows the doctor).
-          {%- endcomment -%}
-          <div class="kal-confirmation-details__row" data-kal-mode-offline-only>
-            <span class="kal-confirmation-details__key">Doctor</span>
-            <span class="kal-confirmation-details__value">Dr. Neethu Jayachandran</span>
-          </div>
+      {%- comment -%}
+        Photo temporarily removed per explicit instruction — the
+        .kal-appointment-card__photo wrapper stays (so the header row's
+        layout/sizing is unaffected) but renders as a plain placeholder
+        box (background color only, no <img>) instead of the doctor's
+        photo for now.
+      {%- endcomment -%}
+      <div class="kal-confirmation-appointment-card">
+        <div class="kal-appointment-card kal-confirmation-appointment-card__top">
+          <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder" data-kal-doctor-photo-display></span>
+          <span class="kal-appointment-card__body">
+            <span class="kal-appointment-card__eyebrow">Your Consultation</span>
+            <span class="kal-appointment-card__name" data-kal-doctor-name-display>Dr. Neethu Jayachandran</span>
+          </span>
+        </div>
+        <div class="kal-confirmation-appointment-card__rows">
           <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Patient</span>
-            <span class="kal-confirmation-details__value" data-kal-confirm-name>—</span>
-          </div>
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Mode</span>
+            <span class="kal-confirmation-appointment-card__key">
+              <span data-kal-mode-online-only hidden>{%- render 'kal-booking-icons', icon_name: 'mode-online' -%}</span>
+              <span data-kal-mode-offline-only>{%- render 'kal-booking-icons', icon_name: 'location-pin' -%}</span>
+              Mode
+            </span>
             <span class="kal-confirmation-details__value" data-kal-confirm-mode>—</span>
           </div>
           <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Date &amp; Time</span>
+            <span class="kal-confirmation-appointment-card__key">
+              {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+              Date &amp; Time
+            </span>
             <span class="kal-confirmation-details__value" data-kal-confirm-datetime>—</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-appointment-card__key">
+              {%- render 'kal-booking-icons', icon_name: 'user' -%}
+              Patient
+            </span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-name>—</span>
           </div>
         </div>
       </div>
 
       {%- comment -%}
-        Payment Method — new per this Figma pass, replacing the old fixed
-        "Fee" row + "pay at the clinic" notice. Click-to-select between
-        the two cards is purely visual (setPaymentMethod() in
-        kal-booking-flow.js just toggles kal-payment-option--selected) —
-        both prices are static mockup values, nothing is actually
-        charged differently. "Pay now" starts selected, matching the
-        export.
+        Payment Method — two horizontal-row cards (node/export "Fieldset"),
+        replacing this pass's earlier design of a floating "Save 10%"
+        badge + centered icon/title/divider/price stack. Click-to-select
+        is purely visual (setPaymentMethod() in kal-booking-flow.js just
+        toggles kal-payment-option--selected) — both prices are static
+        mockup values, nothing is actually charged differently. "Pay now"
+        starts selected, matching the export.
 
-        VIDEO CONSULT (node 625:8869) shows a single non-selectable
-        "Consultation Fee" info card instead — sand/mint gradient, no
-        border, no badge chip, card icon + title/subtitle on the left,
-        price on the right — since there's no "pay at clinic" option once
-        the visit itself is online. applyConsultationModeVisibility() in
-        kal-booking-flow.js toggles data-kal-mode-offline-only /
-        data-kal-mode-online-only based on slotPicker.mode, called on
-        goToStep('confirmation').
+        Now shown for BOTH modes — Video Consult previously got a
+        separate single non-selectable "Consultation Fee" info card
+        instead (no "pay at clinic" option, since the visit itself is
+        online), but this pass's export for the online Confirmation
+        screen (node 625:8818) shows this exact same two-card selector,
+        Mode row above already saying "Video consult" — so that fee-card
+        variant is gone, not just hidden, and data-kal-mode-*-only no
+        longer applies to this section at all.
+      {%- endcomment -%}
+      {%- comment -%}
+        kal-payment-option__badge/__divider are MOBILE ONLY (hidden at
+        750px+, see CSS) — the original vertical card design's floating
+        "Save 10%" pill and title/price divider line, restored after an
+        earlier pass accidentally dropped them everywhere while building
+        the new desktop-only horizontal row layout. Desktop instead shows
+        __subtitle/__price-strike (hidden below 750px), which the
+        original mobile design never had.
       {%- endcomment -%}
       <div class="kal-payment-section">
         <p class="kal-payment-section__label">Payment Method</p>
-        <div class="kal-payment-options" data-kal-mode-offline-only>
+        <div class="kal-payment-options">
           <button type="button" class="kal-payment-option kal-payment-option--selected" data-kal-payment-method="pay-now">
             <span class="kal-payment-option__badge">Save 10%</span>
-            <span class="kal-payment-option__icon">
-              {%- render 'kal-booking-icons', icon_name: 'payment-card' -%}
+            <span class="kal-payment-option__left">
+              <span class="kal-payment-option__icon">
+                {%- render 'kal-booking-icons', icon_name: 'payment-card' -%}
+              </span>
+              <span class="kal-payment-option__text">
+                <span class="kal-payment-option__title">Pay now</span>
+                <span class="kal-payment-option__subtitle">UPI, card or netbanking</span>
+              </span>
             </span>
-            <span class="kal-payment-option__title">Pay now</span>
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
-            <span class="kal-payment-option__price">&#8377;450</span>
+            <span class="kal-payment-option__price-group">
+              <span class="kal-payment-option__price">&#8377;450</span>
+              <span class="kal-payment-option__price-strike">&#8377;495</span>
+            </span>
           </button>
           <button type="button" class="kal-payment-option" data-kal-payment-method="pay-at-clinic">
-            <span class="kal-payment-option__icon kal-payment-option__icon--tint">
-              {%- render 'kal-booking-icons', icon_name: 'clinic-building' -%}
+            <span class="kal-payment-option__left">
+              <span class="kal-payment-option__icon kal-payment-option__icon--tint">
+                {%- render 'kal-booking-icons', icon_name: 'clinic-building' -%}
+              </span>
+              <span class="kal-payment-option__text">
+                <span class="kal-payment-option__title">Pay at clinic</span>
+                <span class="kal-payment-option__subtitle">Pay at the front desk</span>
+              </span>
             </span>
-            <span class="kal-payment-option__title">Pay at clinic</span>
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
-            <span class="kal-payment-option__price">&#8377;495</span>
+            <span class="kal-payment-option__price-group">
+              <span class="kal-payment-option__price">&#8377;495</span>
+            </span>
           </button>
-        </div>
-        <div class="kal-payment-fee-card" data-kal-mode-online-only hidden>
-          <span class="kal-payment-fee-card__icon">
-            {%- render 'kal-booking-icons', icon_name: 'payment-card' -%}
-          </span>
-          <span class="kal-payment-fee-card__body">
-            <span class="kal-payment-fee-card__title">Consultation Fee</span>
-            <span class="kal-payment-fee-card__subtitle">You save 10%</span>
-          </span>
-          <span class="kal-payment-fee-card__price">&#8377;450</span>
         </div>
       </div>
     </div>
 
-    <div class="kal-step-shell__footer">
+    <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
+      {%- comment -%}
+        Button copy differs by mode too (node 625:8818: "Pay ₹450", vs
+        In-Clinic's "Confirm payment") — one button, two text spans
+        toggled the same way, so data-kal-confirm-booking/data-kal-goto
+        stay on a single element regardless of mode.
+      {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        Confirm payment
+        <span data-kal-mode-offline-only>Confirm payment</span>
+        <span data-kal-mode-online-only hidden>Pay &#8377;450</span>
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%}
+    Desktop-only full-width footer bar, same pattern as the previous
+    four steps — help text + Back (to Patient Details)/Continue split
+    across the shared 300px/1fr grid columns. Continue keeps the exact
+    same data-kal-confirm-booking/data-kal-goto hooks and mode-toggled
+    copy as the mobile instance (see the button's own comment above).
+  {%- endcomment -%}
+  <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
+    <div class="kal-concern-select__footer-help kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
+      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
+    </div>
+    <div class="kal-concern-select__footer-actions">
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="patient-details" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
+        <span data-kal-mode-offline-only>Confirm payment</span>
+        <span data-kal-mode-online-only hidden>Pay &#8377;450</span>
+      </button>
+    </div>
   </div>
 
 </div>

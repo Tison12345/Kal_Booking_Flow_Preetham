@@ -58,25 +58,29 @@
   Left column / header pattern matches the other steps (chevron-left back
   button + progress dots, then eyebrow + heading via the same reused
   kal-step-doctor-select__intro classes as Slot Picker).
+
+  DESKTOP REDESIGN: same left column + full-width footer as the previous
+  three steps now (see kal-booking-flow.css's .kal-step-shell--progress-panel
+  section and kal-booking-flow-step-progress.liquid), current_step: 4 —
+  "Health concerns", "Mode & doctor" and "Date & time" all show
+  completed, "Patient Details" current. Mobile keeps its own "Who is
+  this visit for?" composition untouched below.
 {% endcomment %}
 
-<div class="kal-step-patient-details kal-step-shell">
+<div class="kal-step-patient-details kal-step-shell kal-step-shell--progress-panel">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Who is this visit for?</h2>
-      <p class="kal-step-entry__body-text">
-        Book a consultation in under a minute in-clinic or video. Confirmation
-        arrives instantly, no account required.
-      </p>
-    </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-      </span>
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    <div class="kal-concern-select__info-scroll">
+      <div class="kal-concern-select__info-header">
+        <h2 class="kal-step-entry__heading kal-concern-select__heading">Consultation Booking</h2>
+      </div>
+
+      <div class="kal-concern-select__info-section">
+        <p class="kal-concern-select__info-label">Selected Clinic</p>
+        {%- render 'kal-booking-flow-facility-picker', step_number: 4, location_text: 'Indiranagar', extra_class: 'kal-concern-select__info-pill' -%}
+      </div>
+
+      {%- render 'kal-booking-flow-step-progress', current_step: 4 -%}
     </div>
   </div>
 
@@ -84,18 +88,25 @@
 
     {%- render 'kal-booking-flow-step-header', back_target: 'slot-picker', step_number: 4, step_total: 5, next_label: 'Review & Payment' -%}
 
+    {%- comment -%}
+      Heading + appointment card + "Who is this visit for?" moved OUTSIDE
+      .kal-step-shell__scroll (still siblings within .kal-step-shell__panel)
+      per explicit instruction — only the form fields should scroll, with
+      these staying fixed right below the progress bar, same treatment as
+      Concern Select's own heading/banner.
+    {%- endcomment -%}
+    <div class="kal-step-doctor-select__intro">
+      <h2 class="kal-step-doctor-select__heading">Enter your patient details</h2>
+    </div>
+
+    {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+    {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
+
+    <div class="kal-step-doctor-select__intro">
+      <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
+    </div>
+
     <div class="kal-step-shell__scroll">
-      <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Appointment Details</h2>
-      </div>
-
-      {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
-      {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
-
-      <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
-      </div>
-
       <div class="kal-form">
         {%- comment -%}
           Inline field errors — same pattern as the CMS's own forms
@@ -307,12 +318,38 @@
       the CMS's own submit-then-validate pattern instead of a silent
       disabled button with no explanation of what's missing.
     {%- endcomment -%}
-    <div class="kal-step-shell__footer">
+    <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
       <button type="button" class="kal-step-doctor-select__continue" data-kal-patient-continue>
         Continue
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%}
+    Desktop-only full-width footer bar, same pattern as the previous
+    three steps — help text + Back (to Slot Picker)/Continue split
+    across the shared 300px/1fr grid columns. Continue keeps its
+    validate-then-navigate behavior (data-kal-patient-continue, see this
+    step's own comment above) rather than a plain data-kal-goto, same as
+    the mobile instance.
+  {%- endcomment -%}
+  <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
+    <div class="kal-concern-select__footer-help kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
+      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
+    </div>
+    <div class="kal-concern-select__footer-actions">
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="slot-picker" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-patient-continue>
+        Continue
+      </button>
+    </div>
   </div>
 
 </div>

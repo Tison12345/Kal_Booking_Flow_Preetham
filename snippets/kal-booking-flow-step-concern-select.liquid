@@ -35,12 +35,20 @@
     + progress bar underneath
   - A floating down-chevron scroll hint over the list
 
-  Explicit instruction: THIS PASS IS MOBILE-ONLY. The desktop composition
-  (progress dots in the header, no step-bar, no scroll hint) is
-  deliberately left exactly as it was — every new element below is hidden
-  at 750px+, and the pre-existing desktop elements are hidden below 750px
-  instead of removed. See kal-booking-flow.css's own comment on this
-  step for exactly which classes do which.
+  DESKTOP REDESIGN (later pass): a real two-column desktop layout —
+  472px left info column (eyebrow + "Consultation Booking" title,
+  Selected Clinic, Your Concerns chips once picked, a help phone line)
+  and a right column with a text stepper ("STEP 1 OF 5 / Next: Mode &
+  Doctor") instead of the old progress dots, a 2-column concern grid
+  (CSS grid-auto-flow:column against .kal-concern-select__list, not
+  duplicated markup — see kal-booking-flow.css's own comment), and a
+  right-aligned Continue button. This replaced the earlier "desktop
+  unchanged" approach (old dots/no-stepbar) — this step now has a real
+  desktop design of its own, unlike most other steps in this flow which
+  still share their mobile composition at 750px+ pending their own
+  redesign pass. The shared popup dialog itself was resized to 1180x750
+  (from 802x500) to fit this — see kal-booking-flow.css's own comment on
+  .kal-booking-flow for why other steps' desktop views look off for now.
 
   ICONS (updated to match a later Figma pass): each of the 11 concerns now
   has its own dedicated 'concern-*' icon in kal-booking-icons.liquid,
@@ -59,42 +67,108 @@
   switches at 750px.
 {% endcomment %}
 
-<div class="kal-step-concern-select kal-step-shell">
+<div class="kal-step-concern-select kal-step-shell kal-step-shell--progress-panel">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Choose your concern</h2>
-      <p class="kal-step-entry__body-text">
-        We&rsquo;ll match you with available doctors. Book a consultation
-        in under a minute in-clinic or video.
-      </p>
+  {%- comment -%}
+    Desktop-only content (this step's new two-column design) — hidden
+    below 750px exactly like every other step's .kal-step-shell__info,
+    so mobile is completely untouched. Reuses .kal-step-entry__heading
+    and .kal-step-entry__location-text (the latter so the existing
+    facility-switch JS, which already targets that class flow-wide,
+    keeps this in sync for free) — only the genuinely new pieces
+    (eyebrow, section labels, concern chips, help line) get their own
+    classes below.
+  {%- endcomment -%}
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    {%- comment -%}
+      Scrollable wrapper for everything above the help line — flex:1 +
+      min-height:0 (CSS) makes this take exactly "whatever's left after
+      the footer's own height", so the footer below is always pinned to
+      the true bottom of the column no matter how tall this content gets,
+      scrolling internally instead if it doesn't fit. Replaces an earlier
+      margin-top:auto/position:sticky approach on the footer itself, which
+      depended on the column's content height and the footer's own height
+      adding up exactly right — fragile, and wrong again the moment either
+      one changed (e.g. once the Back/Continue bar below started taking
+      its own slice of the dialog's height too).
+    {%- endcomment -%}
+    <div class="kal-concern-select__info-scroll">
+    {%- comment -%}
+      No eyebrow above the heading in this pass (the old "Ayurveda
+      Wellness" line is gone) — just the one heading, sized to this
+      export's own larger 34px/44px "Body 3XL" style rather than the
+      shared .kal-step-entry__heading size every other step's left
+      column uses, hence the extra modifier class below instead of
+      touching that shared rule.
+    {%- endcomment -%}
+    <div class="kal-concern-select__info-header">
+      <h2 class="kal-step-entry__heading kal-concern-select__heading">Consultation Booking</h2>
     </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-      </span>
+
+    {%- comment -%}
+      "Selected Clinic" — this is the SAME real facility-switcher pictured
+      at the top of the mobile view (kal-booking-flow-facility-picker.liquid,
+      extracted out of kal-booking-flow-step-header.liquid), not a separate
+      static copy of the facility name. Rendering it again here (rather
+      than hiding the mobile one and repositioning it) is safe because
+      every click/toggle/select handler in kal-booking-flow.js targets its
+      data-kal-facility-* attributes generically — see that snippet's own
+      comment. kal-concern-select__info-pill only adjusts how it looks in
+      this column (see CSS); the dropdown/select behavior is identical to
+      the mobile badge.
+    {%- endcomment -%}
+    <div class="kal-concern-select__info-section">
+      <p class="kal-concern-select__info-label">Selected Clinic</p>
+      {%- render 'kal-booking-flow-facility-picker', step_number: 1, location_text: 'Indiranagar', extra_class: 'kal-concern-select__info-pill' -%}
     </div>
+
+    {%- comment -%}
+      "Your Progress" desktop stepper (node/export "Desktop Progress") —
+      extracted to its own snippet once Doctor Select needed this exact
+      same list with a different current step (see that snippet's own
+      comment) — this step is step 1, so "Health concerns" reads as
+      current/"In progress" here.
+    {%- endcomment -%}
+    {%- render 'kal-booking-flow-step-progress', current_step: 1 -%}
+    </div>
+
   </div>
 
   <div class="kal-step-shell__panel">
 
     {%- render 'kal-booking-flow-step-header', back_target: 'entry', step_number: 1, step_total: 5, next_label: 'Mode & Doctor', location_switchable: true -%}
 
+    {%- comment -%}
+      Heading + "Not sure?" banner moved OUTSIDE .kal-step-shell__scroll
+      (still siblings within .kal-step-shell__panel, which is what
+      actually keeps them fixed) per explicit instruction: only the
+      concern list itself should scroll, with the progress bar (above,
+      part of kal-booking-flow-step-header.liquid) staying pinned at the
+      top and this heading/banner staying pinned right below it, and the
+      footer Continue button (already a .kal-step-shell__scroll sibling
+      below, unchanged) staying pinned at the bottom — none of those three
+      should scroll out of view, only the list between them.
+    {%- endcomment -%}
+    <div class="kal-step-doctor-select__intro">
+      {%- comment -%}
+        "Choose your health concerns" at every width now — mobile used
+        to say "Choose your concern" (this step's own name), with a
+        separate desktop-only heading toggled by breakpoint (see
+        .kal-concern-select__heading-mobile/-desktop in the CSS). Per
+        explicit instruction, mobile now matches desktop's copy, so
+        there's no longer a text difference to toggle for.
+      {%- endcomment -%}
+      <h2 class="kal-step-doctor-select__heading">Choose your health concerns</h2>
+    </div>
+
+    <div class="kal-concern-select__banner">
+      <span class="kal-icon kal-icon--search">
+        {%- render 'kal-booking-icons', icon_name: 'search' -%}
+      </span>
+      <span class="kal-concern-select__banner-text">Not sure? <strong>General Wellness</strong> will guide you from there.</span>
+    </div>
+
     <div class="kal-step-shell__scroll">
-      <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Choose your concern</h2>
-      </div>
-
-      <div class="kal-concern-select__banner">
-        <span class="kal-icon kal-icon--search">
-          {%- render 'kal-booking-icons', icon_name: 'search' -%}
-        </span>
-        <span class="kal-concern-select__banner-text">Not sure? <strong>General Wellness</strong> will guide you from there.</span>
-      </div>
-
       <div class="kal-concern-select__list">
         {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-wellness', name: 'General Wellness', concern_key: 'general-wellness', selected: false -%}
         {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-bone-joint-muscle', name: 'Bone, Joint, Muscle Pain', concern_key: 'bone-joint-muscle-pain', selected: false -%}
@@ -122,18 +196,70 @@
     </button>
 
     {%- comment -%}
-      Per the updated Figma spec, this footer isn't just a disabled button
-      sitting there from the start — it doesn't exist at all until the
-      visitor has picked at least one concern (see kal-booking-flow.js's
-      updateConcernContinueButton, which toggles the `hidden` attribute on
-      data-kal-concern-footer, not just the button's `disabled` state).
+      Per the target design, Back and Continue appear TOGETHER, only once
+      at least one concern is picked — not a persistently-visible Back
+      with Continue coming and going on its own. So data-kal-concern-footer
+      is back on this whole row (both buttons), same hidden-until-selected
+      behavior as before. Desktop's own export still needed a Back button
+      in this footer row at all (this step's .kal-step-shell__header — the
+      row that normally carries the back button — is hidden entirely at
+      750px+, see this file's own CSS comment, since location/progress
+      moved into the left column instead), it just shouldn't show any
+      earlier than Continue does.
     {%- endcomment -%}
-    <div class="kal-step-shell__footer" data-kal-concern-footer hidden>
+    <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile" data-kal-concern-footer hidden>
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="entry" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
       <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="doctor-select" data-kal-concern-continue>
         Continue
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%}
+    Desktop-only full-width footer bar (Figma node 775:12866) — spans
+    BOTH columns with a border-top separating it from the concern list
+    above, not just sitting inside the right panel's own width like the
+    mobile footer above. This is a second, desktop-only instance of the
+    footer rather than a relocation of the mobile one (CSS can't move one
+    element into two different parents across breakpoints; the mobile
+    instance above stays nested in .kal-step-shell__panel since that
+    column is 100%-height on mobile with no room left for a sibling
+    below it).
+
+    Unlike the mobile instance, this bar also carries the "Need
+    assistance" help line (moved here from the left info column, which
+    used to render it as a separate always-visible line above this bar's
+    border-top divider) — per the updated spec this is ONE footer row,
+    help text left / Back+Continue right, not two independently-pinned
+    pieces that only happen to land at the same height. Because of that,
+    data-kal-concern-footer/hidden — the "no button row until a concern
+    is picked" behavior — moves down to just the .kal-concern-select__footer-actions
+    wrapper around the buttons; the help text stays permanently visible,
+    matching its old always-on behavior in the left column. JS is
+    unaffected: kal-booking-flow.js already toggles every element
+    matching [data-kal-concern-footer] via querySelectorAll, regardless
+    of which element carries the attribute.
+  {%- endcomment -%}
+  <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
+    <div class="kal-concern-select__footer-help kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
+      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
+    </div>
+    <div class="kal-concern-select__footer-actions" data-kal-concern-footer hidden>
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="entry" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="doctor-select" data-kal-concern-continue>
+        Continue
+      </button>
+    </div>
   </div>
 
 </div>

@@ -59,11 +59,11 @@
 
     <div class="kal-step-entry__location kal-step-entry__location--mobile">
       <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
+        {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
       </span>
       <span class="kal-step-entry__location-text">
         <!-- DUMMY VALUE — replace with real clinic name/area once on a real clinic page -->
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+        Kerala Ayurveda Wellness Center, Indiranagar
       </span>
     </div>
   </div>
@@ -72,19 +72,29 @@
   <div class="kal-step-entry__desktop">
     <div class="kal-step-entry__info">
       <div class="kal-step-entry__info-content">
-        <p class="kal-step-entry__eyebrow">No sign-in needed</p>
         <h2 class="kal-step-entry__heading">Calm care, closer than you think.</h2>
         <p class="kal-step-entry__body-text">
-          Book a consultation in under a minute in-clinic or video. Confirmation
-          arrives instantly, no account required.
+          Book a consultation in under a minute in-clinic or video.
         </p>
       </div>
-      <div class="kal-step-entry__location">
-        <span class="kal-icon kal-icon--location">
-          <!-- ICON: location-pin (not received yet) -->
+      {%- comment -%}
+        Entry's desktop left column swaps the shared address bar
+        (.kal-step-entry__location, still used as-is by every other
+        desktop step's left column — Doctor Select, Slot Picker, etc.)
+        for a "Need assistance?" help line instead (node/export "Frame
+        3812") — this is the very first screen, before any clinic has
+        been picked, so there's no location to show yet. Own class
+        (.kal-step-entry__help) rather than overloading
+        .kal-step-entry__location, which every other step still depends
+        on for its address bar. Phone number is a DUMMY placeholder, same
+        as the mobile/desktop location text elsewhere in this step.
+      {%- endcomment -%}
+      <div class="kal-step-entry__help">
+        <span class="kal-icon kal-icon--help">
+          {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
         </span>
-        <span class="kal-step-entry__location-text">
-          Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+        <span class="kal-step-entry__help-text">
+          Need assistance? Call us at +91 804012 3456
         </span>
       </div>
     </div>
@@ -111,10 +121,22 @@
           >
         {%- endif -%}
       </div>
-      <p class="kal-step-entry__label">What would you like to do?</p>
+      {%- comment -%}
+        Own wrapper (node/export "Container", 24px gap) around the label +
+        both option cards — the export nests these one level deeper than
+        the banner above, with its own 24px gap distinct from the 36px gap
+        between the banner and this whole block (see
+        .kal-step-entry__action-panel's own gap in the CSS). Both this
+        wrapper's gap and Frame 3804's inner card-to-card gap are 24px in
+        the export, so one flat 24px gap here reproduces both without
+        needing the extra nesting level.
+      {%- endcomment -%}
+      <div class="kal-step-entry__options">
+        <p class="kal-step-entry__label">What would you like to do?</p>
 
-      {%- render 'kal-booking-flow-option-card', variant: 'primary', icon_name: 'calendar', title: 'Book a consultation', subtitle: 'In-clinic or video under a minute', goto: 'concern-select' -%}
-      {%- render 'kal-booking-flow-option-card', variant: 'secondary', icon_name: 'monitor', title: 'Request a therapy session', subtitle: 'Talk to our care coordinator', goto: 'therapy-slot' -%}
+        {%- render 'kal-booking-flow-option-card', variant: 'primary', icon_name: 'calendar', title: 'Book a consultation', subtitle: 'In-clinic or video under a minute', goto: 'concern-select' -%}
+        {%- render 'kal-booking-flow-option-card', variant: 'secondary', icon_name: 'monitor', title: 'Request a therapy session', subtitle: 'Talk to our care coordinator', goto: 'therapy-slot' -%}
+      </div>
     </div>
   </div>
 

@@ -5,6 +5,88 @@
   content, regardless of any CSS transform/stacking-context elsewhere in the theme.
 {% endcomment %}
 
+{%- comment -%}
+  kal-booking-flow.css cascades a single --kal-booking-flow-font-family: 'Avenir' and
+  relies on numeric font-weight (350/400/500/700/800) to pick the right
+  cut, unlike the main theme's custom-font.liquid (which declares each
+  Avenir weight as its own separate family name). So this flow needs real
+  @font-face rules under ONE "Avenir" family instead — declared here,
+  inline, the same way custom-font.liquid does it for the main theme,
+  since the static .css asset itself can't run the asset_url filter.
+{%- endcomment -%}
+{% style %}
+  @font-face {
+    font-family: 'Avenir';
+    src: url('{{ "Avenir-Light.woff2" | asset_url }}') format('woff2');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Avenir';
+    src: url('{{ "Avenir-Book.woff2" | asset_url }}') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Avenir';
+    src: url('{{ "Avenir-Medium.woff2" | asset_url }}') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  {%- comment -%}
+    600 has no dedicated Avenir file — without this, the browser has to
+    guess the nearest registered weight (300/400/500/700/800) for any
+    font-weight:600 rule, and that guess can silently resolve to a face
+    that looks identical to what was there before (e.g. "Calm care,
+    closer than you think." showing no visible change after being set to
+    600). Explicitly registering 600 against the same Avenir-Medium file
+    as 500 makes it an exact match instead, guaranteeing a real font
+    change even though it reuses that file's actual weight.
+  {%- endcomment -%}
+  @font-face {
+    font-family: 'Avenir';
+    src: url('{{ "Avenir-Medium.woff2" | asset_url }}') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Avenir';
+    src: url('{{ "Avenir-Heavy.woff2" | asset_url }}') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Avenir';
+    src: url('{{ "Avenir-Black.woff2" | asset_url }}') format('woff2');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  {%- comment -%}
+    900 has no dedicated Avenir file either — reuses Avenir-Black.woff2,
+    same pattern as 600 reusing Avenir-Medium.woff2 above, so
+    font-weight:900 (option-card primary title) resolves to this face
+    instead of the browser guessing/falling back to 800.
+  {%- endcomment -%}
+  @font-face {
+    font-family: 'Avenir';
+    src: url('{{ "Avenir-Black.woff2" | asset_url }}') format('woff2');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+  }
+{% endstyle %}
 {{ 'kal-booking-flow.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'kal-booking-flow.js' | asset_url }}" defer></script>
 
@@ -14,6 +96,7 @@
   data-api-base-url="{{ settings.kal_booking_api_base_url }}"
   data-whatsapp-number="{{ settings.kal_booking_whatsapp_number }}"
   data-doctor-photo-placeholder="{{ 'kal-doctor-photo-placeholder.jpg' | asset_url }}"
+  data-kal-active-step="entry"
 >
   {%- comment -%}
     Only visible on Entry (see goToStep() in kal-booking-flow.js — hidden
@@ -86,8 +169,12 @@
       <button type="button" class="kal-facility-switch-modal__close" data-kal-facility-switch-cancel aria-label="Close">
         {%- render 'kal-booking-icons', icon_name: 'close' -%}
       </button>
+      {%- comment -%}
+        Photo removed per explicit instruction (flow-wide) — plain
+        placeholder box instead of the doctor's photo for now.
+      {%- endcomment -%}
       <span class="kal-facility-switch-modal__photo">
-        <img src="{{ 'kal-doctor-photo-placeholder.jpg' | asset_url }}" alt="" width="56" height="56">
+        <span class="kal-doctor-photo-placeholder"></span>
       </span>
       <p class="kal-facility-switch-modal__text">
         <strong data-kal-facility-switch-doctor>Dr. Neethu Jayachandran</strong> is available in person only at the

@@ -25,14 +25,16 @@
       the glyph looking noticeably smaller than the Figma reference, where
       it reads as a proper 28px icon inside the 48px circle (explicit
       instruction: "stethoscope icon looks small in ui but large in
-      figma"). Scaled up ~2.1x around the glyph's own center (17.646,18),
-      then re-centered on the 48x48 frame's center (24,24), instead of
-      just increasing the translate — a plain bigger offset alone
-      wouldn't have made the glyph itself any bigger, only moved it.
+      figma"). Scaled up around the glyph's own center (17.646,18), then
+      re-centered on the 48x48 frame's center (24,24), instead of just
+      increasing the translate — a plain bigger offset alone wouldn't
+      have made the glyph itself any bigger, only moved it. Originally
+      2.1x; dialed back to 1.8x per later feedback that 2.1x read a
+      little too large/heavy against the card's icon circle.
     {%- endcomment -%}
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
       <rect width="48" height="48" rx="12" fill="#FAFAF9" fill-opacity="0.15"/>
-      <g transform="translate(24 24) scale(2.1) translate(-17.646 -18)">
+      <g transform="translate(24 24) scale(1.8) translate(-17.646 -18)">
         <path d="M14.1042 11.9795H12.6875C12.2963 11.9795 11.9792 12.2966 11.9792 12.6878V15.167C11.9792 17.3186 13.7234 19.0628 15.875 19.0628C18.0266 19.0628 19.7708 17.3186 19.7708 15.167V12.6878C19.7708 12.2966 19.4537 11.9795 19.0625 11.9795H17.6458" stroke="#FAFAF9" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M22.6042 20.4792V21.3646C22.6042 23.2228 21.0978 24.7292 19.2396 24.7292C17.3813 24.7292 15.875 23.2228 15.875 21.3646V19.0625" stroke="#FAFAF9" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M17.6458 11.2705V12.6872" stroke="#FAFAF9" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
@@ -157,15 +159,30 @@
     </svg>
 
   {% when 'location-pin' %}
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
-      <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/>
-      <circle cx="12" cy="10" r="3"/>
+    {%- comment -%}
+      Filled glyph (not the earlier stroke-based pin) — per explicit
+      instruction to switch this icon everywhere. Figma's own export
+      wraps the path in a <mask> that's just an opaque full-24x24-bounds
+      rect (not actually cropping anything), whose id would collide
+      since this icon renders in several places on screen at once
+      (mobile header badge, facility picker, Entry's location line,
+      etc.) — dropped, keeping just the path. fill="currentColor" (not
+      the export's hardcoded #2B2926) so it still inherits whatever
+      color each context sets, same convention as every other icon here.
+    {%- endcomment -%}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
+      <path d="M12.0001 19.677C13.8796 18.041 15.3655 16.3772 16.4578 14.6855C17.5501 12.9938 18.0963 11.5307 18.0963 10.2962C18.0963 8.46675 17.5171 6.95675 16.3588 5.76625C15.2005 4.57592 13.7476 3.98075 12.0001 3.98075C10.2526 3.98075 8.79964 4.57592 7.64131 5.76625C6.48298 6.95675 5.90381 8.46675 5.90381 10.2962C5.90381 11.5307 6.44998 12.9938 7.54231 14.6855C8.63464 16.3772 10.1206 18.041 12.0001 19.677ZM11.5308 20.4788C11.3745 20.4276 11.2302 20.3442 11.0981 20.2288C10.3866 19.5749 9.66539 18.8468 8.93456 18.0443C8.20389 17.2418 7.54014 16.4107 6.94331 15.551C6.34648 14.6913 5.85739 13.8138 5.47606 12.9183C5.09456 12.0227 4.90381 11.1487 4.90381 10.2962C4.90381 8.18075 5.59264 6.43583 6.97031 5.0615C8.34781 3.68717 10.0244 3 12.0001 3C13.9757 3 15.6523 3.68717 17.0298 5.0615C18.4075 6.43583 19.0963 8.18075 19.0963 10.2962C19.0963 11.1487 18.9056 12.0196 18.5241 12.9088C18.1427 13.7978 17.6568 14.6753 17.0663 15.5413C16.476 16.4074 15.8154 17.2385 15.0846 18.0345C14.3539 18.8307 13.6328 19.5557 12.9213 20.2095C12.7891 20.325 12.6416 20.4116 12.4788 20.4693C12.316 20.5269 12.1564 20.5557 12.0001 20.5557C11.8437 20.5557 11.6873 20.5301 11.5308 20.4788ZM13.1433 11.2587C13.4581 10.9439 13.6156 10.5628 13.6156 10.1155C13.6156 9.668 13.4581 9.28683 13.1433 8.972C12.8286 8.65733 12.4476 8.5 12.0001 8.5C11.5526 8.5 11.1715 8.65733 10.8568 8.972C10.542 9.28683 10.3846 9.668 10.3846 10.1155C10.3846 10.5628 10.542 10.9439 10.8568 11.2587C11.1715 11.5734 11.5526 11.7308 12.0001 11.7308C12.4476 11.7308 12.8286 11.5734 13.1433 11.2587Z" fill="currentColor"/>
     </svg>
 
   {% when 'video-camera' %}
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
       <path d="m16 8 3.5-2.5A1 1 0 0 1 21 6.3v11.4a1 1 0 0 1-1.5.8L16 16"/>
       <rect x="2" y="6" width="14" height="12" rx="2"/>
+    </svg>
+
+  {% when 'phone' %}
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <path d="M3.27458 7.02753L5.03486 5.26725C5.39394 4.90818 5.51819 4.37761 5.37296 3.89101C5.2594 3.51051 5.13146 3.05309 5.04641 2.66195C4.96775 2.30018 4.6503 2 4.28008 2H3.27458C2.53414 2 1.92608 2.60256 2.0073 3.33853C2.62473 8.93307 7.06694 13.3753 12.6615 13.9927C13.3975 14.0739 14 13.4659 14 12.7254V11.7199C14 11.3497 13.6986 11.046 13.3343 10.9797C12.9325 10.9067 12.5074 10.7869 12.1517 10.6735C11.6407 10.5106 11.0727 10.6251 10.6935 11.0043L8.97247 12.7254"/>
     </svg>
 
   {% when 'clock' %}
@@ -179,6 +196,17 @@
       <path d="M20 6 9 17l-5-5"/>
     </svg>
 
+  {% when 'user' %}
+    {%- comment -%}
+      Updated glyph per explicit instruction — stroke="currentColor" (not
+      the export's hardcoded #191919) so it still inherits whatever color
+      each context sets, same convention as every other icon here.
+    {%- endcomment -%}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
+      <path d="M17 8.5C17 5.73858 14.7614 3.5 12 3.5C9.23858 3.5 7 5.73858 7 8.5C7 11.2614 9.23858 13.5 12 13.5C14.7614 13.5 17 11.2614 17 8.5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19 20.5C19 16.634 15.866 13.5 12 13.5C8.13401 13.5 5 16.634 5 20.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
   {% when 'currency-rupee' %}
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
       <path d="M6 3h12"/>
@@ -189,11 +217,18 @@
     </svg>
 
   {% when 'calendar-days' %}
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
-      <path d="M8 2v4"/>
-      <path d="M16 2v4"/>
-      <rect x="3" y="4" width="18" height="18" rx="2"/>
-      <path d="M3 10h18"/>
+    {%- comment -%}
+      Filled glyph (not the earlier stroke-based calendar) — same
+      conversion as 'location-pin' above: Figma's own export wraps this
+      in a <mask> that's just an opaque full-24x24-bounds rect (not
+      actually cropping anything), whose id would collide since this
+      icon can render in more than one place on screen at once — dropped,
+      keeping just the path. fill="currentColor" (not the export's
+      hardcoded #2B2926) so it still inherits whatever color each
+      context sets, same convention as every other icon here.
+    {%- endcomment -%}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
+      <path d="M13.3885 17.3808C12.9757 16.968 12.7692 16.4692 12.7692 15.8845C12.7692 15.3 12.9757 14.8014 13.3885 14.3885C13.8013 13.9757 14.3 13.7693 14.8845 13.7693C15.4692 13.7693 15.9679 13.9757 16.3807 14.3885C16.7936 14.8014 17 15.3 17 15.8845C17 16.4692 16.7936 16.968 16.3807 17.3808C15.9679 17.7936 15.4692 18 14.8845 18C14.3 18 13.8013 17.7936 13.3885 17.3808ZM5.6155 21C5.15517 21 4.77083 20.8459 4.4625 20.5375C4.15417 20.2292 4 19.8449 4 19.3845V6.61554C4 6.1552 4.15417 5.77087 4.4625 5.46254C4.77083 5.1542 5.15517 5.00004 5.6155 5.00004H7.3845V3.30779C7.3845 3.15262 7.4355 3.02404 7.5375 2.92204C7.6395 2.8202 7.768 2.76929 7.923 2.76929C8.07817 2.76929 8.20675 2.8202 8.30875 2.92204C8.41058 3.02404 8.4615 3.15262 8.4615 3.30779V5.00004H15.6155V3.26929C15.6155 3.12695 15.6632 3.00804 15.7587 2.91254C15.8542 2.81704 15.9732 2.76929 16.1155 2.76929C16.2577 2.76929 16.3765 2.81704 16.472 2.91254C16.5677 3.00804 16.6155 3.12695 16.6155 3.26929V5.00004H18.3845C18.8448 5.00004 19.2292 5.1542 19.5375 5.46254C19.8458 5.77087 20 6.1552 20 6.61554V19.3845C20 19.8449 19.8458 20.2292 19.5375 20.5375C19.2292 20.8459 18.8448 21 18.3845 21H5.6155ZM5.6155 20H18.3845C18.5385 20 18.6796 19.936 18.8077 19.8078C18.9359 19.6796 19 19.5385 19 19.3845V10.6155H5V19.3845C5 19.5385 5.06408 19.6796 5.19225 19.8078C5.32042 19.936 5.4615 20 5.6155 20ZM5 9.61529H19V6.61554C19 6.46154 18.9359 6.32045 18.8077 6.19229C18.6796 6.06412 18.5385 6.00004 18.3845 6.00004H5.6155C5.4615 6.00004 5.32042 6.06412 5.19225 6.19229C5.06408 6.32045 5 6.46154 5 6.61554V9.61529Z" fill="currentColor"/>
     </svg>
 
   {%- comment -%}
@@ -237,10 +272,15 @@
     </svg>
 
   {% when 'credit-card' %}
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
-      <rect x="2" y="5" width="20" height="14" rx="2"/>
-      <path d="M2 10h20"/>
-      <path d="M6 15h4"/>
+    {%- comment -%}
+      "Payment" row icon on the therapy Request Sent screen — same
+      <mask>-removal treatment as shopping-cart/directions above: the
+      export's mask is just an opaque full-bounds rect, not actually
+      cropping anything, and its id would collide since icons here can
+      render multiple times in the DOM at once.
+    {%- endcomment -%}
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="{{ class }}">
+      <path d="M17.5 5.51324V14.4874C17.5 14.871 17.3715 15.1913 17.1146 15.4482C16.8576 15.7052 16.5374 15.8337 16.1538 15.8337H3.84625C3.46264 15.8337 3.14236 15.7052 2.88542 15.4482C2.62847 15.1913 2.5 14.871 2.5 14.4874V5.51324C2.5 5.12963 2.62847 4.80935 2.88542 4.55241C3.14236 4.29546 3.46264 4.16699 3.84625 4.16699H16.1538C16.5374 4.16699 16.8576 4.29546 17.1146 4.55241C17.3715 4.80935 17.5 5.12963 17.5 5.51324ZM3.33333 7.34012H16.6667V5.51324C16.6667 5.38491 16.6133 5.26734 16.5065 5.16053C16.3997 5.05373 16.2821 5.00033 16.1538 5.00033H3.84625C3.71792 5.00033 3.60035 5.05373 3.49354 5.16053C3.38674 5.26734 3.33333 5.38491 3.33333 5.51324V7.34012ZM3.33333 9.3272V14.4874C3.33333 14.6157 3.38674 14.7333 3.49354 14.8401C3.60035 14.9469 3.71792 15.0003 3.84625 15.0003H16.1538C16.2821 15.0003 16.3997 14.9469 16.5065 14.8401C16.6133 14.7333 16.6667 14.6157 16.6667 14.4874V9.3272H3.33333Z" fill="currentColor"/>
     </svg>
 
   {%- comment -%}
@@ -357,6 +397,13 @@
     here would have the dot in the wrong place for this meaning.
   {%- endcomment -%}
 
+  {% when 'help-circle' %}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+      <path d="M12 17h.01"/>
+    </svg>
+
   {% when 'alert-circle' %}
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
       <circle cx="12" cy="12" r="10"/>
@@ -455,10 +502,23 @@
       close/check/location-pin above, not one of the filled concern-*
       glyphs.
     {%- endcomment -%}
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
-      <circle cx="8" cy="21" r="1"/>
-      <circle cx="19" cy="21" r="1"/>
-      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="{{ class }}">
+      <path d="M5.20112 17.2345C4.96029 16.9935 4.83987 16.6973 4.83987 16.3459C4.83987 15.9944 4.96029 15.6981 5.20112 15.4572C5.4421 15.2163 5.73835 15.0959 6.08987 15.0959C6.4414 15.0959 6.73758 15.2163 6.97842 15.4572C7.21939 15.6981 7.33987 15.9944 7.33987 16.3459C7.33987 16.6973 7.21939 16.9935 6.97842 17.2345C6.73758 17.4754 6.4414 17.5959 6.08987 17.5959C5.73835 17.5959 5.4421 17.4754 5.20112 17.2345ZM13.0217 17.2345C12.7808 16.9935 12.6603 16.6973 12.6603 16.3459C12.6603 15.9944 12.7808 15.6981 13.0217 15.4572C13.2626 15.2163 13.5588 15.0959 13.9103 15.0959C14.2618 15.0959 14.5581 15.2163 14.799 15.4572C15.0399 15.6981 15.1603 15.9944 15.1603 16.3459C15.1603 16.6973 15.0399 16.9935 14.799 17.2345C14.5581 17.4754 14.2618 17.5959 13.9103 17.5959C13.5588 17.5959 13.2626 17.4754 13.0217 17.2345ZM4.90071 4.58301L7.12508 9.26259H12.6538C12.7501 9.26259 12.8356 9.23849 12.9103 9.1903C12.9852 9.14224 13.0492 9.07551 13.1026 8.99009L15.2822 5.03176C15.3462 4.91426 15.3515 4.81009 15.2982 4.71926C15.2447 4.62842 15.1539 4.58301 15.0257 4.58301H4.90071ZM4.49362 3.74967H15.343C15.7052 3.74967 15.9777 3.89738 16.1603 4.1928C16.3431 4.48822 16.3527 4.79245 16.1892 5.10551L13.8078 9.44509C13.6871 9.64815 13.5303 9.80738 13.3374 9.9228C13.1446 10.0382 12.9328 10.0959 12.702 10.0959H6.75008L5.73716 11.9549C5.65175 12.0831 5.64911 12.222 5.72925 12.3716C5.80939 12.5211 5.9296 12.5959 6.08987 12.5959H14.7436C14.8622 12.5959 14.9613 12.6357 15.0409 12.7153C15.1205 12.7949 15.1603 12.894 15.1603 13.0126C15.1603 13.1311 15.1205 13.2301 15.0409 13.3097C14.9613 13.3894 14.8622 13.4293 14.7436 13.4293H6.08987C5.60376 13.4293 5.24105 13.2244 5.00175 12.8147C4.76244 12.405 4.75654 11.9934 4.98404 11.5799L6.23716 9.34592L3.17321 2.91634H2.08341C1.9648 2.91634 1.86571 2.87655 1.78612 2.79697C1.70654 2.71738 1.66675 2.61829 1.66675 2.49967C1.66675 2.38106 1.70654 2.28197 1.78612 2.20238C1.86571 2.1228 1.9648 2.08301 2.08341 2.08301H3.27737C3.40876 2.08301 3.52786 2.11669 3.63466 2.18405C3.74147 2.25127 3.82425 2.34523 3.883 2.46592L4.49362 3.74967Z" fill="currentColor"/>
+    </svg>
+
+  {% when 'directions' %}
+    {%- comment -%}
+      "Get directions" action button on the therapy Request Sent screen —
+      a distinct diamond/compass glyph, not location-pin (which is shared
+      across the mobile header badge, facility picker, Entry's location
+      line, and Confirmation, so it stays untouched). Same <mask>-removal
+      treatment as shopping-cart above: the export's mask is just an
+      opaque full-bounds rect, not actually cropping anything, and its id
+      would collide since icons here can render multiple times in the DOM
+      at once.
+    {%- endcomment -%}
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="{{ class }}">
+      <path d="M7.91666 9.58357H11.6667V10.3623C11.6667 10.4927 11.726 10.5847 11.8446 10.6382C11.9632 10.6915 12.0705 10.6701 12.1667 10.574L13.2148 9.52586C13.3173 9.42044 13.3685 9.29739 13.3685 9.15669C13.3685 9.016 13.3151 8.89294 13.2083 8.78753L12.1667 7.75982C12.0705 7.66371 11.9632 7.63926 11.8446 7.68648C11.726 7.73357 11.6667 7.82322 11.6667 7.95544V8.75023H7.75645C7.56575 8.75023 7.40589 8.81475 7.27687 8.94378C7.14784 9.0728 7.08332 9.23267 7.08332 9.42336V11.6669C7.08332 11.785 7.12332 11.8839 7.20332 11.9638C7.28332 12.0436 7.38242 12.0836 7.50062 12.0836C7.61881 12.0836 7.7177 12.0436 7.79728 11.9638C7.87687 11.8839 7.91666 11.785 7.91666 11.6669V9.58357ZM10.0031 17.2759C9.83548 17.2759 9.66985 17.2422 9.50624 17.1748C9.34263 17.1076 9.19312 17.0067 9.0577 16.8721L3.12812 10.9425C2.99353 10.8084 2.89263 10.6602 2.82541 10.4982C2.75805 10.3361 2.72437 10.1711 2.72437 10.0034C2.72437 9.83572 2.75805 9.6701 2.82541 9.50648C2.89263 9.34287 2.99353 9.19336 3.12812 9.05794L9.0577 3.12836C9.19187 2.99378 9.33999 2.89287 9.50207 2.82565C9.66416 2.75829 9.82909 2.72461 9.99687 2.72461C10.1645 2.72461 10.3301 2.75829 10.4937 2.82565C10.6574 2.89287 10.8069 2.99378 10.9423 3.12836L16.8719 9.05794C17.0065 9.19211 17.1074 9.34023 17.1746 9.50232C17.2419 9.6644 17.2756 9.82933 17.2756 9.99711C17.2756 10.1647 17.2419 10.3304 17.1746 10.494C17.1074 10.6576 17.0065 10.8071 16.8719 10.9425L10.9423 16.8721C10.8081 17.0067 10.66 17.1076 10.4979 17.1748C10.3358 17.2422 10.1709 17.2759 10.0031 17.2759ZM9.64749 16.3144C9.7436 16.4105 9.8611 16.4586 9.99999 16.4586C10.1389 16.4586 10.2564 16.4105 10.3525 16.3144L16.3142 10.3527C16.4103 10.2566 16.4583 10.1391 16.4583 10.0002C16.4583 9.86135 16.4103 9.74385 16.3142 9.64773L10.3525 3.68607C10.2564 3.58996 10.1389 3.5419 9.99999 3.5419C9.8611 3.5419 9.7436 3.58996 9.64749 3.68607L3.68582 9.64773C3.58971 9.74385 3.54166 9.86135 3.54166 10.0002C3.54166 10.1391 3.58971 10.2566 3.68582 10.3527L9.64749 16.3144Z" fill="currentColor"/>
     </svg>
 
   {% when 'concern-other' %}
@@ -493,8 +553,7 @@
   {%- endcomment -%}
 
   {% when 'flag-in' %}
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="-45 -30 90 60" fill="#07038D" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>India</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-45 -30 90 60" fill="#07038D" class="{{ class }}" aria-hidden="true" focusable="false">
       <path fill="#FFF" d="m-45-30h90v60h-90z"/>
       <path fill="#FF6820" d="m-45-30h90v20h-90z"/>
       <path fill="#046A38" d="m-45 10h90v20h-90z"/>
@@ -508,19 +567,18 @@
               <path d="m0-8 .3 4.81409L0-.80235-.3-3.18591z"/>
               <circle transform="rotate(7.5)" r="0.35" cy="-8"/>
             </g>
-            <use xlink:href="#kal-flag-in-a" transform="scale(-1)"/>
+            <use href="#kal-flag-in-a" transform="scale(-1)"/>
           </g>
-          <use xlink:href="#kal-flag-in-b" transform="rotate(15)"/>
+          <use href="#kal-flag-in-b" transform="rotate(15)"/>
         </g>
-        <use xlink:href="#kal-flag-in-c" transform="rotate(30)"/>
+        <use href="#kal-flag-in-c" transform="rotate(30)"/>
       </g>
-      <use xlink:href="#kal-flag-in-d" transform="rotate(60)"/>
-      <use xlink:href="#kal-flag-in-d" transform="rotate(120)"/>
+      <use href="#kal-flag-in-d" transform="rotate(60)"/>
+      <use href="#kal-flag-in-d" transform="rotate(120)"/>
     </svg>
 
   {% when 'flag-us' %}
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 7410 3900" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>United States</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7410 3900" class="{{ class }}" aria-hidden="true" focusable="false">
       <path d="M0,0h7410v3900H0" fill="#b31942"/>
       <path d="M0,450H7410m0,600H0m0,600H7410m0,600H0m0,600H7410m0,600H0" stroke="#FFF" stroke-width="300"/>
       <path d="M0,0h2964v2100H0" fill="#0a3161"/>
@@ -530,61 +588,63 @@
             <g id="kal-flag-us-s5">
               <g id="kal-flag-us-s4">
                 <path id="kal-flag-us-s" d="M247,90 317.534230,307.082039 132.873218,172.917961H361.126782L176.465770,307.082039z"/>
-                <use xlink:href="#kal-flag-us-s" y="420"/>
-                <use xlink:href="#kal-flag-us-s" y="840"/>
-                <use xlink:href="#kal-flag-us-s" y="1260"/>
+                <use href="#kal-flag-us-s" y="420"/>
+                <use href="#kal-flag-us-s" y="840"/>
+                <use href="#kal-flag-us-s" y="1260"/>
               </g>
-              <use xlink:href="#kal-flag-us-s" y="1680"/>
+              <use href="#kal-flag-us-s" y="1680"/>
             </g>
-            <use xlink:href="#kal-flag-us-s4" x="247" y="210"/>
+            <use href="#kal-flag-us-s4" x="247" y="210"/>
           </g>
-          <use xlink:href="#kal-flag-us-s9" x="494"/>
+          <use href="#kal-flag-us-s9" x="494"/>
         </g>
-        <use xlink:href="#kal-flag-us-s18" x="988"/>
-        <use xlink:href="#kal-flag-us-s9" x="1976"/>
-        <use xlink:href="#kal-flag-us-s5" x="2470"/>
+        <use href="#kal-flag-us-s18" x="988"/>
+        <use href="#kal-flag-us-s9" x="1976"/>
+        <use href="#kal-flag-us-s5" x="2470"/>
       </g>
     </svg>
 
   {% when 'flag-gb' %}
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 30" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>United Kingdom</title>
-      <clipPath id="kal-flag-gb-t">
-        <path d="M25,15h25v15zv15h-25zh-25v-15zv-15h25z"/>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 30" class="{{ class }}" aria-hidden="true" focusable="false">
+      <clipPath id="kal-flag-gb-s">
+        <path d="M0,0 v30 h45 v-30 z"/>
       </clipPath>
-      <path d="M0,0v30h50v-30z" fill="#012169"/>
-      <path d="M0,0 50,30M50,0 0,30" stroke="#fff" stroke-width="6"/>
-      <path d="M0,0 50,30M50,0 0,30" clip-path="url(#kal-flag-gb-t)" stroke="#C8102E" stroke-width="4"/>
-      <path d="M-1 11h22v-12h8v12h22v8h-22v12h-8v-12h-22z" fill="#C8102E" stroke="#FFF" stroke-width="2"/>
+      <clipPath id="kal-flag-gb-t">
+        <path d="M22.5,15 h22.5 v15 z v15 h-22.5 z h-22.5 v-15 z v-15 h22.5 z"/>
+      </clipPath>
+      <g clip-path="url(#kal-flag-gb-s)">
+        <path d="M0,0 v30 h45 v-30 z" fill="#012169"/>
+        <path d="M0,0 L45,30 M45,0 L0,30" stroke="#fff" stroke-width="6"/>
+        <path d="M0,0 L45,30 M45,0 L0,30" clip-path="url(#kal-flag-gb-t)" stroke="#C8102E" stroke-width="4"/>
+        <path d="M22.5,0 v30 M0,15 h45" stroke="#fff" stroke-width="10"/>
+        <path d="M22.5,0 v30 M0,15 h45" stroke="#C8102E" stroke-width="6"/>
+      </g>
     </svg>
 
   {% when 'flag-ae' %}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>United Arab Emirates</title>
-      <rect width="12" height="6" fill="#00843d" id="kal-flag-ae-green"/>
+      <rect width="12" height="6" fill="#00843d"/>
       <rect width="12" height="4" y="2" fill="#fff"/>
       <rect width="12" height="2" y="4"/>
-      <rect width="3" height="6" fill="#c8102e" id="kal-flag-ae-red"/>
+      <rect width="3" height="6" fill="#c8102e"/>
     </svg>
 
   {% when 'flag-sg' %}
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 54 36" fill="#fff" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>Singapore</title>
-      <path d="M0 0h54v36H0z"/>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 54 36" class="{{ class }}" aria-hidden="true" focusable="false">
+      <path d="M0 0h54v36H0z" fill="#fff"/>
       <path d="M0 0h54v18H0z" fill="#ed2939"/>
-      <circle cx="11.405" cy="9" r="6.625"/>
+      <circle cx="11.405" cy="9" r="6.625" fill="#fff"/>
       <circle cx="15.03" cy="9" r="7.25" fill="#ed2939"/>
-      <path id="kal-flag-sg-s" d="m15.03 3.475-1.01393 3.120554 2.654502-1.928609h-3.281145l2.654502 1.928609z"/>
+      <path id="kal-flag-sg-s" d="m15.03 3.475-1.01393 3.120554 2.654502-1.928609h-3.281145l2.654502 1.928609z" fill="#fff"/>
       <g id="kal-flag-sg-t">
-        <use xlink:href="#kal-flag-sg-s" transform="rotate(72 15.03 9)"/>
-        <use xlink:href="#kal-flag-sg-s" transform="rotate(216 15.03 9)"/>
+        <use href="#kal-flag-sg-s" transform="rotate(72 15.03 9)"/>
+        <use href="#kal-flag-sg-s" transform="rotate(216 15.03 9)"/>
       </g>
-      <use xlink:href="#kal-flag-sg-t" transform="rotate(72 15.03 9)"/>
+      <use href="#kal-flag-sg-t" transform="rotate(72 15.03 9)"/>
     </svg>
 
   {% when 'flag-my' %}
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13440 6720" fill="none" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>Malaysia</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13440 6720" class="{{ class }}" aria-hidden="true" focusable="false">
       <g transform="scale(480)">
         <path fill="#fff" d="m0 0h28v14H0z"/>
         <path stroke="#c00" d="m1 .5h27m0 2H1m0 2h27m0 2H1"/>
@@ -595,11 +655,14 @@
     </svg>
 
   {% when 'flag-au' %}
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10080 5040" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>Australia</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10080 5040" class="{{ class }}" aria-hidden="true" focusable="false">
       <defs>
-        <clipPath id="kal-flag-au-c1"><path d="M0,0H6V3H0z"/></clipPath>
-        <clipPath id="kal-flag-au-c2"><path d="M0,0V1.5H6V3H6zM6,0H3V3H0V3z"/></clipPath>
+        <clipPath id="kal-flag-au-c1">
+          <path d="M0,0H6V3H0z"/>
+        </clipPath>
+        <clipPath id="kal-flag-au-c2">
+          <path d="M0,0V1.5H6V3H6zM6,0H3V3H0V3z"/>
+        </clipPath>
         <path id="kal-flag-au-Star7" d="M0,-360 69.421398,-144.155019 281.459334,-224.456329 155.988466,-35.603349 350.974048,80.107536 125.093037,99.758368 156.198146,324.348792 0,160 -156.198146,324.348792 -125.093037,99.758368 -350.974048,80.107536 -155.988466,-35.603349 -281.459334,-224.456329 -69.421398,-144.155019z"/>
         <path id="kal-flag-au-Star5" d="M0,-210 54.859957,-75.508253 199.721868,-64.893569 88.765275,28.841586 123.434903,169.893569 0,93.333333 -123.434903,169.893569 -88.765275,28.841586 -199.721868,-64.893569 -54.859957,-75.508253z"/>
       </defs>
@@ -611,26 +674,24 @@
         <path d="M3,0V3M0,1.5H6" stroke="#f00" stroke-width="0.6"/>
       </g>
       <g fill="#fff">
-        <use xlink:href="#kal-flag-au-Star7" transform="translate(2520, 3780) scale(2.1)"/>
-        <use xlink:href="#kal-flag-au-Star7" x="7560" y="4200"/>
-        <use xlink:href="#kal-flag-au-Star7" x="6300" y="2205"/>
-        <use xlink:href="#kal-flag-au-Star7" x="7560" y="840"/>
-        <use xlink:href="#kal-flag-au-Star7" x="8680" y="1869"/>
-        <use xlink:href="#kal-flag-au-Star5" x="8064" y="2730"/>
+        <use id="kal-flag-au-Comwlth" href="#kal-flag-au-Star7" transform="translate(2520, 3780) scale(2.1)"/>
+        <use href="#kal-flag-au-Star7" x="7560" y="4200"/>
+        <use href="#kal-flag-au-Star7" x="6300" y="2205"/>
+        <use href="#kal-flag-au-Star7" x="7560" y="840"/>
+        <use href="#kal-flag-au-Star7" x="8680" y="1869"/>
+        <use href="#kal-flag-au-Star5" x="8064" y="2730"/>
       </g>
     </svg>
 
   {% when 'flag-de' %}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 3" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>Germany</title>
-      <rect width="5" height="3" y="0" x="0" fill="#000"/>
-      <rect width="5" height="2" y="1" x="0" fill="#D00"/>
-      <rect width="5" height="1" y="2" x="0" fill="#FFCE00"/>
+      <rect width="5" height="3" fill="#000"/>
+      <rect width="5" height="2" y="1" fill="#D00"/>
+      <rect width="5" height="1" y="2" fill="#FFCE00"/>
     </svg>
 
   {% when 'flag-jp' %}
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" class="{{ class }}" aria-hidden="true" focusable="false">
-      <title>Japan</title>
       <rect fill="#fff" height="600" width="900"/>
       <circle fill="#bc002d" cx="450" cy="300" r="180"/>
     </svg>

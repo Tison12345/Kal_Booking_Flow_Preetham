@@ -19,7 +19,7 @@
         "clinic-2": {
           "type": "clinics_list",
           "settings": {
-            "location_name": "Kerala Ayurveda, HSR Layout (PLACEHOLDER — replace facility_id)",
+            "location_name": "Kerala Ayurveda, HSR Layout",
             "clinic_address": "<p>PLACEHOLDER ADDRESS — replace with a real facility from Supabase</p>",
             "facility_id": "00000000-0000-0000-0000-000000000002",
             "location_url_clnk": "",
@@ -29,7 +29,7 @@
         "clinic-3": {
           "type": "clinics_list",
           "settings": {
-            "location_name": "Kerala Ayurveda, Koramangala (PLACEHOLDER — replace facility_id)",
+            "location_name": "Kerala Ayurveda, Koramangala",
             "clinic_address": "<p>PLACEHOLDER ADDRESS — replace with a real facility from Supabase</p>",
             "facility_id": "00000000-0000-0000-0000-000000000003",
             "location_url_clnk": "",

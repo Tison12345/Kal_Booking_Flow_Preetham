@@ -70,23 +70,30 @@
   matching this node's own footer.
 {% endcomment %}
 
-<div class="kal-step-therapy-slot kal-step-shell" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
+<div class="kal-step-therapy-slot kal-step-shell kal-step-shell--progress-panel" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Choose your therapy</h2>
-      <p class="kal-step-entry__body-text">
-        Book a consultation in under a minute in-clinic or video. Confirmation
-        arrives instantly, no account required.
-      </p>
-    </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-      </span>
+  {%- comment -%}
+    Desktop left column — same 300px "Selected Clinic" + "Your Progress"
+    pattern as the consultation flow's own progress-panel steps (Concern
+    Select/Doctor Select/Slot Picker/Patient Details/Confirmation), reused
+    here for this therapy flow's own 2 steps instead of a parallel
+    layout. kal-booking-flow-step-progress.liquid's own step_names param
+    (added for this) is what lets the SAME stepper component show
+    "Choose therapy"/"Personal details" here instead of the 5-step
+    consultation list.
+  {%- endcomment -%}
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    <div class="kal-concern-select__info-scroll">
+      <div class="kal-concern-select__info-header">
+        <h2 class="kal-step-entry__heading kal-concern-select__heading">Therapy Request</h2>
+      </div>
+
+      <div class="kal-concern-select__info-section">
+        <p class="kal-concern-select__info-label">Selected Clinic</p>
+        {%- render 'kal-booking-flow-facility-picker', step_number: 1, location_text: 'Indiranagar', extra_class: 'kal-concern-select__info-pill' -%}
+      </div>
+
+      {%- render 'kal-booking-flow-step-progress', current_step: 1, step_names: 'Choose therapy|Personal details' -%}
     </div>
   </div>
 
@@ -211,11 +218,15 @@
     </div>
 
     {%- comment -%}
-      Hidden until a category or a specific therapy is picked, same
-      pattern as Concern Select's own footer (data-kal-concern-footer) —
-      see updateTherapyConcernContinueButton() in kal-booking-flow.js. No
-      data-kal-goto yet: Step 2 of 2 ("Personal details") for this flow
-      doesn't exist yet, so there's nowhere for this to navigate to.
+      Hidden until a category or a specific therapy is picked — see
+      updateTherapyConcernContinueButton() in kal-booking-flow.js, which
+      generically toggles EVERY element with data-kal-therapy-concern-footer/
+      data-kal-therapy-concern-continue/data-kal-therapy-concern-summary,
+      so this mobile instance and the desktop one below stay in sync with
+      zero JS changes. Confirm/Continue's click behavior is handled
+      explicitly in kal-booking-flow.js (not a plain data-kal-goto — see
+      that file's own comment on why), so both instances share that same
+      hook too.
 
       The summary line above the button is conditional, not just a plain
       "N selected" — explicit instruction: it only appears once at least
@@ -227,13 +238,38 @@
       updateTherapyDropdownSummary()), so a second count here would be
       redundant. See updateTherapyConcernContinueButton() for the exact text.
     {%- endcomment -%}
-    <div class="kal-step-shell__footer" data-kal-therapy-concern-footer hidden>
+    <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile" data-kal-therapy-concern-footer hidden>
       <p class="kal-therapy-concern-summary" data-kal-therapy-concern-summary hidden></p>
       <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-concern-continue>
         Confirm
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%}
+    Desktop-only full-width footer bar, same pattern as the consultation
+    flow's progress-panel steps — help text + Back/Continue split across
+    the shared 300px/1fr grid columns. Continue keeps the exact same
+    data-kal-therapy-concern-continue hook as the mobile instance (see
+    that button's own comment above).
+  {%- endcomment -%}
+  <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop" data-kal-therapy-concern-footer hidden>
+    <div class="kal-concern-select__footer-help kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
+      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
+    </div>
+    <div class="kal-concern-select__footer-actions">
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="entry" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-concern-continue>
+        Confirm
+      </button>
+    </div>
   </div>
 
 </div>

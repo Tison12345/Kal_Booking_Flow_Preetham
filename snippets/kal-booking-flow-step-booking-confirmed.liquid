@@ -22,6 +22,53 @@
     full-bleed tinted band (edge-to-edge, top/bottom border only, no
     corner radius) to match the export.
 
+  CARD REDESIGN, later Figma pass (node 656:5433) — replaces the
+  appointment-card + Consultation Details list above with one bordered
+  "confirmed card" (.kal-confirmed-card) combining a date badge, the
+  time/mode/relative-eta line, a dashed divider with the export's
+  cutout-circle notches, a doctor row, and a Patient/Payment two-cell
+  grid. Originally In-Clinic only (data-kal-mode-offline-only), with
+  Video Consult keeping the older appointment-card + Consultation
+  Details layout (no online-mode spec had been given for that pass) —
+  per explicit instruction, this card is now shown for BOTH modes and
+  that older layout is gone entirely. Mode/Patient reuse the exact same
+  data-kal-confirm-mode/-name hooks renderConfirmationSummary() in
+  kal-booking-flow.js already populates per mode, so no JS changes were
+  needed; Payment stays the same static "₹450 Paid" mockup regardless of
+  mode, same as this card already showed for In-Clinic.
+  - "Booking ID AYR-20486" chip, new — added under the intro subtext, same
+    generic addition regardless of mode.
+  - Date badge (FRI/06/AUG), the "10:30 AM" time, and the "in 3 days"
+    relative-eta chip are static mockup values straight from the export —
+    same category as the doctor's photo/fee placeholders elsewhere in
+    this flow, no hook exists (or is worth adding) to derive a day-badge
+    + relative-day string from slotPicker's state for a screen this
+    build isn't wiring to the backend anyway.
+  - Mode/duration text reuses the existing data-kal-confirm-mode hook
+    as-is (renderConfirmationSummary() in kal-booking-flow.js already
+    populates it as "In Clinic - 30 mins") rather than introduce a
+    second, differently-formatted mode hook just to match the export's
+    exact "In-clinic, 30 mins" punctuation.
+  - Patient cell reuses data-kal-confirm-name, same hook Confirmation's
+    own details list already uses.
+  - Payment cell is a static "₹450 Paid" per the export, NOT the old
+    data-kal-confirm-payment text hook (which produced a plain "Online
+    payment"/"Pay at clinic" string, not a price + paid badge) — now
+    that the old per-mode appointment-card + Consultation Details layout
+    is gone entirely, that hook has no matching element anywhere in this
+    file; setPaymentMethod()'s querySelectorAll() over it no-ops
+    harmlessly.
+  - "Before your visit" band recolored from the mint tint to the export's
+    sand/tan treatment (background, label, and icon-tint colors) and its
+    check icons moved into their own white rounded-8 boxes; copy trimmed
+    to the export's three items (arrival, ID + referral, reports) — the
+    old "pay at reception" item is gone since payment is already settled
+    per the new card above.
+  - "Back to Homepage" button, new — a footer this step never had before,
+    using the same shared .kal-step-doctor-select__continue treatment as
+    every other step's primary CTA. Static mockup like the rest of this
+    build — points at the shop's root URL, no click handler needed.
+
   Patient Name, Mode, and Date & Time reuse the EXACT SAME data-kal-confirm-*
   hooks as the Confirmation (review) step — renderConfirmationSummary() in
   kal-booking-flow.js already does flow.querySelectorAll() for each of
@@ -72,7 +119,7 @@
         <!-- ICON: location-pin (not received yet) -->
       </span>
       <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
+        Kerala Ayurveda Wellness Center, Indiranagar
       </span>
     </div>
   </div>
@@ -86,39 +133,89 @@
     </div>
 
     <div class="kal-step-shell__scroll">
-      <div class="kal-confirmation-success-icon">
-        <span class="kal-confirmation-success-icon__inner">
-          {%- render 'kal-booking-icons', icon_name: 'check' -%}
-        </span>
-      </div>
-
-      <div class="kal-step-booking-confirmed__intro">
-        <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
-        <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
-      </div>
-
-      {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
-      {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
-
-      <div class="kal-confirmation-details">
-        <p class="kal-confirmation-details__label">Consultation Details</p>
-        <div class="kal-confirmation-details__divider"></div>
-        <div class="kal-confirmation-details__rows">
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Patient Name</span>
-            <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
+      {%- comment -%}
+        Wraps the hero band + the card that sits partly on top of it
+        (node 656:5433) in one plain block-flow group, deliberately NOT a
+        flex column — .kal-step-shell__scroll's own flex gap would
+        otherwise land between hero and card too and eat into the
+        overlap below. The export's own structure nests these two the
+        same way (no gap between them, unlike its wider 16/24px gaps
+        elsewhere), so this wrapper is a container flattening fix, not a
+        style choice of its own.
+      {%- endcomment -%}
+      <div class="kal-step-booking-confirmed__summary">
+        {%- comment -%}
+          Mint hero band behind the success icon/heading — the export's
+          own markup has this section overlap 24px behind the card below
+          it (mb-[-24px] in the export), so the band's bottom edge tucks
+          under the card's rounded top corners instead of stopping flush
+          above it.
+        {%- endcomment -%}
+        <div class="kal-step-booking-confirmed__hero">
+          <div class="kal-confirmation-success-icon">
+            <span class="kal-confirmation-success-icon__inner">
+              {%- render 'kal-booking-icons', icon_name: 'check' -%}
+            </span>
           </div>
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Mode</span>
-            <span class="kal-confirmation-details__value" data-kal-confirm-mode>&mdash;</span>
+
+          <div class="kal-step-booking-confirmed__intro">
+            <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
+            <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
+            <span class="kal-confirmed-booking-id">Booking ID AYR-20486</span>
           </div>
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Date &amp; Time</span>
-            <span class="kal-confirmation-details__value" data-kal-confirm-datetime>&mdash;</span>
+        </div>
+
+        {%- comment -%}
+          Now shown for BOTH modes (node 656:5433) — was In-Clinic only,
+          with Video Consult keeping the older appointment-card +
+          Consultation Details layout below (no online-mode spec had
+          been given for that pass). Per explicit instruction, Video
+          Consult now gets this exact same card too, so that older
+          layout is removed. Mode/Patient reuse the exact same
+          data-kal-confirm-mode/-name hooks renderConfirmationSummary()
+          in kal-booking-flow.js already populates per mode ("Online -
+          30 mins" vs "In Clinic - 30 mins") — zero JS changes needed.
+          Payment stays the same static "₹450 Paid" mockup regardless of
+          mode, same as this card already showed for In-Clinic.
+        {%- endcomment -%}
+        <div class="kal-confirmed-card">
+          <div class="kal-confirmed-card__slot">
+            <div class="kal-confirmed-card__date">
+              <span class="kal-confirmed-card__date-day">FRI</span>
+              <span class="kal-confirmed-card__date-num">06</span>
+              <span class="kal-confirmed-card__date-month">AUG</span>
+            </div>
+            <div class="kal-confirmed-card__slot-info">
+              <p class="kal-confirmed-card__time">10:30 AM</p>
+              <p class="kal-confirmed-card__mode" data-kal-confirm-mode>&mdash;</p>
+              <span class="kal-confirmed-card__eta">in 3 days</span>
+            </div>
           </div>
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-details__key">Payment</span>
-            <span class="kal-confirmation-details__value" data-kal-confirm-payment>Online payment</span>
+          <div class="kal-confirmed-card__divider" aria-hidden="true">
+            <span class="kal-confirmed-card__divider-notch kal-confirmed-card__divider-notch--left"></span>
+            <span class="kal-confirmed-card__divider-notch kal-confirmed-card__divider-notch--right"></span>
+          </div>
+          <div class="kal-confirmed-card__body">
+            <div class="kal-confirmed-card__doctor">
+              <span class="kal-confirmed-card__doctor-avatar">NJ</span>
+              <span class="kal-confirmed-card__doctor-info">
+                <span class="kal-confirmed-card__doctor-label">Your doctor</span>
+                <span class="kal-confirmed-card__doctor-name" data-kal-doctor-name-display>Dr. Neethu Jayachandran</span>
+              </span>
+            </div>
+            <div class="kal-confirmed-card__grid">
+              <div class="kal-confirmed-card__cell">
+                <span class="kal-confirmed-card__cell-label">Patient</span>
+                <span class="kal-confirmed-card__cell-value" data-kal-confirm-name>&mdash;</span>
+              </div>
+              <div class="kal-confirmed-card__cell">
+                <span class="kal-confirmed-card__cell-label">Payment</span>
+                <span class="kal-confirmed-card__cell-value">
+                  &#8377;450
+                  <span class="kal-confirmed-card__paid-badge">Paid</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -135,18 +232,22 @@
         <ul class="kal-before-visit__list">
           <li class="kal-before-visit__item">
             <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            <span>Pay at reception cash or card.</span>
-          </li>
-          <li class="kal-before-visit__item">
-            <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
             <span>Arrive 10 minutes early for check-in.</span>
           </li>
           <li class="kal-before-visit__item">
             <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
             <span>Bring an ID and your referral letter if you have one.</span>
           </li>
+          <li class="kal-before-visit__item">
+            <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+            <span>Carry any recent reports or prescriptions.</span>
+          </li>
         </ul>
       </div>
+    </div>
+
+    <div class="kal-step-shell__footer">
+      <a href="{{ routes.root_url }}" class="kal-step-doctor-select__continue">Back to Homepage</a>
     </div>
 
   </div>

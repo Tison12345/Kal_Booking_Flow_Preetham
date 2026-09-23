@@ -53,76 +53,12 @@
         show the "not available here" Continue/Change Clinic warning
         (kal-booking-flow.liquid's shared kal-facility-switch-modal).
 
-        data-kal-facility-picker-step marks which step this instance is
-        on (Concern Select never triggers the warning — no doctor picked
-        yet at that point).
+        Extracted to its own snippet (kal-booking-flow-facility-picker.liquid)
+        so Concern Select's desktop "Selected Clinic" pill can render this
+        exact same interactive picker instead of a disconnected static
+        copy — see that snippet's own comment.
       {%- endcomment -%}
-      <div class="kal-facility-picker" data-kal-facility-picker data-kal-facility-picker-step="{{ step_number }}">
-        <button
-          type="button"
-          class="kal-step-header__location-badge"
-          data-kal-facility-toggle
-          aria-haspopup="listbox"
-          aria-expanded="false"
-        >
-          <span class="kal-step-header__location-badge-left">
-            {%- comment -%}
-              Two icons, one hidden — Video Consult swaps the pin for the
-              monitor glyph (setOnlineHeaderState() in kal-booking-flow.js
-              toggles which is hidden) since there's no physical location
-              once online. Both live in the DOM rather than swapping
-              innerHTML from JS, matching this file's existing flag-swap
-              convention in the phone country picker.
-            {%- endcomment -%}
-            <span class="kal-icon kal-icon--location">
-              <span data-kal-location-icon-offline>{%- render 'kal-booking-icons', icon_name: 'location-pin' -%}</span>
-              <span data-kal-location-icon-online hidden>{%- render 'kal-booking-icons', icon_name: 'mode-online' -%}</span>
-            </span>
-            <span class="kal-step-header__location-text">{{ location_text }}</span>
-          </span>
-          <span class="kal-step-header__location-chevron" aria-hidden="true">
-            {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
-          </span>
-        </button>
-        <ul class="kal-country-picker__panel" data-kal-facility-panel hidden role="listbox" aria-label="Choose a clinic">
-          <li role="presentation">
-            <button type="button" class="kal-country-picker__option kal-facility-picker__option" data-kal-facility-option data-kal-facility-option-id="indiranagar" data-kal-facility-name="Indiranagar" role="option" aria-selected="true">
-              <span class="kal-country-picker__label">Indiranagar</span>
-              <span class="kal-facility-picker__check">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            </button>
-          </li>
-          <li role="presentation">
-            <button type="button" class="kal-country-picker__option kal-facility-picker__option" data-kal-facility-option data-kal-facility-option-id="hsr-layout" data-kal-facility-name="HSR layout" role="option" aria-selected="false">
-              <span class="kal-country-picker__label">HSR layout</span>
-              <span class="kal-facility-picker__check">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            </button>
-          </li>
-          <li role="presentation">
-            <button type="button" class="kal-country-picker__option kal-facility-picker__option" data-kal-facility-option data-kal-facility-option-id="jayanagar" data-kal-facility-name="Jayanagar" role="option" aria-selected="false">
-              <span class="kal-country-picker__label">Jayanagar</span>
-              <span class="kal-facility-picker__check">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            </button>
-          </li>
-          <li role="presentation">
-            <button type="button" class="kal-country-picker__option kal-facility-picker__option" data-kal-facility-option data-kal-facility-option-id="koramangala" data-kal-facility-name="Koramangala" role="option" aria-selected="false">
-              <span class="kal-country-picker__label">Koramangala</span>
-              <span class="kal-facility-picker__check">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            </button>
-          </li>
-          <li role="presentation">
-            <button type="button" class="kal-country-picker__option kal-facility-picker__option" data-kal-facility-option data-kal-facility-option-id="sarjapur" data-kal-facility-name="Sarjapur" role="option" aria-selected="false">
-              <span class="kal-country-picker__label">Sarjapur</span>
-              <span class="kal-facility-picker__check">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            </button>
-          </li>
-          <li role="presentation">
-            <button type="button" class="kal-country-picker__option kal-facility-picker__option" data-kal-facility-option data-kal-facility-option-id="whitefield" data-kal-facility-name="Whitefield" role="option" aria-selected="false">
-              <span class="kal-country-picker__label">Whitefield</span>
-              <span class="kal-facility-picker__check">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            </button>
-          </li>
-        </ul>
-      </div>
+      {%- render 'kal-booking-flow-facility-picker', step_number: step_number, location_text: location_text -%}
     {%- else -%}
       {%- comment -%}
         Mobile: static facility badge, no chevron — this isn't a dropdown
@@ -165,11 +101,11 @@
       {%- if step_number == step_total -%}
         Final step
       {%- else -%}
-        Next : {{ next_label }}
+        Next : <span class="kal-step-progress-bar__next-label">{{ next_label }}</span>
       {%- endif -%}
     </span>
   </div>
   <div class="kal-step-progress-bar__track">
-    <div class="kal-step-progress-bar__fill" style="--kal-step-progress: {{ step_percent }}%;"></div>
+    <div class="kal-step-progress-bar__fill" style="--kal-booking-flow-step-progress: {{ step_percent }}%;"></div>
   </div>
 </div>

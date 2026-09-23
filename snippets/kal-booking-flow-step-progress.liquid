@@ -1,0 +1,81 @@
+{% comment %}
+  Shared "Your Progress" desktop stepper (Figma node/export "Desktop
+  Progress") — originally built inline in kal-booking-flow-step-concern-select.liquid
+  for that step alone, extracted here once Doctor Select needed the exact
+  same list with a different current step, so the 5 step names/order live
+  in exactly one place instead of drifting between per-step copies.
+
+  Accepts:
+  - current_step: {Number} 1-based, which step is "in progress" right
+    now. Steps before it render as completed (checkmark, filled
+    dark-green circle); the one immediately after it renders as "Up
+    next" (the lighter tan-bordered --next look); every step after that
+    renders plain, with no state text at all — matching the original
+    concern-select export's own greying-out of later, not-yet-relevant
+    steps.
+  - step_names: {String} optional, pipe-separated (e.g.
+    'Choose therapy|Personal details') — defaults to the 5-step
+    consultation flow's own names if omitted, so every existing caller
+    keeps working unchanged. Lets shorter flows (the 2-step therapy
+    flow) reuse this exact same stepper instead of a parallel copy.
+
+  Usage:
+  {% render 'kal-booking-flow-step-progress', current_step: 2 %}
+  {% render 'kal-booking-flow-step-progress', current_step: 1, step_names: 'Choose therapy|Personal details' %}
+
+  Still uses the .kal-concern-select__* class names from that first
+  build (stepper/stepper-step/stepper-number/etc., and the outer
+  .kal-concern-select__progress) rather than a step-agnostic rename —
+  reused as-is on Doctor Select's left column too, same as this flow's
+  other shared pieces (see kal-booking-flow-step-header.liquid's own
+  comment on why one CSS definition beats duplicating it per step).
+{% endcomment %}
+
+{%- liquid
+  assign step_names_string = step_names | default: 'Health concerns|Mode & doctor|Date & time|Patient Details|Review & payment'
+  assign step_names = step_names_string | split: '|'
+  assign next_step = current_step | plus: 1
+-%}
+
+<div class="kal-concern-select__progress">
+  <p class="kal-concern-select__info-label">Your Progress</p>
+  <ol class="kal-concern-select__stepper">
+    {%- for step_name in step_names -%}
+      {%- assign step_index = forloop.index -%}
+      {%- assign is_last = forloop.last -%}
+      {%- if step_index < current_step -%}
+        {%- assign state_modifier = ' kal-concern-select__stepper-step--completed' -%}
+        {%- assign state_text = 'Completed' -%}
+      {%- elsif step_index == current_step -%}
+        {%- assign state_modifier = ' kal-concern-select__stepper-step--current' -%}
+        {%- assign state_text = 'In progress' -%}
+      {%- elsif step_index == next_step -%}
+        {%- assign state_modifier = ' kal-concern-select__stepper-step--next' -%}
+        {%- assign state_text = 'Up next' -%}
+      {%- else -%}
+        {%- assign state_modifier = '' -%}
+        {%- assign state_text = '' -%}
+      {%- endif -%}
+      <li class="kal-concern-select__stepper-step{{ state_modifier }}">
+        <div class="kal-concern-select__stepper-row">
+          <span class="kal-concern-select__stepper-number">
+            {%- if step_index < current_step -%}
+              {%- render 'kal-booking-icons', icon_name: 'check' -%}
+            {%- else -%}
+              {{ step_index }}
+            {%- endif -%}
+          </span>
+          <span class="kal-concern-select__stepper-text">
+            <span class="kal-concern-select__stepper-label">{{ step_name }}</span>
+            {%- if state_text != '' -%}
+              <span class="kal-concern-select__stepper-state">{{ state_text }}</span>
+            {%- endif -%}
+          </span>
+        </div>
+        {%- unless is_last -%}
+          <span class="kal-concern-select__stepper-divider" aria-hidden="true"></span>
+        {%- endunless -%}
+      </li>
+    {%- endfor -%}
+  </ol>
+</div>

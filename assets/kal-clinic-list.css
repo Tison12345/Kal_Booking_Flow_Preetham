@@ -8,13 +8,13 @@
   max-width: 600px;
   margin: 0 auto;
   padding: 48px 24px;
-  font-family: var(--kal-font-family);
+  font-family: var(--kal-booking-flow-font-family);
 }
 
 .kal-clinic-list__heading {
   font-size: 20px;
   font-weight: 800;
-  color: var(--kal-color-heading);
+  color: var(--kal-booking-flow-color-heading);
   margin: 0 0 24px;
 }
 
@@ -28,7 +28,7 @@
 
 .kal-clinic-list__item {
   padding: 20px 0;
-  border-bottom: 1px solid var(--kal-color-border);
+  border-bottom: 1px solid var(--kal-booking-flow-color-border);
 }
 
 .kal-clinic-list__item:first-child {
@@ -49,7 +49,7 @@
   font-family: inherit;
   font-size: 16px;
   font-weight: 700;
-  color: var(--kal-color-primary);
+  color: var(--kal-booking-flow-color-primary);
   cursor: pointer;
 }
 
@@ -60,17 +60,17 @@
 .kal-clinic-list__address {
   margin: 6px 0 0;
   font-size: 14px;
-  color: var(--kal-color-body);
+  color: var(--kal-booking-flow-color-body);
 }
 
 .kal-clinic-list__directions {
   display: inline-block;
   margin-top: 8px;
   font-size: 13px;
-  color: var(--kal-color-location-text);
+  color: var(--kal-booking-flow-color-location-text);
 }
 
 .kal-clinic-list__empty {
-  color: var(--kal-color-body);
+  color: var(--kal-booking-flow-color-body);
   font-size: 14px;
 }

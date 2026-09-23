@@ -75,8 +75,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const facility = getStoredFacility();
     if (!facility || !facility.id) return;
 
+    // "Kerala Ayurveda Wellness Center, {facility}" — no address/hours
+    // suffix, matching the static default's own format exactly (see this
+    // element's own liquid comment).
     flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
-      el.textContent = facility.address ? `${facility.name} · ${facility.address}` : facility.name;
+      el.textContent = `Kerala Ayurveda Wellness Center, ${facility.name}`;
     });
 
     // Shorter mobile badge — just the name, no address, matching its
@@ -127,6 +130,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return card ? card.dataset.kalDoctorName : null;
   };
 
+  const getSelectedDoctorPhotoUrl = () => {
+    const card = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
+    return card ? card.dataset.kalDoctorPhotoUrl : null;
+  };
+
+  const getSelectedDoctorPrice = () => {
+    const card = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
+    return card ? card.dataset.kalDoctorPrice : null;
+  };
+
   // Drives Doctor Select's 3 static mock cards off the same
   // MOCK_DOCTOR_HOME_FACILITY map the facility-switch warning uses —
   // no fetching/cloning, just hiding/showing and (de)selecting what's
@@ -140,6 +153,57 @@ document.addEventListener('DOMContentLoaded', () => {
   // video doctor list doesn't exist in this mock, so "all of them" is
   // the closest stand-in). Called on arrival at Doctor Select, on every
   // mode toggle, and after every facility switch.
+  // Doctor Select's Continue is disabled until a card is actually
+  // selected (see that step's own liquid comment) — matters most for
+  // Video Consult, which deliberately starts with none selected, but
+  // also covers the empty-state facility case below where In-Clinic ends
+  // up with zero matching doctors too. Re-checked on every card click and
+  // every render pass here.
+  const updateDoctorSelectContinueButton = () => {
+    const hasSelection = getSelectedDoctorName() !== null;
+    flow.querySelectorAll('[data-kal-doctor-continue]').forEach((btn) => {
+      btn.disabled = !hasSelection;
+    });
+  };
+
+  // Keeps every downstream "doctor" display (Slot Picker/Patient Details'
+  // shared appointment card, Confirmation's own copy, Booking Confirmed's
+  // "Your doctor" row) in sync with whichever card is actually selected on
+  // Doctor Select — those used to just hardcode "Dr. Neethu Jayachandran"
+  // (and a static mock photo/price) regardless of which mock/real doctor
+  // got picked. No-op per field when that field has nothing to apply yet
+  // (no selection, or a doctor with no photo uploaded), leaving whatever
+  // was already there — every one of these steps is only reachable once
+  // Continue has been enabled, which itself requires a selection to exist,
+  // so in practice name/price are always applied by the time they're seen.
+  const applySelectedDoctorToCards = () => {
+    const name = getSelectedDoctorName();
+    if (name) {
+      flow.querySelectorAll('[data-kal-doctor-name-display]').forEach((el) => {
+        el.textContent = name;
+      });
+    }
+
+    const price = getSelectedDoctorPrice();
+    if (price) {
+      flow.querySelectorAll('[data-kal-doctor-price-display]').forEach((el) => {
+        el.textContent = price;
+      });
+    }
+
+    const photoUrl = getSelectedDoctorPhotoUrl();
+    if (photoUrl) {
+      flow.querySelectorAll('[data-kal-doctor-photo-display]').forEach((el) => {
+        el.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = photoUrl;
+        img.alt = name || '';
+        img.loading = 'lazy';
+        el.appendChild(img);
+      });
+    }
+  };
+
   const renderMockDoctorsForCurrentState = () => {
     const list = flow.querySelector('[data-kal-doctor-list]');
     if (!list) return;
@@ -152,6 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
         card.classList.remove('kal-doctor-card--selected');
       });
       if (emptyState) emptyState.hidden = true;
+      updateDoctorSelectContinueButton();
+      applySelectedDoctorToCards();
       return;
     }
 
@@ -163,6 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     if (matchingCards.length > 0) matchingCards[0].classList.add('kal-doctor-card--selected');
     if (emptyState) emptyState.hidden = matchingCards.length > 0;
+    updateDoctorSelectContinueButton();
+    applySelectedDoctorToCards();
   };
 
   // Confirmation's appointment card, "Doctor" row, and Payment Method
@@ -314,6 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
         el.dataset.kalDoctorId = selectedDoctorId;
       });
     }
+    updateDoctorSelectContinueButton();
+    applySelectedDoctorToCards();
   };
 
   const buildFallbackDoctorCard = (doctor) => {
@@ -410,6 +480,11 @@ document.addEventListener('DOMContentLoaded', () => {
       step.hidden = step.dataset.kalStep !== stepName;
     });
 
+    // Lets kal-booking-flow.css size the desktop dialog per step (e.g.
+    // Entry's own 802x600 export vs. every other step's shared 1180x750)
+    // without any step needing its own <dialog> element.
+    flow.dataset.kalActiveStep = stepName;
+
     // Entry has no back button, so it's the only step that still relies on
     // the global, absolutely-positioned .kal-booking-flow__close. Every
     // other step now renders its own close button as a flex sibling of
@@ -482,7 +557,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Toggles one concern on/off, rather than replacing the whole selection —
-  // the checkbox equivalent of the old radio's setConcern(concern).
+  // the checkbox equivalent of the old radio's setConcern(concern). Just
+  // highlights the row (kal-concern-row--selected) — no separate summary
+  // display anywhere; that chip-summary pattern belongs to the therapy
+  // flow's own "Selected therapies" list (kal-booking-flow-step-therapy-slot.liquid),
+  // not this consultation flow.
   const toggleConcern = (concern) => {
     if (concernSelect.selected.has(concern)) {
       concernSelect.selected.delete(concern);
@@ -798,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     flow.querySelectorAll('[data-kal-summary-mode]').forEach((el) => {
-      el.textContent = mode === 'video' ? 'Online' : 'In-Clinic';
+      el.textContent = mode === 'video' ? 'Video Consult' : 'In-Clinic';
     });
 
     // Slot Picker's day-strip/slot-grid are static now (see that step's
@@ -1308,7 +1387,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     flow.querySelectorAll('[data-kal-confirm-mode]').forEach((el) => {
-      const modeLabel = slotPicker.mode === 'video' ? 'Online' : 'In Clinic';
+      const modeLabel = slotPicker.mode === 'video' ? 'Video Consult' : 'In Clinic';
       el.textContent = `${modeLabel} - ${CONSULT_DURATION_MINUTES} mins`;
     });
 
@@ -1381,7 +1460,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const patientContinueTrigger = e.target.closest('[data-kal-patient-continue]');
     if (patientContinueTrigger) {
       if (validatePatientDetailsAndShowErrors()) {
-        goToStep('confirmation');
+        // Therapy Details' "Submit Request" button carries BOTH
+        // data-kal-goto="therapy-confirmed" (see the gotoTrigger block
+        // above, which already navigates there unconditionally) AND
+        // data-kal-patient-continue (to share this validation logic with
+        // the consultation flow's own Patient Details button, which has
+        // no data-kal-goto of its own). Hardcoding 'confirmation' here
+        // meant this block ran second and always overrode Therapy
+        // Details' navigation back to the consultation flow's
+        // Confirmation step, regardless of which button was actually
+        // clicked. Falling back to 'confirmation' only when the trigger
+        // has no data-kal-goto of its own fixes this for both.
+        goToStep(patientContinueTrigger.dataset.kalGoto || 'confirmation');
       }
     }
     const backTrigger = e.target.closest('[data-kal-back]');

@@ -50,12 +50,25 @@
   type="button"
   class="kal-doctor-card {% if selected %}kal-doctor-card--selected{% endif %}"
   data-kal-doctor-name="{{ name }}"
+  data-kal-doctor-photo-url="{{ photo_url | escape }}"
+  data-kal-doctor-price="{{ price }}"
 >
   <span class="kal-doctor-card__top">
     <span class="kal-doctor-card__body">
+      {%- comment -%}
+        Real photo now (Doctor Select passes each entry's actual Photo
+        metaobject field) — falls back to the plain placeholder box only
+        when a doctor has no photo uploaded, or for any other caller that
+        still passes the shared placeholder asset (Doctor Select's own
+        photo_url is no longer that placeholder now that it reads real
+        metaobject data, but other flows/tests may still rely on this
+        param defaulting to a visible box either way).
+      {%- endcomment -%}
       <span class="kal-doctor-card__photo">
         {%- if photo_url != blank -%}
           <img src="{{ photo_url }}" alt="{{ name }}" loading="lazy">
+        {%- else -%}
+          <span class="kal-doctor-photo-placeholder"></span>
         {%- endif -%}
       </span>
       <span class="kal-doctor-card__info">

@@ -37,23 +37,25 @@
   first" stage; it's just disabled until isPatientDetailsValid().
 {% endcomment %}
 
-<div class="kal-step-therapy-details kal-step-shell">
+<div class="kal-step-therapy-details kal-step-shell kal-step-shell--progress-panel">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Who is this visit for?</h2>
-      <p class="kal-step-entry__body-text">
-        Book a consultation in under a minute in-clinic or video. Confirmation
-        arrives instantly, no account required.
-      </p>
-    </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-      </span>
+  {%- comment -%}
+    Desktop left column — same pattern as therapy-slot.liquid's own left
+    column (see that file's comment) — current_step: 2 now, so "Choose
+    therapy" reads Completed and "Personal details" reads In progress.
+  {%- endcomment -%}
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    <div class="kal-concern-select__info-scroll">
+      <div class="kal-concern-select__info-header">
+        <h2 class="kal-step-entry__heading kal-concern-select__heading">Therapy Request</h2>
+      </div>
+
+      <div class="kal-concern-select__info-section">
+        <p class="kal-concern-select__info-label">Selected Clinic</p>
+        {%- render 'kal-booking-flow-facility-picker', step_number: 2, location_text: 'Indiranagar', extra_class: 'kal-concern-select__info-pill' -%}
+      </div>
+
+      {%- render 'kal-booking-flow-step-progress', current_step: 2, step_names: 'Choose therapy|Personal details' -%}
     </div>
   </div>
 
@@ -61,45 +63,51 @@
 
     {%- render 'kal-booking-flow-step-header', back_target: 'therapy-slot', step_number: 2, step_total: 2, next_label: 'Final step' -%}
 
-    <div class="kal-step-shell__scroll">
-      <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Therapy Details</h2>
-      </div>
+    {%- comment -%}
+      Heading + therapy/doctor summary card moved OUTSIDE
+      .kal-step-shell__scroll (still siblings within .kal-step-shell__panel)
+      per explicit instruction — only the form fields should scroll, with
+      these staying fixed right below the progress bar, same treatment as
+      Concern Select's own heading/banner.
+    {%- endcomment -%}
+    <div class="kal-step-doctor-select__intro">
+      <h2 class="kal-step-doctor-select__heading">Enter your patient details</h2>
+    </div>
 
-      {%- assign therapy_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
-      <div class="kal-therapy-appointment-card">
-        <div class="kal-therapy-appointment-card__top">
-          <span class="kal-therapy-appointment-card__photo">
-            <img src="{{ therapy_photo_url }}" alt="Dr. Neethu Jayachandran" loading="lazy">
-          </span>
-          <span class="kal-therapy-appointment-card__body">
-            <span class="kal-therapy-appointment-card__name">Dr. Neethu Jayachandran</span>
-            <span class="kal-therapy-appointment-card__meta">
-              <span class="kal-therapy-appointment-card__meta-item">
-                <span class="kal-therapy-appointment-card__meta-icon">
-                  {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
-                </span>
-                BAMS
+    {%- comment -%}
+      Photo removed per explicit instruction (flow-wide) — plain
+      placeholder box instead of the doctor's photo for now.
+    {%- endcomment -%}
+    <div class="kal-therapy-appointment-card">
+      <div class="kal-therapy-appointment-card__top">
+        <span class="kal-therapy-appointment-card__photo">
+          <span class="kal-doctor-photo-placeholder"></span>
+        </span>
+        <span class="kal-therapy-appointment-card__body">
+          <span class="kal-therapy-appointment-card__name">Dr. Neethu Jayachandran</span>
+          <span class="kal-therapy-appointment-card__meta">
+            <span class="kal-therapy-appointment-card__meta-item">
+              <span class="kal-therapy-appointment-card__meta-icon">
+                {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
               </span>
-              <span class="kal-therapy-appointment-card__divider" aria-hidden="true"></span>
-              <span class="kal-therapy-appointment-card__meta-item">
-                <span class="kal-therapy-appointment-card__meta-icon">
-                  {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
-                </span>
-                12 yrs experience
+              BAMS
+            </span>
+            <span class="kal-therapy-appointment-card__divider" aria-hidden="true"></span>
+            <span class="kal-therapy-appointment-card__meta-item">
+              <span class="kal-therapy-appointment-card__meta-icon">
+                {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
               </span>
+              12 yrs experience
             </span>
           </span>
-        </div>
-        <span class="kal-therapy-appointment-card__desc">
-          Your therapy starts with a short <strong>doctor consultation</strong> and is performed by an expert therapist.
         </span>
       </div>
+      <span class="kal-therapy-appointment-card__desc">
+        Your therapy starts with a short <strong>doctor consultation</strong> and is performed by an expert therapist.
+      </span>
+    </div>
 
-      <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
-      </div>
-
+    <div class="kal-step-shell__scroll">
       <div class="kal-form">
         <div class="kal-form-field">
           <label class="kal-form-label" for="kal-therapy-patient-name">Full name*</label>
@@ -169,12 +177,41 @@
       </div>
     </div>
 
-    <div class="kal-step-shell__footer">
+    <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
       <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue disabled>
         Submit Request
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%}
+    Desktop-only full-width footer bar, same pattern as the consultation
+    flow's progress-panel steps — help text + Back (to Therapy Slot)/
+    Submit Request split across the shared 300px/1fr grid columns.
+    data-kal-goto="therapy-confirmed" + data-kal-patient-continue on this
+    button work the exact same way as the mobile instance (see
+    kal-booking-flow.js's patientContinueTrigger handler, which now
+    reads a button's own data-kal-goto instead of always hardcoding
+    'confirmation' — fixed specifically so this shared hook works
+    correctly for both flows).
+  {%- endcomment -%}
+  <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
+    <div class="kal-concern-select__footer-help kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
+      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
+    </div>
+    <div class="kal-concern-select__footer-actions">
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="therapy-slot" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue disabled>
+        Submit Request
+      </button>
+    </div>
   </div>
 
 </div>

@@ -22,30 +22,38 @@
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
-  switches at 750px. Left column reuses .kal-step-entry__info exactly like
-  every other step's desktop composition (per the Figma spec — only the
-  heading text differs); this pass is mobile-only, so its copy ("Who would
-  you like to see?") is left as-is while the mobile intro heading below
-  gets the new copy.
+  switches at 750px.
+
+  DESKTOP REDESIGN: this step now reuses Concern Select's own desktop
+  left column ("Consultation Booking" heading, Selected Clinic, Your
+  Progress stepper) and full-width footer (Need assistance + Back/
+  Continue) rather than the old plain .kal-step-entry__info reuse most
+  other steps still have — per the reference export, this step's left
+  column looks IDENTICAL to Concern Select's, just with "Health
+  concerns" now showing completed (checkmark) and "Mode & doctor" as the
+  current step instead. See kal-booking-flow-step-progress.liquid (the
+  stepper, parameterized by current_step) and kal-booking-flow.css's
+  .kal-step-shell--progress-panel section (generalized from Concern
+  Select's original build once this step needed the exact same layout)
+  for how this is shared instead of duplicated. Mobile is untouched —
+  still its own "Who would you like to see?" composition below, unaware
+  any of this exists (.kal-step-shell__info stays display:none there).
 {% endcomment %}
 
-<div class="kal-step-doctor-select kal-step-shell">
+<div class="kal-step-doctor-select kal-step-shell kal-step-shell--progress-panel">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">Who would you like to see?</h2>
-      <p class="kal-step-entry__body-text">
-        Book a consultation in under a minute in-clinic or video. Confirmation
-        arrives instantly, no account required.
-      </p>
-    </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
-      </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar &middot; Opens 8 AM
-      </span>
+  <div class="kal-step-entry__info kal-step-shell__info kal-concern-select__info">
+    <div class="kal-concern-select__info-scroll">
+      <div class="kal-concern-select__info-header">
+        <h2 class="kal-step-entry__heading kal-concern-select__heading">Consultation Booking</h2>
+      </div>
+
+      <div class="kal-concern-select__info-section">
+        <p class="kal-concern-select__info-label">Selected Clinic</p>
+        {%- render 'kal-booking-flow-facility-picker', step_number: 2, location_text: 'Indiranagar', extra_class: 'kal-concern-select__info-pill' -%}
+      </div>
+
+      {%- render 'kal-booking-flow-step-progress', current_step: 2 -%}
     </div>
   </div>
 
@@ -63,27 +71,37 @@
     {%- endcomment -%}
     {%- render 'kal-booking-flow-step-header', back_target: 'concern-select', step_number: 2, step_total: 5, next_label: 'Date & Time', location_switchable: true -%}
 
+    {%- comment -%}
+      Heading + mode toggle moved OUTSIDE .kal-step-shell__scroll (still
+      siblings within .kal-step-shell__panel) per explicit instruction —
+      only the doctor list itself should scroll, with these two staying
+      fixed right below the progress bar, same treatment as Concern
+      Select's own heading/banner. Desktop already scrolled just
+      .kal-step-doctor-select__list on its own (see that class's own
+      750px+ rule below) rather than this whole wrapper — this brings
+      mobile in line with that, rather than changing desktop's behavior.
+    {%- endcomment -%}
+    <div class="kal-step-doctor-select__intro">
+      <h2 class="kal-step-doctor-select__heading">Choose your doctor</h2>
+      <p class="kal-step-doctor-select__subtext">Select a doctor and how you&rsquo;d like to consult</p>
+    </div>
+
+    <div class="kal-toggle-group">
+      <button type="button" class="kal-toggle-btn kal-toggle-btn--active" data-kal-mode="in-clinic">
+        <span class="kal-icon kal-icon--location">
+          {%- render 'kal-booking-icons', icon_name: 'mode-location' -%}
+        </span>
+        In-Clinic
+      </button>
+      <button type="button" class="kal-toggle-btn" data-kal-mode="video">
+        <span class="kal-icon kal-icon--video">
+          {%- render 'kal-booking-icons', icon_name: 'mode-online' -%}
+        </span>
+        Video Consult
+      </button>
+    </div>
+
     <div class="kal-step-shell__scroll">
-      <div class="kal-step-doctor-select__intro">
-        <h2 class="kal-step-doctor-select__heading">Choose your doctor</h2>
-        <p class="kal-step-doctor-select__subtext">Select a doctor and how you&rsquo;d like to consult</p>
-      </div>
-
-      <div class="kal-toggle-group">
-        <button type="button" class="kal-toggle-btn kal-toggle-btn--active" data-kal-mode="in-clinic">
-          <span class="kal-icon kal-icon--location">
-            {%- render 'kal-booking-icons', icon_name: 'mode-location' -%}
-          </span>
-          In-Clinic
-        </button>
-        <button type="button" class="kal-toggle-btn" data-kal-mode="video">
-          <span class="kal-icon kal-icon--video">
-            {%- render 'kal-booking-icons', icon_name: 'mode-online' -%}
-          </span>
-          Video Consult
-        </button>
-      </div>
-
       {%- comment -%}
         In-Clinic mode shows only the doctor(s) whose mock home facility
         (kal-booking-flow.js's MOCK_DOCTOR_HOME_FACILITY — the same map
@@ -95,53 +113,95 @@
         covers facilities with no assigned mock doctor (HSR layout,
         Jayanagar, Sarjapur).
       {%- endcomment -%}
-      {%- assign doctor_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      {%- comment -%}
+        Real Shopify data now, via the "Doctor" metaobject (Settings >
+        Custom data > Metaobject definitions) instead of the 3 hardcoded
+        mock cards this used to render — see that definition's fields
+        (name/qualification/languages/experience/specialties/photo/
+        next_slot/price) for what each entry needs. languages/specialties
+        are List fields, joined here into the same pre-formatted strings
+        kal-booking-flow-doctor-card.liquid already expected from the old
+        hardcoded calls. First entry pre-selected (forloop.first), same
+        default-selection behavior the old first hardcoded card had — no
+        real facility-matching logic here yet (see this file's own
+        BACKEND INTEGRATION comment above), so every entry currently shows
+        regardless of the selected clinic/mode.
+      {%- endcomment -%}
+      {%- assign placeholder_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
       <div class="kal-step-doctor-select__list" data-kal-doctor-list>
         <p class="kal-step-doctor-select__list-empty" data-kal-doctor-list-empty hidden>
           No in-clinic doctors available at this clinic yet — try Video Consult, or switch clinics.
         </p>
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Neethu Jayachandran',
-          degree: 'BAMS',
-          languages: 'English &middot; Hindi &middot; Malayalam',
-          experience: '12 yrs experience',
-          tags: 'Anxiety,Stress Management,Diabetes Care,Preventive Health',
-          next_slot: 'Today, 10:30 AM',
-          price: '&#8377;500',
-          selected: true,
-          photo_url: doctor_photo_url
-        -%}
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Arjun Menon',
-          degree: 'BAMS, MD (Ayurveda)',
-          languages: 'English &middot; Malayalam &middot; Tamil',
-          experience: '8 yrs experience',
-          tags: 'Joint Pain,Skin Care,Weight Management',
-          next_slot: 'Today, 2:00 PM',
-          price: '&#8377;500',
-          selected: false,
-          photo_url: doctor_photo_url
-        -%}
-        {%- render 'kal-booking-flow-doctor-card',
-          name: 'Dr. Priya Nair',
-          degree: 'BAMS',
-          languages: 'English &middot; Hindi &middot; Malayalam',
-          experience: '15 yrs experience',
-          tags: "Women's Health,Digestive Care,Preventive Health",
-          next_slot: 'Tomorrow, 9:15 AM',
-          price: '&#8377;600',
-          selected: false,
-          photo_url: doctor_photo_url
-        -%}
+        {%- for doctor in shop.metaobjects.doctor.values -%}
+          {%- assign languages_joined = doctor.languages.value | join: ' &middot; ' -%}
+          {%- assign tags_joined = doctor.specialties.value | join: ',' -%}
+          {%- if doctor.photo.value != blank -%}
+            {%- assign doctor_photo_url = doctor.photo.value | image_url: width: 200 -%}
+          {%- else -%}
+            {%- assign doctor_photo_url = placeholder_photo_url -%}
+          {%- endif -%}
+          {%- render 'kal-booking-flow-doctor-card',
+            name: doctor.name.value,
+            degree: doctor.qualification.value,
+            languages: languages_joined,
+            experience: doctor.experience.value,
+            tags: tags_joined,
+            next_slot: doctor.next_slot.value,
+            price: doctor.price.value,
+            selected: forloop.first,
+            photo_url: doctor_photo_url
+          -%}
+        {%- endfor -%}
       </div>
     </div>
 
-    <div class="kal-step-shell__footer">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker">
+    {%- comment -%}
+      data-kal-doctor-continue, disabled by default — Video Consult
+      intentionally pre-selects no doctor (see this list's own comment),
+      so a plain always-clickable data-kal-goto would let the visitor
+      through with none picked. updateDoctorSelectContinueButton() in
+      kal-booking-flow.js keeps this in sync with whether a card is
+      currently selected, re-checked on every card click and every
+      facility/mode re-render.
+    {%- endcomment -%}
+    <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
         Continue
       </button>
     </div>
 
+  </div>
+
+  {%- comment -%}
+    Desktop-only full-width footer bar — same composition as Concern
+    Select's own (help text + Back/Continue split across the shared
+    300px/1fr grid columns, see kal-booking-flow.css's
+    .kal-step-shell--progress-panel section), a separate instance rather
+    than a relocation of the mobile footer above for the same reason
+    Concern Select's is (CSS can't move one element into two different
+    parents across breakpoints).
+
+    Unlike Concern Select's Back/Continue, there's no data-kal-concern-footer/
+    hidden toggle here — Doctor Select's Continue was always just
+    disabled (not the whole row hidden) via data-kal-doctor-continue,
+    kept as-is; Back is always clickable, going to Concern Select.
+  {%- endcomment -%}
+  <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
+    <div class="kal-concern-select__footer-help kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
+      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
+    </div>
+    <div class="kal-concern-select__footer-actions">
+      <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="concern-select" aria-label="Back">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
+        <span>Back</span>
+      </button>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="slot-picker" data-kal-doctor-continue disabled>
+        Continue
+      </button>
+    </div>
   </div>
 
 </div>
