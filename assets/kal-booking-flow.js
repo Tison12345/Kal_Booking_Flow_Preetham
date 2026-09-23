@@ -1368,8 +1368,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // ----------------------------------------------------------------------
 
   const setPaymentMethod = (method) => {
+    let selectedPriceText = '';
     flow.querySelectorAll('[data-kal-payment-method]').forEach((btn) => {
-      btn.classList.toggle('kal-payment-option--selected', btn.dataset.kalPaymentMethod === method);
+      const isSelected = btn.dataset.kalPaymentMethod === method;
+      btn.classList.toggle('kal-payment-option--selected', isSelected);
+      if (isSelected) {
+        const priceEl = btn.querySelector('.kal-payment-option__price');
+        selectedPriceText = priceEl ? priceEl.textContent : '';
+      }
     });
 
     // Booking Confirmed's own "Payment" row (data-kal-confirm-payment)
@@ -1378,6 +1384,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // other data-kal-confirm-* hooks.
     flow.querySelectorAll('[data-kal-confirm-payment]').forEach((el) => {
       el.textContent = method === 'pay-at-clinic' ? 'Pay at clinic' : 'Online payment';
+    });
+
+    // Confirm button's own amount (mobile + desktop instances, both
+    // In-Clinic's "Confirm payment · ₹X" and Video Consult's "Pay ₹X"
+    // copy) — reads the price straight off the selected card rather than
+    // duplicating the mock ₹450/₹495 values in JS.
+    flow.querySelectorAll('[data-kal-confirm-payment-amount]').forEach((el) => {
+      el.textContent = selectedPriceText;
     });
   };
 

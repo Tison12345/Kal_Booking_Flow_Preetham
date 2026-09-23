@@ -237,14 +237,13 @@
 
     <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
       {%- comment -%}
-        Button copy differs by mode too (node 625:8818: "Pay ₹450", vs
-        In-Clinic's "Confirm payment") — one button, two text spans
-        toggled the same way, so data-kal-confirm-booking/data-kal-goto
-        stay on a single element regardless of mode.
+        Same "Pay ₹X" copy at every mode now — was "Confirm payment" for
+        In-Clinic vs "Pay ₹450" for Video Consult, but both modes let you
+        pick Pay now/Pay at clinic here, so both read the selected card's
+        price the same way. See setPaymentMethod() in kal-booking-flow.js.
       {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        <span data-kal-mode-offline-only>Confirm payment</span>
-        <span data-kal-mode-online-only hidden>Pay &#8377;450</span>
+        Pay&nbsp;<span data-kal-confirm-payment-amount>&#8377;450</span>
       </button>
     </div>
 
@@ -270,8 +269,7 @@
         <span>Back</span>
       </button>
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        <span data-kal-mode-offline-only>Confirm payment</span>
-        <span data-kal-mode-online-only hidden>Pay &#8377;450</span>
+        Pay&nbsp;<span data-kal-confirm-payment-amount>&#8377;450</span>
       </button>
     </div>
   </div>

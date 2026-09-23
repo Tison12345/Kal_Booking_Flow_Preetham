@@ -120,7 +120,7 @@
     max-width: 802px;
     height: 600px;
     max-height: 90vh;
-    border: 1px solid var(--kal-booking-flow-color-border);
+    border: 1px solid #dcdcdc;
     border-radius: 16px;
     box-shadow: 0px 24px 48px -16px rgba(25, 25, 25, 0.18), 0px 8px 16px -8px rgba(25, 25, 25, 0.1);
   }
@@ -1237,7 +1237,7 @@
      content zeroes its mobile side-padding below so it isn't applied
      twice on top of that. */
   .kal-step-shell--progress-panel .kal-step-shell__panel {
-    padding: 40px 20px 0px 20px;
+    padding: 36px 24px 0px 24px;
   }
 
   .kal-step-concern-select .kal-step-doctor-select__intro,
@@ -1278,6 +1278,17 @@
   .kal-step-shell--progress-panel .kal-step-shell__scroll {
     padding-left: 0;
     padding-right: 0;
+  }
+
+  /* .kal-toggle-group is the one element in this list whose mobile inset
+     comes from margin (0 25px) rather than padding like its siblings
+     (.kal-step-doctor-select__intro, etc.) — the padding zero-out above
+     doesn't touch it, so at desktop it stayed 25px narrower on each side
+     than the heading/description above it instead of extending the full
+     width of the panel. */
+  .kal-step-shell--progress-panel .kal-toggle-group {
+    margin-left: 0;
+    margin-right: 0;
   }
 
   /* .kal-slot-section needs the extra .kal-step-slot-picker class chained
@@ -1404,7 +1415,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 0 20px;
+    padding: 0 24px;
   }
 
   /* Keep the actions group occupying its box even while "hidden" —
@@ -1450,7 +1461,7 @@
     width: auto;
     min-width: 93px;
     height: 44px;
-    padding: 20px 16px;
+    padding: 12px 16px;
     border: 1px solid var(--kal-booking-flow-color-border-faint);
     border-radius: 8px;
     background: var(--kal-booking-flow-color-white);
@@ -1477,7 +1488,7 @@
   .kal-step-shell--progress-panel .kal-step-doctor-select__continue {
     flex: none;
     width: auto;
-    min-width: 180px;
+    min-width: 185px;
     height: 44px;
     padding: 12px 24px;
     border: 1px solid var(--kal-booking-flow-color-primary-dark);
@@ -2367,17 +2378,6 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   padding: 0 var(--kal-booking-flow-space-inset);
 }
 
-/* 25px, not the shared 24px inset above — Doctor Select's own Figma spec
-   has this heading block 343px wide inside the 393px mobile frame
-   (393 - 2*25 = 343), 2px narrower an inset than the shared token gives.
-   Scoped to just this step so every other step reusing
-   .kal-step-doctor-select__intro (Concern Select, Slot Picker, Patient
-   Details, Confirmation, Therapy Slot/Details) keeps the shared 24px. */
-.kal-step-doctor-select .kal-step-doctor-select__intro {
-  padding-left: 25px;
-  padding-right: 25px;
-}
-
 .kal-step-doctor-select__eyebrow {
   font-size: var(--kal-booking-flow-font-size-caption);
   font-weight: 600;
@@ -2909,7 +2909,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   align-items: center;
   gap: 16px;
   font-size: var(--kal-booking-flow-font-size-small);
-  line-height: 20px;
+  line-height: 140%;
   font-weight: 400;
   color: var(--kal-booking-flow-color-location-text);
 }
@@ -3105,6 +3105,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-slot-picker .kal-day-chip__label,
 .kal-step-slot-picker .kal-day-chip__date {
   font-size: var(--kal-booking-flow-font-size-small);
+  line-height: 140%;
+  font-weight: 400;
   color: var(--kal-booking-flow-color-location-text);
 }
 
@@ -3121,9 +3123,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 .kal-step-slot-picker .kal-day-chip__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 54px;
+  height: 21px;
   padding: 4px 8px;
   border-radius: 12px;
   font-size: var(--kal-booking-flow-font-size-caption);
+  line-height: 100%;
 }
 
 .kal-step-slot-picker .kal-day-chip--active .kal-day-chip__badge {
@@ -3210,12 +3219,15 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 8px;
+  height: 26px;
+  box-sizing: content-box;
+  padding: 4px 8px;
   border: none;
   border-bottom: 1px solid transparent;
   background: none;
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-caption);
+  line-height: 150%;
   font-weight: 500;
   color: var(--kal-booking-flow-color-text-muted);
   cursor: pointer;
@@ -3262,6 +3274,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-step-slot-picker .kal-slot-chip {
   height: 38px;
+  padding: 8px 0;
   border-radius: 12px;
   border-color: var(--kal-booking-flow-color-border);
   font-size: var(--kal-booking-flow-font-size-small);
@@ -3601,7 +3614,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-gender-group {
   display: flex;
-  gap: 8px;
+  gap: 16px;
 }
 
 .kal-gender-btn {
@@ -3749,6 +3762,18 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   padding: 0 var(--kal-booking-flow-space-inset);
 }
 
+/* Desktop: the right panel already supplies its own side inset
+   (.kal-step-shell--progress-panel .kal-step-shell__panel), so the
+   scroll region's own 24px here just doubled up on top of it — zeroed
+   so the heading/appointment card/Payment Method all start flush with
+   the scroll container's own edges instead of getting a second inset. */
+@media screen and (min-width: 750px) {
+  .kal-step-confirmation .kal-step-shell__scroll {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 @media screen and (min-width: 750px) {
   .kal-step-confirmation .kal-step-shell__scroll {
     gap: var(--kal-booking-flow-space-inset);
@@ -3880,13 +3905,11 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-direction: column;
   flex-shrink: 0;
   gap: 4px;
-  /* min-height (not height) — 220px is the Figma reference size, but a
-     longer patient name or a date/time string that wraps to two lines
-     needs more room than that. overflow:hidden below would otherwise
-     silently clip that extra content instead of the card growing to fit
-     it (see the "Patient" row squished flush with no space, real-device
-     screenshot). */
-  min-height: 220px;
+  /* Content-driven, not a fixed/min height — 220px was the Figma
+     reference size, but real content (top section + 3 rows + this
+     card's own 8px bottom padding) naturally comes in shorter than
+     that, and a forced min-height just left extra blank space below the
+     "Patient" row instead of the card hugging its own content. */
   box-sizing: border-box;
   padding-bottom: 8px;
   border: 1px solid var(--kal-booking-flow-color-border);
