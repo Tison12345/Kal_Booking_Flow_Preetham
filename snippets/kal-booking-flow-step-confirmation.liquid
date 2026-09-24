@@ -178,14 +178,13 @@
         mockup values, nothing is actually charged differently. "Pay now"
         starts selected, matching the export.
 
-        Now shown for BOTH modes — Video Consult previously got a
-        separate single non-selectable "Consultation Fee" info card
-        instead (no "pay at clinic" option, since the visit itself is
-        online), but this pass's export for the online Confirmation
-        screen (node 625:8818) shows this exact same two-card selector,
-        Mode row above already saying "Video consult" — so that fee-card
-        variant is gone, not just hidden, and data-kal-mode-*-only no
-        longer applies to this section at all.
+        In-Clinic only (data-kal-mode-offline-only) — Video Consult gets
+        its own single non-selectable "Consultation Fee" card below
+        instead (no "pay at clinic" choice makes sense when the visit
+        itself is online), per a later export remodeling Payment Method
+        for that mode specifically. This reverses an earlier pass that
+        had briefly shown this exact two-card selector for both modes;
+        that export is superseded by this one.
       {%- endcomment -%}
       {%- comment -%}
         kal-payment-option__badge/__divider are MOBILE ONLY (hidden at
@@ -198,7 +197,7 @@
       {%- endcomment -%}
       <div class="kal-payment-section">
         <p class="kal-payment-section__label">Payment Method</p>
-        <div class="kal-payment-options">
+        <div class="kal-payment-options" data-kal-mode-offline-only>
           <button type="button" class="kal-payment-option kal-payment-option--selected" data-kal-payment-method="pay-now">
             <span class="kal-payment-option__badge">Save 10%</span>
             <span class="kal-payment-option__left">
@@ -231,6 +230,28 @@
               <span class="kal-payment-option__price">&#8377;495</span>
             </span>
           </button>
+        </div>
+
+        {%- comment -%}
+          Video Consult's counterpart to the two-card selector above — a
+          single, non-interactive "Consultation Fee" info card (node
+          export), since online visits have no "pay at clinic" choice to
+          offer. Reuses the same 'credit-card' glyph (fill="currentColor")
+          the appointment-card Payment row already uses elsewhere in this
+          flow, tinted via CSS instead of a second icon def. Starts
+          `hidden` in markup, same convention as this file's other
+          data-kal-mode-online-only elements, so it doesn't flash visible
+          before applyConsultationModeVisibility() runs on arrival at
+          this step.
+        {%- endcomment -%}
+        <div class="kal-payment-fee-card" data-kal-mode-online-only hidden>
+          <div class="kal-payment-fee-card__left">
+            <span class="kal-payment-fee-card__icon">
+              {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
+            </span>
+            <span class="kal-payment-fee-card__title">Consultation Fee</span>
+          </div>
+          <span class="kal-payment-fee-card__price">&#8377;450</span>
         </div>
       </div>
     </div>

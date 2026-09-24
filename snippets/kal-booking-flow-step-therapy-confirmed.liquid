@@ -170,57 +170,65 @@
             </li>
           </ol>
         </div>
+      </div>
 
-        {%- comment -%}
-          Visit details card (node 539:2222) — now the exact same
-          bordered card the consultation flow's Confirmation step uses
-          (.kal-confirmation-appointment-card, reused as-is: photo/
-          eyebrow/name header, then icon+label rows below), not a plain
-          rows-only card. Eyebrow reads "Therapy Details" instead of
-          "Your Consultation"; rows are Patient/Location/Payment instead
-          of Mode/Date & Time/Patient. Patient reuses the exact same
-          data-kal-confirm-name hook the rest of this flow already
-          populates; the doctor photo/name and Location/Payment are
-          static mockup values, same "visual match, not wired" treatment
-          as elsewhere in this build (no doctor is actually assigned to a
-          therapy request, and there's no facility-switcher/payment-method
-          step in the therapy flow to reflect a real choice from).
-        {%- endcomment -%}
-        {%- comment -%}
-          Photo removed per explicit instruction (flow-wide) — same
-          .kal-appointment-card__photo--placeholder treatment as the
-          Confirmation step's own copy of this card.
-        {%- endcomment -%}
-        <div class="kal-confirmation-appointment-card">
-          <div class="kal-appointment-card kal-confirmation-appointment-card__top">
-            <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder"></span>
-            <span class="kal-appointment-card__body">
-              <span class="kal-appointment-card__eyebrow">Therapy Details</span>
-              <span class="kal-appointment-card__name">Dr. Neethu Jayachandran</span>
+      {%- comment -%}
+        Visit details card (node 539:2222) — now the exact same
+        bordered card the consultation flow's Confirmation step uses
+        (.kal-confirmation-appointment-card, reused as-is: photo/
+        eyebrow/name header, then icon+label rows below), not a plain
+        rows-only card. Eyebrow reads "Therapy Details" instead of
+        "Your Consultation"; rows are Patient/Location/Payment instead
+        of Mode/Date & Time/Patient. Patient reuses the exact same
+        data-kal-confirm-name hook the rest of this flow already
+        populates; the doctor photo/name and Location/Payment are
+        static mockup values, same "visual match, not wired" treatment
+        as elsewhere in this build (no doctor is actually assigned to a
+        therapy request, and there's no facility-switcher/payment-method
+        step in the therapy flow to reflect a real choice from).
+
+        Kept as a sibling of .kal-step-therapy-confirmed__summary rather
+        than nested inside a shared "cards" wrapper with "What happens
+        next" and the actions row below — same restructure Booking
+        Confirmed's own screen went through: each card is its own flex
+        child of .kal-step-shell__scroll, picking up that container's
+        24px gap for spacing instead of a wrapper div, with its own
+        scoped side-inset/max-width in CSS.
+      {%- endcomment -%}
+      {%- comment -%}
+        Photo removed per explicit instruction (flow-wide) — same
+        .kal-appointment-card__photo--placeholder treatment as the
+        Confirmation step's own copy of this card.
+      {%- endcomment -%}
+      <div class="kal-confirmation-appointment-card">
+        <div class="kal-appointment-card kal-confirmation-appointment-card__top">
+          <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder"></span>
+          <span class="kal-appointment-card__body">
+            <span class="kal-appointment-card__eyebrow">Therapy Details</span>
+            <span class="kal-appointment-card__name">Dr. Neethu Jayachandran</span>
+          </span>
+        </div>
+        <div class="kal-confirmation-appointment-card__rows">
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-appointment-card__key">
+              {%- render 'kal-booking-icons', icon_name: 'user' -%}
+              Patient
             </span>
+            <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
           </div>
-          <div class="kal-confirmation-appointment-card__rows">
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-appointment-card__key">
-                {%- render 'kal-booking-icons', icon_name: 'user' -%}
-                Patient
-              </span>
-              <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
-            </div>
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-appointment-card__key">
-                {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
-                Location
-              </span>
-              <span class="kal-confirmation-details__value">Indiranagar, Bengaluru</span>
-            </div>
-            <div class="kal-confirmation-details__row">
-              <span class="kal-confirmation-appointment-card__key">
-                {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
-                Payment
-              </span>
-              <span class="kal-confirmation-details__value">At the clinic</span>
-            </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-appointment-card__key">
+              {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+              Location
+            </span>
+            <span class="kal-confirmation-details__value">Indiranagar, Bengaluru</span>
+          </div>
+          <div class="kal-confirmation-details__row">
+            <span class="kal-confirmation-appointment-card__key">
+              {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
+              Payment
+            </span>
+            <span class="kal-confirmation-details__value">At the clinic</span>
           </div>
         </div>
       </div>

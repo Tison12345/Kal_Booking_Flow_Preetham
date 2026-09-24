@@ -93,18 +93,15 @@
   into the shared step shell (see "SHARED STEP SHELL" in
   kal-booking-flow.css), same correction as the Confirmation step: the
   success icon, intro, and full Consultation Details card were
-  byte-for-byte identical between the old mobile and desktop blocks. The
-  one real difference left is the "Before your visit" card, which the
-  desktop Figma export omits entirely — hidden at 750px+ via CSS
-  (.kal-step-booking-confirmed .kal-before-visit), the same technique
-  used for Confirmation's pay-notice. No progress-dots/back-button on this
-  step at any width (booking is done, nothing to navigate back to), so
-  unlike the other consolidated steps there's no .kal-step-shell__header
-  here — just a bare close button in the corner (.kal-step-booking-
-  confirmed__header), same treatment as Therapy Confirmed's own __header:
-  absolutely positioned rather than a normal-flow row, so it doesn't
-  reserve height above .kal-step-shell__scroll and unbalance that region's
-  justify-content:center (see kal-booking-flow.css's comment on that rule).
+  byte-for-byte identical between the old mobile and desktop blocks. No
+  progress-dots/back-button on this step at any width (booking is done,
+  nothing to navigate back to), so unlike the other consolidated steps
+  there's no .kal-step-shell__header here — just a bare close button in
+  the corner (.kal-step-booking-confirmed__header), same treatment as
+  Therapy Confirmed's own __header: absolutely positioned rather than a
+  normal-flow row, so it doesn't reserve height above .kal-step-shell__scroll
+  and unbalance that region's justify-content:center (see
+  kal-booking-flow.css's comment on that rule).
 {% endcomment %}
 
 <div class="kal-step-booking-confirmed kal-step-shell">
@@ -166,70 +163,84 @@
         </div>
 
         {%- comment -%}
-          Now shown for BOTH modes (node 656:5433) — was In-Clinic only,
-          with Video Consult keeping the older appointment-card +
-          Consultation Details layout below (no online-mode spec had
-          been given for that pass). Per explicit instruction, Video
-          Consult now gets this exact same card too, so that older
-          layout is removed. Mode/Patient reuse the exact same
-          data-kal-confirm-mode/-name hooks renderConfirmationSummary()
-          in kal-booking-flow.js already populates per mode ("Online -
-          30 mins" vs "In Clinic - 30 mins") — zero JS changes needed.
-          Payment stays the same static "₹450 Paid" mockup regardless of
-          mode, same as this card already showed for In-Clinic.
+          Replaces the old ticket/notch .kal-confirmed-card entirely
+          (explicit instruction — remove it) — this is now the one card
+          shown for both modes at every width, the exact same
+          .kal-confirmation-appointment-card the Confirmation step's own
+          review card uses (photo/eyebrow/name header, then Mode/Date &
+          Time/Patient/Payment rows). Mode/Date & Time/Patient reuse the
+          same data-kal-confirm-*/data-kal-doctor-* hooks
+          renderConfirmationSummary()/applySelectedDoctorToCards() in
+          kal-booking-flow.js already populate — zero JS changes needed.
+          Payment is a static "Paid online" per the export (booking is
+          already confirmed by this point, so there's no Pay now/Pay at
+          clinic distinction to reflect here).
         {%- endcomment -%}
-        <div class="kal-confirmed-card">
-          <div class="kal-confirmed-card__slot">
-            <div class="kal-confirmed-card__date">
-              <span class="kal-confirmed-card__date-day">FRI</span>
-              <span class="kal-confirmed-card__date-num">06</span>
-              <span class="kal-confirmed-card__date-month">AUG</span>
-            </div>
-            <div class="kal-confirmed-card__slot-info">
-              <p class="kal-confirmed-card__time">10:30 AM</p>
-              <p class="kal-confirmed-card__mode" data-kal-confirm-mode>&mdash;</p>
-              <span class="kal-confirmed-card__eta">in 3 days</span>
-            </div>
+        <div class="kal-confirmation-appointment-card">
+          <div class="kal-appointment-card kal-confirmation-appointment-card__top">
+            <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder" data-kal-doctor-photo-display></span>
+            <span class="kal-appointment-card__body">
+              <span class="kal-appointment-card__eyebrow">Consultation</span>
+              <span class="kal-appointment-card__name" data-kal-doctor-name-display>Dr. Neethu Jayachandran</span>
+            </span>
           </div>
-          <div class="kal-confirmed-card__divider" aria-hidden="true">
-            <span class="kal-confirmed-card__divider-notch kal-confirmed-card__divider-notch--left"></span>
-            <span class="kal-confirmed-card__divider-notch kal-confirmed-card__divider-notch--right"></span>
-          </div>
-          <div class="kal-confirmed-card__body">
-            <div class="kal-confirmed-card__doctor">
-              <span class="kal-confirmed-card__doctor-avatar">NJ</span>
-              <span class="kal-confirmed-card__doctor-info">
-                <span class="kal-confirmed-card__doctor-label">Your doctor</span>
-                <span class="kal-confirmed-card__doctor-name" data-kal-doctor-name-display>Dr. Neethu Jayachandran</span>
+          <div class="kal-confirmation-appointment-card__rows">
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-appointment-card__key">
+                <span data-kal-mode-online-only hidden>{%- render 'kal-booking-icons', icon_name: 'mode-online' -%}</span>
+                <span data-kal-mode-offline-only>{%- render 'kal-booking-icons', icon_name: 'mode-location' -%}</span>
+                Mode
               </span>
+              <span class="kal-confirmation-details__value" data-kal-confirm-mode>&mdash;</span>
             </div>
-            <div class="kal-confirmed-card__grid">
-              <div class="kal-confirmed-card__cell">
-                <span class="kal-confirmed-card__cell-label">Patient</span>
-                <span class="kal-confirmed-card__cell-value" data-kal-confirm-name>&mdash;</span>
-              </div>
-              <div class="kal-confirmed-card__cell">
-                <span class="kal-confirmed-card__cell-label">Payment</span>
-                <span class="kal-confirmed-card__cell-value">
-                  &#8377;450
-                  <span class="kal-confirmed-card__paid-badge">Paid</span>
-                </span>
-              </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-appointment-card__key">
+                {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+                Date &amp; Time
+              </span>
+              <span class="kal-confirmation-details__value" data-kal-confirm-datetime>&mdash;</span>
+            </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-appointment-card__key">
+                {%- render 'kal-booking-icons', icon_name: 'user' -%}
+                Patient
+              </span>
+              <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
+            </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-appointment-card__key">
+                {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
+                Payment
+              </span>
+              <span class="kal-confirmation-details__value kal-confirmation-details__value--paid">Paid online</span>
             </div>
           </div>
         </div>
       </div>
 
       {%- comment -%}
-        Desktop-only omission handled in CSS, see this file's top comment.
-        Also hidden for Video Consult (data-kal-mode-offline-only,
-        toggled by applyConsultationModeVisibility() in
-        kal-booking-flow.js) — "Pay at reception cash or card" and
-        "arrive 10 minutes early" don't apply to an online visit.
+        "Before your visit" checklist (node 105 export) — In-Clinic
+        only, gated with the same data-kal-mode-offline-only hook
+        applyConsultationModeVisibility() in kal-booking-flow.js already
+        toggles for this step's appointment card rows (see that
+        function's own comment, which already names this exact card as
+        one of the elements it's meant to control). Kept as a sibling of
+        .kal-step-booking-confirmed__summary rather than nested inside
+        it, so it picks up .kal-step-shell__scroll's own flex gap
+        (16px mobile / 24px desktop) below the summary instead of
+        needing a margin-top of its own — unlike the hero+card inside
+        __summary, there's no overlap here to protect from that gap.
+        Same 0 24px side margin as the appointment card above it, with
+        its own 750px+ cap matching that card's 608px max-width so both
+        stay the same width at every size.
       {%- endcomment -%}
       <div class="kal-before-visit" data-kal-mode-offline-only>
         <p class="kal-before-visit__label">Before your visit</p>
         <ul class="kal-before-visit__list">
+          <li class="kal-before-visit__item">
+            <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+            <span>Pay at reception cash or card.</span>
+          </li>
           <li class="kal-before-visit__item">
             <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
             <span>Arrive 10 minutes early for check-in.</span>
@@ -238,11 +249,38 @@
             <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
             <span>Bring an ID and your referral letter if you have one.</span>
           </li>
-          <li class="kal-before-visit__item">
-            <span class="kal-before-visit__icon">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
-            <span>Carry any recent reports or prescriptions.</span>
-          </li>
         </ul>
+      </div>
+
+      {%- comment -%}
+        Video Consult's counterpart to In-Clinic's "Before your visit"
+        card above — reuses Therapy Confirmed's own
+        .kal-therapy-confirmed-actions/__btn/__icon button treatment
+        as-is (same "Shop Products"/"Get directions" pair, no click
+        handlers, same decorative-per-this-build's-scope status as
+        there) rather than a parallel set of near-duplicate classes.
+        Gated with data-kal-mode-online-only, the exact opposite hook
+        .kal-before-visit uses, so exactly one of the two ever shows;
+        starts `hidden` in markup (same convention as this file's other
+        data-kal-mode-online-only elements) so it doesn't flash visible
+        before applyConsultationModeVisibility() runs on arrival at this
+        step. Sits in the same sibling position .kal-before-visit does,
+        below the summary card, with matching 0 24px / 608px-at-750px+
+        sizing scoped in CSS rather than duplicated here.
+      {%- endcomment -%}
+      <div class="kal-step-booking-confirmed__online-actions kal-therapy-confirmed-actions" data-kal-mode-online-only hidden>
+        <button type="button" class="kal-therapy-confirmed-actions__btn">
+          <span class="kal-therapy-confirmed-actions__icon">
+            {%- render 'kal-booking-icons', icon_name: 'shopping-cart' -%}
+          </span>
+          <span>Shop Products</span>
+        </button>
+        <button type="button" class="kal-therapy-confirmed-actions__btn">
+          <span class="kal-therapy-confirmed-actions__icon">
+            {%- render 'kal-booking-icons', icon_name: 'directions' -%}
+          </span>
+          <span>Get directions</span>
+        </button>
       </div>
     </div>
 

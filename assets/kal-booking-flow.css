@@ -104,6 +104,12 @@
    mean applied to .kal-booking-flow directly. */
 .kal-booking-flow * {
   font-family: inherit;
+  /* Same "author rule on the element itself wins over inheritance" issue
+     as font-family above — the theme's base.css also sets letter-spacing
+     directly on bare h1-h5 (calc(var(--font-heading-scale) * 0.06rem)),
+     which otherwise overrides any letter-spacing this flow's own heading
+     classes try to inherit/set to normal. */
+  letter-spacing: normal;
 }
 
 .kal-booking-flow::backdrop {
@@ -429,7 +435,7 @@
 .kal-step-entry__label {
   font-size: var(--kal-booking-flow-font-size-eyebrow);
   font-weight: var(--kal-booking-flow-font-weight-bold);
-  letter-spacing: var(--kal-booking-flow-letter-spacing-eyebrow);
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-heading);
   margin: 0;
@@ -1039,7 +1045,7 @@
 .kal-concern-select__info-label {
   font-size: var(--kal-booking-flow-font-size-small);
   font-weight: var(--kal-booking-flow-font-weight-black);
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
   margin: 0;
@@ -2031,7 +2037,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-progress-bar__step {
   font-size: var(--kal-booking-flow-font-size-caption);
   font-weight: var(--kal-booking-flow-font-weight-medium);
-  letter-spacing: 0.025em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
 }
@@ -2396,7 +2402,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-doctor-select__eyebrow {
   font-size: var(--kal-booking-flow-font-size-caption);
   font-weight: var(--kal-booking-flow-font-weight-semibold);
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-label);
   margin: 0;
@@ -2903,7 +2909,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-appointment-card__eyebrow {
   font-size: var(--kal-booking-flow-font-size-caption);
   font-weight: var(--kal-booking-flow-font-weight-medium);
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-primary-dark);
   line-height: 18px;
@@ -2972,7 +2978,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 21px;
   font-weight: var(--kal-booking-flow-font-weight-black);
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
   margin: 0;
@@ -3847,7 +3853,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-confirmation-details__label {
   font-size: var(--kal-booking-flow-font-size-small);
   font-weight: var(--kal-booking-flow-font-weight-semibold);
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
   margin: 0 0 12px;
@@ -3937,6 +3943,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   padding-bottom: 8px;
   border: 1px solid var(--kal-booking-flow-color-border);
   border-radius: 12px;
+  background: var(--kal-booking-flow-color-white);
   overflow: hidden;
 }
 
@@ -4033,6 +4040,140 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: none;
 }
 
+/* Booking Confirmed's card (replaces the old ticket-style
+   .kal-confirmed-card entirely, all modes/widths now) — this shared
+   class has no margin of its own, so it needs one directly here since
+   .kal-step-shell__scroll has no side padding on this step. */
+.kal-step-booking-confirmed .kal-confirmation-appointment-card {
+  margin: 0 24px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-booking-confirmed .kal-confirmation-appointment-card {
+    width: 608px;
+    margin: 0 auto;
+  }
+}
+
+/* "Before your visit" checklist (node 105 export) — In-Clinic only,
+   gated by data-kal-mode-offline-only (see this step's own liquid
+   comment). Same 0 24px side margin as the appointment card above it
+   so both align edge to edge; the 750px+ rule below caps it at that
+   card's own 608px so the two stay the same width at every size. */
+.kal-before-visit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  margin: 0 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--kal-booking-flow-color-divider);
+  border-radius: 12px;
+  background: linear-gradient(93.62deg, rgba(235, 242, 239, 0.5) 20.38%, rgba(255, 255, 255, 0.5) 65.7%);
+}
+
+/* Without this, this rule's own display:flex above overrides the
+   browser's [hidden] { display: none } default regardless of the
+   attribute — same class of bug as .kal-confirmation-appointment-card[hidden]
+   elsewhere in this file. Needed since this card is toggled purely via
+   the mode-based data-kal-mode-offline-only JS hook (hidden set to true
+   for Video Consult). */
+.kal-before-visit[hidden] {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-before-visit {
+    width: 608px;
+    margin: 0 auto;
+  }
+}
+
+/* Video Consult's counterpart to .kal-before-visit above (see this
+   step's own liquid comment) — reuses .kal-therapy-confirmed-actions'
+   button styling as-is, but that class's own margin (defined further
+   down this file, Therapy Confirmed's own 25px/640px sizing) doesn't
+   match this step's 24px/608px. The compound selector here (not a
+   second plain class) is deliberate — .kal-therapy-confirmed-actions's
+   own margin rule has the same 0,1,0 specificity and sits later in this
+   file, so a plain class selector here would lose that cascade fight
+   and this row would end up 25px-inset/640px-capped like Therapy
+   Confirmed's instead. Matches .kal-before-visit/.kal-confirmation-appointment-card's
+   own 0 24px / 608px-at-750px+ sizing so all three stay the same
+   width. */
+.kal-step-booking-confirmed .kal-therapy-confirmed-actions {
+  margin: 0 24px;
+}
+
+/* Same [hidden] vs display:flex specificity fix as
+   .kal-before-visit[hidden]/.kal-confirmation-appointment-card[hidden]
+   above — needed since this reuses .kal-therapy-confirmed-actions'
+   display:flex and is toggled purely via the mode-based
+   data-kal-mode-online-only JS hook. */
+.kal-step-booking-confirmed__online-actions[hidden] {
+  display: none;
+}
+
+/* Compound selector here too (not a plain class), same reason as the
+   mobile margin rule above — .kal-therapy-confirmed-actions now has its
+   own 750px+ rule (640px, further down this file, later in source
+   order) at this same 0,1,0 specificity, which would otherwise win and
+   widen this row past the appointment/before-visit cards' 608px. */
+@media screen and (min-width: 750px) {
+  .kal-step-booking-confirmed .kal-therapy-confirmed-actions {
+    width: 608px;
+    margin: 0 auto;
+  }
+}
+
+.kal-before-visit__label {
+  margin: 0;
+  font-size: var(--kal-booking-flow-font-size-small);
+  font-weight: var(--kal-booking-flow-font-weight-black);
+  line-height: 150%;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--kal-booking-flow-color-text-muted);
+}
+
+.kal-before-visit__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kal-before-visit__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--kal-booking-flow-font-size-caption);
+  line-height: 138%;
+  color: var(--kal-booking-flow-color-text-muted);
+}
+
+.kal-before-visit__icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--kal-booking-flow-color-primary-dark);
+}
+
+.kal-before-visit__icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 2.4px;
+}
+
+/* Booking Confirmed's "Paid online" Payment row — teal, not the shared
+   row value's default heading-dark color, matching the export. */
+.kal-confirmation-details__value--paid {
+  color: var(--kal-booking-flow-color-primary-dark);
+}
+
 /* Payment Method — Confirmation's two payment-choice cards (node
    438:7468), replacing the old pay-at-clinic notice. Selection is purely
    visual (setPaymentMethod() in kal-booking-flow.js just toggles
@@ -4059,7 +4200,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-size: 14px;
   line-height: 150%;
   font-weight: var(--kal-booking-flow-font-weight-black);
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
   margin: 0;
@@ -4074,6 +4215,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-direction: row;
   gap: 24px;
   width: 100%;
+}
+
+/* Without this, this rule's own display:flex above overrides the
+   browser's [hidden] { display: none } default regardless of the
+   attribute — same class of bug as .kal-confirmation-appointment-card[hidden]
+   elsewhere in this file. Needed now that this two-card selector is
+   gated In-Clinic-only again via data-kal-mode-offline-only (see this
+   step's own liquid comment). */
+.kal-payment-options[hidden] {
+  display: none;
 }
 
 .kal-payment-option {
@@ -4261,6 +4412,78 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   }
 }
 
+/* Video Consult's "Consultation Fee" card — a single, non-interactive
+   info row replacing the two-card pay-now/pay-at-clinic selector for
+   that mode (see this step's own liquid comment). Same mint-tinted
+   gradient language as this flow's other highlight cards (e.g. Booking
+   Confirmed's own appointment card gradient), just this section's own
+   values per the export. */
+.kal-payment-fee-card {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 24px 16px;
+  border-radius: 12px;
+  background: linear-gradient(93.35deg, rgba(235, 242, 239, 0.8) 30.43%, rgba(255, 255, 255, 0.8) 99.42%);
+}
+
+/* Without this, this rule's own display:flex above overrides the
+   browser's [hidden] { display: none } default regardless of the
+   attribute — same class of bug as .kal-payment-options[hidden] above,
+   needed since this card is toggled purely via the mode-based
+   data-kal-mode-online-only JS hook. */
+.kal-payment-fee-card[hidden] {
+  display: none;
+}
+
+/* Icon + title grouped together on the left, same .kal-payment-option__left
+   pattern the two-card selector above uses — .kal-payment-fee-card's own
+   justify-content:space-between is what pushes __price to the right,
+   not a flex:1 on the title. */
+.kal-payment-fee-card__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.kal-payment-fee-card__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: var(--kal-booking-flow-color-white);
+  color: var(--kal-booking-flow-color-primary-dark);
+}
+
+/* Export spec's icon size (24x24) — larger than the 'credit-card' glyph's
+   own intrinsic 20x20, so sized up explicitly here rather than touching
+   that shared icon def's default. */
+.kal-payment-fee-card__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.kal-payment-fee-card__title {
+  min-width: 0;
+  font-size: var(--kal-booking-flow-font-size-name);
+  color: var(--kal-booking-flow-color-primary-darker);
+}
+
+.kal-payment-fee-card__price {
+  flex-shrink: 0;
+  font-size: var(--kal-booking-flow-font-size-heading);
+  font-weight: var(--kal-booking-flow-font-weight-medium);
+  color: var(--kal-booking-flow-color-heading);
+}
+
 /* ----------------------------------------
    STEP: BOOKING CONFIRMED
    Post-booking success screen. Consolidated into the shared step shell
@@ -4342,11 +4565,9 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
     gap: var(--kal-booking-flow-space-inset);
   }
 
-  /* Now shown at every width (was desktop-only omitted before this
-     export) — the "Before your visit" checklist is part of this same
-     single-column layout on desktop too, not left out. */
-  .kal-step-booking-confirmed .kal-before-visit {
-    display: block;
+  /* "Back to homepage" removed on desktop only — mobile keeps it. */
+  .kal-step-booking-confirmed .kal-step-shell__footer {
+    display: none;
   }
 }
 
@@ -4455,356 +4676,6 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   margin-bottom: 12px;
 }
 
-/* ----------------------------------------
-   In-Clinic's combined date/doctor/patient-payment card (node 656:5433) —
-   see this step's own liquid comment for what's a reused hook vs. a
-   static mockup value here. */
-/* No native border here anymore — see ::before below for why. */
-.kal-confirmed-card {
-  position: relative;
-  margin: 0 16px;
-  border-radius: 16px;
-  background: var(--kal-booking-flow-color-white);
-  overflow: hidden;
-}
-
-/* The card's border, moved off the card element itself and onto a
-   pseudo-element instead. Root cause of the notch's border line bug:
-   a native border on .kal-confirmed-card is painted as part of the
-   CARD's own box, which sits outside the notch's overflow-clipping
-   area — an opaque descendant can't occlude an ancestor's own native
-   border that way, no matter its z-index or background. Moving the
-   border onto this ::before makes it an ordinary descendant of the
-   card instead (same stacking context as .kal-confirmed-card__divider
-   and its notch spans), so normal paint order applies: the notch
-   (positioned later in the DOM, given z-index below) now genuinely
-   paints on top of this pseudo-element's border wherever they overlap,
-   the way it always should have been able to for a real border.
-   pointer-events:none + z-index:0 (kept low) so this stays purely
-   decorative and never intercepts clicks or out-stacks real content;
-   inset:0 covers exactly the same box a native border would have. */
-.kal-confirmed-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 1px solid var(--kal-booking-flow-color-border-subtle);
-  border-radius: 16px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.kal-confirmed-card__slot {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-}
-
-.kal-confirmed-card__date {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 64px;
-  padding: 8px 0;
-  border-radius: 12px;
-  background: var(--kal-booking-flow-color-primary-dark);
-  color: var(--kal-booking-flow-color-white);
-}
-
-.kal-confirmed-card__date-day,
-.kal-confirmed-card__date-month {
-  font-size: 12px;
-  line-height: 1.3;
-  font-weight: var(--kal-booking-flow-font-weight-semibold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  opacity: 0.8;
-}
-
-.kal-confirmed-card__date-num {
-  font-size: var(--kal-booking-flow-font-size-heading);
-  line-height: 1.3;
-}
-
-.kal-confirmed-card__slot-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-}
-
-.kal-confirmed-card__time {
-  margin: 0;
-  font-size: var(--kal-booking-flow-font-size-heading);
-  line-height: 1.3;
-  font-weight: var(--kal-booking-flow-font-weight-semibold);
-  color: var(--kal-booking-flow-color-heading);
-}
-
-.kal-confirmed-card__mode {
-  margin: 0;
-  font-size: var(--kal-booking-flow-font-size-small);
-  line-height: 1.3;
-  color: var(--kal-booking-flow-color-location-text);
-}
-
-.kal-confirmed-card__eta {
-  padding: 4px 8px;
-  border-radius: 99px;
-  background: var(--kal-booking-flow-color-highlight-tint);
-  color: var(--kal-booking-flow-color-highlight-text);
-  font-size: 12px;
-}
-
-/* Dashed divider with the export's cutout-circle notches at each end
-   (same visual device a physical ticket stub uses) — a plain dashed
-   border alone reproduces the line but not those semicircle cutouts, so
-   two small circles are pinned over the card's own left/right edges,
-   colored to match the card background and borrowing the card's own
-   border color so they read as a bite taken out of the edge. */
-.kal-confirmed-card__divider {
-  position: relative;
-  height: 1px;
-  margin: 0 14px;
-  border-top: 1px dashed var(--kal-booking-flow-color-border-subtle);
-}
-
-.kal-confirmed-card__divider-notch {
-  position: absolute;
-  top: 50%;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: var(--kal-booking-flow-color-white);
-  border: 1px solid var(--kal-booking-flow-color-border-subtle);
-  transform: translateY(-50%);
-  /* Explicit — guarantees this paints above .kal-confirmed-card::before
-     (the card's own border, now a z-index:0 pseudo-element) regardless
-     of DOM-order tie-breaking, so its white background actually covers
-     that border at the notch's position instead of just relying on
-     document order to happen to work out. */
-  z-index: 1;
-}
-
-.kal-confirmed-card__divider-notch--left {
-  left: -24px;
-  border-left: none;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.kal-confirmed-card__divider-notch--right {
-  right: -24px;
-  border-right: none;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.kal-confirmed-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
-
-.kal-confirmed-card__doctor {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.kal-confirmed-card__doctor-avatar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  background: var(--kal-booking-flow-color-highlight-tint);
-  color: var(--kal-booking-flow-color-highlight-text);
-  font-size: var(--kal-booking-flow-font-size-base);
-}
-
-.kal-confirmed-card__doctor-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.kal-confirmed-card__doctor-label {
-  font-size: 12px;
-  line-height: 1;
-  font-weight: var(--kal-booking-flow-font-weight-semibold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--kal-booking-flow-color-primary-dark);
-}
-
-.kal-confirmed-card__doctor-name {
-  font-size: var(--kal-booking-flow-font-size-base);
-  line-height: 1.1;
-  color: var(--kal-booking-flow-color-heading);
-}
-
-.kal-confirmed-card__grid {
-  display: flex;
-  gap: 12px;
-}
-
-.kal-confirmed-card__cell {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--kal-booking-flow-color-surface-tint);
-}
-
-.kal-confirmed-card__cell-label {
-  font-size: 12px;
-  font-weight: var(--kal-booking-flow-font-weight-semibold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--kal-booking-flow-color-text-muted);
-}
-
-.kal-confirmed-card__cell-value {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--kal-booking-flow-font-size-base);
-  color: var(--kal-booking-flow-color-heading);
-}
-
-.kal-confirmed-card__paid-badge {
-  padding: 4px 8px;
-  border-radius: 99px;
-  background: #e3eee7;
-  color: var(--kal-booking-flow-color-primary-dark);
-  font-size: 12px;
-}
-
-/* Placed AFTER every base (mobile-default) .kal-confirmed-card* rule
-   above rather than earlier in the file — with equal specificity, a
-   later same-specificity rule always wins regardless of which one is
-   inside a media query, so this being positioned before those base
-   rules (an earlier mistake) meant the base rules' own left:-24px /
-   right:-24px / height:1px etc. were winning even at desktop widths,
-   which is why the divider/notches stayed in their mobile horizontal
-   positions instead of switching to vertical. */
-@media screen and (min-width: 750px) {
-  .kal-confirmed-card {
-    /* 508x149 per the desktop design spec, centered rather than
-       stretching edge-to-edge across the panel. min-width/min-height,
-       not fixed — the card has overflow:hidden (needed for the notch
-       trick), and fixed dimensions either clipped or wrapped real
-       content that runs bigger than the spec number (e.g. a long patient
-       name) instead of the card growing to fit it, which explicit
-       feedback asked for over wrapping/clipping. These match the spec
-       exactly for typical content while still letting the card grow when
-       it's bigger. */
-    min-width: 508px;
-    /* fit-content, not auto — this is a plain block div (no flex/grid
-       parent sizing it), and a block box's width:auto stretches to fill
-       its containing block rather than shrinking to its content, which
-       would make min-width above meaningless (auto already exceeds it).
-       fit-content is what actually lets the card grow only as much as
-       its content needs, with 508px as the floor. */
-    width: fit-content;
-    min-height: 149px;
-    margin: 0 auto;
-    /* Side-by-side on desktop (date/time on the left, doctor+Patient/
-       Payment on the right, split by a vertical dashed divider) instead
-       of mobile's stacked top/bottom halves with a horizontal divider —
-       matches the export's wider ticket-card layout. align-items:stretch
-       is what lets the divider (below) stretch to the row's full height
-       instead of needing an explicit height of its own. */
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-  }
-
-  .kal-confirmed-card__slot {
-    flex: 0 0 auto;
-  }
-
-  /* Rotated from a horizontal line (with notches biting into the card's
-     left/right edges) to a vertical one (notches biting into the card's
-     top/bottom edges instead) — same technique, just turned 90deg to
-     split the row instead of stacking two halves. */
-  .kal-confirmed-card__divider {
-    width: 1px;
-    height: auto;
-    align-self: stretch;
-    margin: 16px 0;
-    border-top: none;
-    border-left: 1px dashed var(--kal-booking-flow-color-border-subtle);
-  }
-
-  .kal-confirmed-card__divider-notch {
-    top: auto;
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-  }
-
-  /* Top notch — flat edge facing up/outside the card (border-top removed,
-     top corners flattened), rounded edge facing down into the card. -25px
-     = the divider's own 16px top margin + half the notch's 18px height,
-     so it straddles the card's actual top edge, same reasoning as the
-     mobile version's -24px (14px divider margin + notch radius). */
-  .kal-confirmed-card__divider-notch--left {
-    top: -25px;
-    border-left: 1px solid var(--kal-booking-flow-color-border-subtle);
-    border-right: 1px solid var(--kal-booking-flow-color-border-subtle);
-    border-top: none;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-bottom-left-radius: 999px;
-    border-bottom-right-radius: 999px;
-  }
-
-  /* Bottom notch — mirror of the top one. */
-  .kal-confirmed-card__divider-notch--right {
-    top: auto;
-    bottom: -25px;
-    border-left: 1px solid var(--kal-booking-flow-color-border-subtle);
-    border-right: 1px solid var(--kal-booking-flow-color-border-subtle);
-    border-bottom: none;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-top-left-radius: 999px;
-    border-top-right-radius: 999px;
-  }
-
-  .kal-confirmed-card__body {
-    flex: 1;
-    min-width: 0;
-    justify-content: center;
-  }
-
-  /* Long Patient/Payment values (e.g. a long patient name) grow the card
-     wider instead of wrapping to a second line and getting clipped by
-     overflow:hidden — explicit feedback over the earlier wrap-and-clip
-     behavior. min-width:0 above lets .kal-confirmed-card__body compress
-     below its content's natural size; auto here (scoped narrower, so it
-     wins) stops that compression from squeezing the grid/cells down to
-     where their nowrap text would need to overflow instead of the whole
-     card actually growing per its own width: fit-content. */
-  .kal-confirmed-card__grid .kal-confirmed-card__cell {
-    min-width: auto;
-  }
-
-  .kal-confirmed-card__cell-value {
-    white-space: nowrap;
-  }
-}
 
 .kal-step-booking-confirmed .kal-confirmation-details {
   margin: 0 16px;
@@ -4818,100 +4689,6 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   .kal-step-booking-confirmed .kal-confirmation-details {
     margin: 0 24px;
   }
-}
-
-/* Restyled from a bordered, inset card to a full-bleed tinted band per
-   the updated Figma spec (node 438:7571) — edge-to-edge (negative margin
-   cancels .kal-step-shell__scroll's own side padding), top/bottom
-   border only, no corner radius. Was margin-top:auto, meant to pin this to
-   the bottom of the screen when content is shorter than the viewport —
-   but on this success screen the content (icon/intro/card/details) is
-   much shorter than a typical phone height, so that auto margin ate all
-   the leftover space and left a huge gap above this block instead, not
-   matching the Figma frame (which just flows it right after the details
-   card with normal spacing). Plain 0 follows the scroll region's own
-   gap like every other sibling here.
-
-   Recolored from the mint tint to the sand/tan treatment per the later
-   node-656:5433 pass — border/background/label/icon all switched
-   together since the export pairs them as one tan family, distinct from
-   the mint-tinted card gradients used elsewhere in this flow. */
-.kal-before-visit {
-  /* No negative horizontal margin here — that only works as a "full
-     bleed" trick if some ancestor supplies a matching positive padding
-     to cancel against, and on this step .kal-step-shell__scroll (its
-     actual scroll container on mobile) has zero side padding, same as
-     every other piece here (.kal-confirmed-card supplies its own 16px
-     margin directly instead of relying on ambient panel padding). A
-     margin: 0 -16px with nothing to cancel just bled this element 16px
-     past the real edge on both sides, which is what was causing the
-     horizontal scroll on this step. */
-  margin: 0;
-  padding: 14px 40px;
-  border-top: 1px solid #ece3d3;
-  border-bottom: 1px solid #ece3d3;
-  background: var(--kal-booking-flow-color-highlight-tint);
-  box-sizing: border-box;
-}
-
-@media screen and (min-width: 750px) {
-  /* Desktop's own export (node/export "Frame 3931") shows this as a
-     centered, rounded, inset card — not mobile's full-bleed band with
-     only top/bottom borders and no radius. Same background color already
-     matches (#f6f0e7), so only the shape/positioning changes here. */
-  .kal-before-visit {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 16px 36px;
-    border: none;
-    border-radius: 8px;
-  }
-}
-
-.kal-before-visit__label {
-  font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-semibold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--kal-booking-flow-color-highlight-text);
-  margin: 0 0 10px;
-}
-
-.kal-before-visit__list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.kal-before-visit__item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 12.5px;
-  line-height: 138%;
-  color: var(--kal-booking-flow-color-body);
-}
-
-/* White rounded-8 chip around the check icon per node 656:5433 — was a
-   bare 14px glyph before, now boxed to match the export. */
-.kal-before-visit__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--kal-booking-flow-color-white);
-  color: var(--kal-booking-flow-color-highlight-text);
-  flex-shrink: 0;
-}
-
-.kal-before-visit__icon svg {
-  width: 18px;
-  height: 18px;
 }
 
 /* ----------------------------------------
@@ -5241,7 +5018,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   color: var(--kal-booking-flow-color-primary);
   font-size: var(--kal-booking-flow-font-size-caption);
   font-weight: var(--kal-booking-flow-font-weight-medium);
-  letter-spacing: 0.025em;
+  letter-spacing: 0;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -5450,14 +5227,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   height: 100%;
 }
 
-/* Content stays top-anchored in normal flow on mobile; min-height:100% +
-   margin-top:auto on the footer pushes just the button to the bottom
-   without needing an internal scroll region. Desktop's height:100%/
-   justify-content:space-between come from the shared .kal-step-shell__panel
-   rule (see SHARED STEP SHELL above); this only needs the mobile-only
-   min-height override. */
+/* height:100% (not the old mobile-only min-height:100%) — a bounded
+   panel is what lets .kal-step-shell__scroll's flex:1/min-height:0/
+   overflow-y:auto below actually constrain and scroll internally,
+   instead of the whole panel growing to fit all content and leaving the
+   "Submit Request" footer to scroll away with the page on longer forms.
+   Same pattern every other step in this flow uses (Patient Details,
+   Slot Picker, Confirmation, etc.) so the footer reads as sticky at
+   every width, not just desktop. */
 .kal-step-therapy-details .kal-step-shell__panel {
-  min-height: 100%;
+  height: 100%;
 }
 
 .kal-step-therapy-details .kal-step-shell__footer {
@@ -5471,21 +5250,22 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    .kal-therapy-appointment-card / .kal-form set their own margin), so
    "Therapy Details"/the doctor card and "Who is this visit for?"/Full
    name sat flush against each other instead of the 24px the design has.
-   Same gap value Slot Picker's own .kal-step-shell__scroll uses. */
+   Same gap value Slot Picker's own .kal-step-shell__scroll uses.
+   flex:1/min-height:0/overflow-y:auto now apply at every width (not just
+   750px+) so only this form area scrolls, with the "Submit Request"
+   footer pinned in place below it — see the panel's own comment above. */
 .kal-step-therapy-details .kal-step-shell__scroll {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: 24px;
+  overflow-y: auto;
 }
 
-/* Desktop needs its own scroll region since the dialog's own content
-   scroll is turned off at that width. */
 @media screen and (min-width: 750px) {
   .kal-step-therapy-details .kal-step-shell__scroll {
-    flex: 1;
-    min-height: 0;
     min-width: 0;
-    overflow-y: auto;
   }
 }
 
@@ -5621,10 +5401,25 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   }
 }
 
+/* Own scoped side-inset/max-width (not a shared "cards" wrapper div
+   around this, .kal-therapy-next-steps and .kal-confirmation-appointment-card
+   — same restructure Booking Confirmed's screen went through, each card
+   a flex child of .kal-step-shell__scroll instead) — 25px/640px matches
+   this step's own export, distinct from Booking Confirmed's 24px/608px.
+   No top/bottom margin needed: .kal-step-shell__scroll's own 24px gap
+   already spaces this from the card above it. */
 .kal-therapy-confirmed-actions {
   display: flex;
   gap: 16px;
-  padding: 16px 24px 24px;
+  margin: 0 25px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-therapy-confirmed-actions {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* Row (icon beside label), not stacked — matches this export's own
@@ -5665,10 +5460,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 /* Plain block-flow wrapper (no display:flex) around the hero band + the
-   cards that overlap it — see this step's own liquid comment for why:
-   same technique as Booking Confirmed's .kal-step-booking-confirmed__summary,
-   needed so .kal-step-shell__scroll's own flex gap doesn't land between
-   the hero and the card below it too. */
+   ONE card that overlaps it ("What happens next") — see this step's own
+   liquid comment for why: same technique as Booking Confirmed's
+   .kal-step-booking-confirmed__summary, needed so .kal-step-shell__scroll's
+   own flex gap doesn't land between the hero and that card too. The
+   visit details card and the Shop Products/Get directions row below are
+   plain flex siblings of this instead (no overlap to protect), each
+   with its own scoped side-inset/max-width — see their own rules. */
 .kal-step-therapy-confirmed__summary {
   width: 100%;
 }
@@ -5718,6 +5516,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    Progress" doesn't have, since that one sits directly in a left info
    column instead), but the list itself reuses .kal-concern-select__stepper*
    directly — see this step's own liquid comment. */
+/* Own scoped side-inset — sits inside .kal-step-therapy-confirmed__summary,
+   which (like Booking Confirmed's own __summary) has no side padding of
+   its own, so this needs it directly rather than inheriting it from a
+   shared wrapper. Desktop's max-width/centering matches the visit
+   details card and actions row below it, kept below in this file next
+   to those two rather than duplicated here. */
 .kal-therapy-next-steps {
   min-height: 224px;
   margin: 0 25px;
@@ -5726,6 +5530,14 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   border-radius: 16px;
   background: var(--kal-booking-flow-color-white);
   box-sizing: border-box;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-therapy-next-steps {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* This card's own connector reads taller/thinner (29px, 1.5px stroke)
@@ -5753,8 +5565,6 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      .kal-before-visit card at this width. */
   .kal-therapy-next-steps {
     min-height: 134px;
-    max-width: 640px;
-    margin: 0 auto;
   }
 
   /* Desktop-only: the 3 steps run left to right with a horizontal
@@ -5817,7 +5627,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-therapy-next-steps__label {
   font-size: var(--kal-booking-flow-font-size-small);
   font-weight: var(--kal-booking-flow-font-weight-black);
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
   margin: 0 0 12px;
@@ -5883,22 +5693,18 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 /* Visit details card (node 539:2222) — this is the exact same
    .kal-confirmation-appointment-card the Confirmation step's own card
-   uses (photo/eyebrow/name header + icon+label rows), just given its own
-   side margin here since it sits right below "What happens next" inside
-   the same non-flex .kal-step-therapy-confirmed__summary wrapper (which
-   has no gap of its own — see this step's own liquid comment on why
-   it's plain block-flow, not a flex column) and .kal-step-shell__scroll
-   has no side padding either (each piece on this screen supplies its
-   own, same as .kal-therapy-next-steps above). Nothing else about the
-   shared card's own styling needs touching. */
+   uses (photo/eyebrow/name header + icon+label rows). Own scoped
+   side-inset/max-width, matching .kal-therapy-next-steps and
+   .kal-therapy-confirmed-actions — it's a flex sibling of
+   .kal-step-therapy-confirmed__summary inside .kal-step-shell__scroll,
+   not nested inside a shared "cards" wrapper, so no top margin either:
+   that scroll container's own 24px gap already spaces it from the
+   summary block above. */
 .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-  margin: 16px 25px 0;
+  margin: 0 25px;
 }
 
 @media screen and (min-width: 750px) {
-  /* Capped and centered to the same 640px as "What happens next" above,
-     so both cards line up at the same width instead of this one
-     stretching edge to edge across the full dialog. */
   .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
     max-width: 640px;
     margin-left: auto;
