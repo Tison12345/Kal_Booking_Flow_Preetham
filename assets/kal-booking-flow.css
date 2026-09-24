@@ -818,10 +818,13 @@
    hidden depending on width, same as every other __mobile/__desktop pair
    in this file, just at a smaller grain.
 
-   NOT used by Entry or Therapy Slot — those still have their own
-   genuinely different mobile vs desktop compositions (different copy, not
-   just a different layout of the same fields) and keep their existing
-   __mobile/__desktop split untouched. The
+   NOT used by Entry — that step still has its own genuinely different
+   mobile vs desktop composition (different copy, not just a different
+   layout of the same fields) and keeps its existing __mobile/__desktop
+   split untouched. Therapy Slot, despite the class name, is fully on the
+   SHARED DESKTOP "PROGRESS PANEL" LAYOUT below (kal-step-shell--progress-panel,
+   reusing Concern Select's own __info/__footer--desktop/stepper/list/row
+   classes as-is) — see that step's own liquid comment. The
    .kal-step-doctor-select__desktop/__panel/__progress--desktop/
    __desktop-footer/__list--desktop classes below are still required by
    those other steps — do not remove them even though the steps above no
@@ -3715,10 +3718,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 /* Patient Details' own desktop export keeps Phone/Email stacked one per
    line, unlike the shared .kal-form-row default above (which puts them
-   side by side at this width) — scoped to this step so Therapy Details'
-   own copy of this same row keeps the shared side-by-side behavior. */
+   side by side at this width) — Therapy Details' own Phone/Email row
+   now matches that same stacked treatment instead of the shared
+   side-by-side default. */
 @media screen and (min-width: 750px) {
-  .kal-step-patient-details .kal-form-row {
+  .kal-step-patient-details .kal-form-row,
+  .kal-step-therapy-details .kal-form-row {
     flex-direction: column;
     gap: 24px;
   }
@@ -4953,8 +4958,19 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-therapy-selected {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   padding: 0 24px;
+}
+
+/* Desktop only — same side-padding zero-out as this step's own
+   .kal-therapy-select-wrapper/.kal-concern-select__list, so the
+   selected-therapy chips line up flush with the rest of the panel
+   instead of sitting 24px narrower. */
+@media screen and (min-width: 750px) {
+  .kal-therapy-selected {
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 
 .kal-therapy-selected[hidden] {
@@ -4981,7 +4997,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
   font-weight: var(--kal-booking-flow-font-weight-medium);
-  color: var(--kal-booking-flow-color-primary);
+  color: var(--kal-booking-flow-color-primary-dark);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -5033,6 +5049,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-therapy-select-wrapper {
   position: relative;
   padding: 0 24px;
+}
+
+/* Desktop only — same side-padding zero-out as this step's own
+   .kal-concern-select__list below, so the dropdown trigger lines up
+   flush with the category list instead of sitting 24px narrower. */
+@media screen and (min-width: 750px) {
+  .kal-therapy-select-wrapper {
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 
 /* Real multi-select trigger now (node 623:7334) — see this step's own
@@ -5130,24 +5156,6 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: none;
 }
 
-.kal-therapy-dropdown__dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--kal-booking-flow-color-primary);
-}
-
-.kal-therapy-dropdown__clear {
-  padding: 0;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  color: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
 
 .kal-therapy-dropdown__list {
   display: flex;
@@ -5189,17 +5197,17 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
   border: 1.5px solid var(--kal-booking-flow-color-text-disabled);
   box-sizing: border-box;
   background: var(--kal-booking-flow-color-white);
 }
 
 .kal-therapy-option__checkbox svg {
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   color: var(--kal-booking-flow-color-white);
   opacity: 0;
 }
@@ -5269,14 +5277,41 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 /* This step's own category cards read taller (58px, matching Concern
    Select's --selected state) and use a larger 24x24 checkbox than
    Concern Select's own 20x20 default — scoped here so Concern Select's
-   own settled card height/checkbox size are untouched. */
+   own settled card height/checkbox size are untouched. Checkbox stays the
+   shared 20x20 default (only the card height is taller here). */
 .kal-step-therapy-slot .kal-concern-row {
   min-height: 58px;
 }
 
-.kal-step-therapy-slot .kal-concern-row__checkbox {
-  width: 24px;
-  height: 24px;
+/* Desktop only, scoped to this step alone — Concern Select's own desktop
+   composition already zeroes its list's side padding via its own scoped
+   rule (see SHARED DESKTOP "PROGRESS PANEL" LAYOUT above), untouched
+   here. Bottom stays a literal 25px (not the shared var(--kal-booking-
+   flow-space-inset) 24px the base rule uses) per this page's own spec. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-slot .kal-concern-select__list {
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 25px;
+  }
+}
+
+/* This therapy flow's own "Your Progress" divider (Frame 3966/3940 in
+   the export) reads taller than the shared stepper component's default
+   13px — the export's own 45px-tall connector between step 1 and step
+   2, not just this 2-step list stretched thin. Scoped to both therapy
+   steps (the only two that render this 2-step list) so Concern Select/
+   Doctor Select's own 5-step "Your Progress" list (which uses the same
+   shared .kal-concern-select__stepper-divider class) keeps its shorter,
+   tighter-spaced default. 14px left offset (not the shared rule's
+   13px) centers it under the 28px circle to match this export's own
+   14px-padded divider frame. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-slot .kal-concern-select__stepper-divider,
+  .kal-step-therapy-details .kal-concern-select__stepper-divider {
+    height: 45px;
+    margin: 4px 0 4px 14px;
+  }
 }
 
 /* Footer summary line above Confirm (node 623:7592's "3 therapies
@@ -5296,6 +5331,25 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-therapy-concern-summary[hidden] {
   display: none;
+}
+
+/* Desktop's own summary + Confirm stack (see this step's own liquid
+   comment on why this is a second instance of the same
+   .kal-therapy-concern-summary element) — right-aligned above the
+   button instead of the mobile footer's full-width centered line, since
+   this wrapper only spans the button's own width inside the
+   space-between actions row. */
+.kal-therapy-concern-desktop-continue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.kal-therapy-concern-desktop-continue .kal-therapy-concern-summary {
+  padding: 0;
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* Therapy Details' own appointment card (node 543:1462) — NOT the shared
@@ -5672,6 +5726,25 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   border-radius: 16px;
   background: var(--kal-booking-flow-color-white);
   box-sizing: border-box;
+}
+
+/* This card's own connector reads taller/thinner (29px, 1.5px stroke)
+   than the shared stepper component's default (13px, 2px) — scoped here
+   so Concern Select/Doctor Select's own "Your Progress" list (same
+   shared .kal-concern-select__stepper-divider class) keeps its shorter
+   default. Desktop's own horizontal version below already uses this
+   same 1.5px thickness, just rotated into a width instead of a height. */
+.kal-therapy-next-steps .kal-concern-select__stepper-divider {
+  width: 1.5px;
+  height: 29px;
+}
+
+/* The connector leaving a completed step reads dark green (matching
+   that step's own filled circle), not the shared component's neutral
+   grey default — same override desktop's horizontal version already
+   has below, just missing here at the base/mobile level until now. */
+.kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-divider {
+  background: #1f4a3d;
 }
 
 @media screen and (min-width: 750px) {

@@ -623,13 +623,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // further down with the dropdown itself) — per explicit instruction that
   // "minimum 1 concern should be selected" covers both.
   //
-  // The footer summary line's text is a separate, more specific rule
-  // (explicit instruction): it only appears once >=1 CATEGORY is selected
-  // — either alone ("1 therapy category selected") or combined with
-  // dropdown therapies ("2 therapies & 1 therapy category selected").
-  // Dropdown-only selections stay silent here, since the dropdown's own
-  // trigger label already says "N therapy selected" in that case (see
-  // updateTherapyDropdownSummary()) — a second count would be redundant.
+  // The footer summary line's text (explicit instruction): shows a
+  // combined count of whatever's selected — dropdown therapies alone
+  // ("2 therapies selected"), categories alone ("1 therapy category
+  // selected"), or both ("2 therapies & 1 therapy category selected").
+  // The dropdown trigger's own label never changes to reflect a count
+  // (see updateTherapyDropdownSummary() below) — this footer line is now
+  // the only place a selection count is communicated.
   const updateTherapyConcernContinueButton = () => {
     const categoryCount = therapyConcernSelect.selected.size;
     const therapyCount = therapyDropdownSelect.selected.size;
@@ -646,14 +646,16 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.dataset.kalTherapyConcernMode = needsConfirm ? 'confirm' : 'continue';
     });
 
-    const showSummary = categoryCount > 0;
+    const showSummary = categoryCount > 0 || therapyCount > 0;
     let summaryText = '';
     if (showSummary) {
       const parts = [];
       if (therapyCount > 0) {
         parts.push(`${therapyCount} ${therapyCount === 1 ? 'therapy' : 'therapies'}`);
       }
-      parts.push(`${categoryCount} ${categoryCount === 1 ? 'therapy category' : 'therapy categories'}`);
+      if (categoryCount > 0) {
+        parts.push(`${categoryCount} ${categoryCount === 1 ? 'therapy category' : 'therapy categories'}`);
+      }
       summaryText = `${parts.join(' & ')} selected`;
     }
     flow.querySelectorAll('[data-kal-therapy-concern-summary]').forEach((el) => {
@@ -765,10 +767,11 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll('[data-kal-therapy-dropdown-count]').forEach((el) => {
       el.textContent = `${count} selected`;
     });
-    flow.querySelectorAll('[data-kal-therapy-dropdown-label]').forEach((el) => {
-      el.textContent = count > 0 ? `${count} therapy selected` : 'Select the therapy';
-      el.classList.toggle('kal-therapy-select__placeholder--filled', count > 0);
-    });
+    // The trigger's own label stays "Select the therapy" regardless of
+    // selection count — explicit instruction — the count is communicated
+    // by the footer summary line instead (see
+    // updateTherapyConcernContinueButton() above) and, above the fold, by
+    // the "Selected therapies" chip list (renderTherapySelectedChips()).
   };
 
   // "Selected therapies" chip summary (node 623:7592) — mirrors
@@ -1394,12 +1397,14 @@ document.addEventListener('DOMContentLoaded', () => {
       el.textContent = method === 'pay-at-clinic' ? 'Pay at clinic' : 'Online payment';
     });
 
-    // Confirm button's own amount (mobile + desktop instances, both
-    // In-Clinic's "Confirm payment · ₹X" and Video Consult's "Pay ₹X"
-    // copy) — reads the price straight off the selected card rather than
-    // duplicating the mock ₹450/₹495 values in JS.
-    flow.querySelectorAll('[data-kal-confirm-payment-amount]').forEach((el) => {
-      el.textContent = selectedPriceText;
+    // Confirm button's own label (mobile + desktop instances) — "Pay ₹X"
+    // for Pay now (reading the price straight off the selected card
+    // rather than duplicating the mock ₹450/₹495 values in JS), but just
+    // "Continue" for Pay at clinic, since no amount is actually being
+    // collected right now for that option and showing a price there
+    // read as if payment was happening immediately.
+    flow.querySelectorAll('[data-kal-confirm-payment-label]').forEach((el) => {
+      el.textContent = method === 'pay-at-clinic' ? 'Continue' : `Pay ${selectedPriceText}`;
     });
   };
 

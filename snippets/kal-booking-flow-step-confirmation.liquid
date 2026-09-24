@@ -237,13 +237,15 @@
 
     <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
       {%- comment -%}
-        Same "Pay ₹X" copy at every mode now — was "Confirm payment" for
-        In-Clinic vs "Pay ₹450" for Video Consult, but both modes let you
-        pick Pay now/Pay at clinic here, so both read the selected card's
-        price the same way. See setPaymentMethod() in kal-booking-flow.js.
+        "Pay ₹X" when Pay now is selected, "Continue" when Pay at clinic
+        is — no amount is actually collected for Pay at clinic, so
+        showing a price on that button read as if payment was happening
+        now. Whole label is one span so setPaymentMethod() in
+        kal-booking-flow.js can swap its full text per method instead of
+        just the amount.
       {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        Pay&nbsp;<span data-kal-confirm-payment-amount>&#8377;450</span>
+        <span data-kal-confirm-payment-label>Pay&nbsp;&#8377;450</span>
       </button>
     </div>
 
@@ -269,7 +271,7 @@
         <span>Back</span>
       </button>
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        Pay&nbsp;<span data-kal-confirm-payment-amount>&#8377;450</span>
+        <span data-kal-confirm-payment-label>Pay&nbsp;&#8377;450</span>
       </button>
     </div>
   </div>

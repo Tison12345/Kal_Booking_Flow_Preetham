@@ -109,9 +109,9 @@
         opening the dropdown. Hidden entirely until ≥1 therapy is picked;
         rendered/re-rendered client-side by renderTherapySelectedChips() in
         kal-booking-flow.js, called alongside renderTherapyDropdownList()
-        everywhere the dropdown selection changes. "Clear all" here reuses
-        the exact same data-kal-therapy-dropdown-clear handler the
-        dropdown's own "Clear all" uses — both just call
+        everywhere the dropdown selection changes. "Clear all" here is the
+        single global control (the dropdown panel below has no instance
+        of its own) — data-kal-therapy-dropdown-clear calls
         clearTherapyDropdownSelection().
       {%- endcomment -%}
       <div class="kal-therapy-selected" data-kal-therapy-selected hidden>
@@ -138,10 +138,14 @@
         <div class="kal-therapy-dropdown" data-kal-therapy-dropdown-panel hidden>
           <div class="kal-therapy-dropdown__head">
             <span class="kal-therapy-dropdown__title">All Therapies</span>
+            {%- comment -%}
+              No "Clear all" here — the "Selected therapies" chip list's
+              own instance above (data-kal-therapy-dropdown-clear on
+              .kal-therapy-selected__clear) is the single global control
+              per explicit instruction.
+            {%- endcomment -%}
             <span class="kal-therapy-dropdown__summary" data-kal-therapy-dropdown-summary hidden>
               <span data-kal-therapy-dropdown-count>0 selected</span>
-              <span class="kal-therapy-dropdown__dot" aria-hidden="true"></span>
-              <button type="button" class="kal-therapy-dropdown__clear" data-kal-therapy-dropdown-clear>Clear all</button>
             </span>
           </div>
           <div class="kal-therapy-dropdown__list" data-kal-therapy-dropdown-list></div>
@@ -266,9 +270,20 @@
         {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
         <span>Back</span>
       </button>
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-concern-continue>
-        Confirm
-      </button>
+      {%- comment -%}
+        Desktop's own summary + Confirm stack — mobile has this same
+        summary line in its own footer above (see that instance's own
+        comment); this is a second instance of the SAME element
+        (data-kal-therapy-concern-summary), kept in sync by the generic
+        querySelectorAll('[data-kal-therapy-concern-summary]') loop in
+        updateTherapyConcernContinueButton().
+      {%- endcomment -%}
+      <div class="kal-therapy-concern-desktop-continue">
+        <p class="kal-therapy-concern-summary" data-kal-therapy-concern-summary hidden></p>
+        <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-concern-continue>
+          Confirm
+        </button>
+      </div>
     </div>
   </div>
 
