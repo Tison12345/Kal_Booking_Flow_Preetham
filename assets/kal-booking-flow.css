@@ -1547,9 +1547,23 @@
   }
 }
 
+/* Tighter than the shared 16px (.kal-step-shell__panel's default) —
+   this step's own heading-to-banner spacing reads better at 10px.
+   Affects every direct .kal-step-shell__panel child gap on this step
+   (header-to-heading, banner-to-scroll, etc. all use the same flex
+   gap), not just the one pairing — scoped to Concern Select only, not
+   a shared-shell change. */
+.kal-step-concern-select .kal-step-shell__panel {
+  gap: 10px;
+}
+
 /* One scroll region for intro + the concern list together, at every width
    — this step never had a different desktop scroll boundary (unlike
-   Doctor Select, where only the doctor list itself scrolls on desktop). */
+   Doctor Select, where only the doctor list itself scrolls on desktop).
+   margin-top:6px adds to .kal-step-shell__panel's 10px gap above,
+   bringing the banner-to-scroll gap to 16px specifically — the other
+   panel gaps (header-to-heading, heading-to-banner) stay at the shared
+   10px, untouched. */
 .kal-step-concern-select .kal-step-shell__scroll {
   flex: 1;
   min-height: 0;
@@ -1557,6 +1571,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 6px;
 }
 
 /* Shared step-header pieces (the mobile facility badge + its mobile step
