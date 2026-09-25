@@ -104,7 +104,6 @@
           <div class="kal-step-therapy-confirmed__intro">
             <h2 class="kal-step-doctor-select__heading">Request received</h2>
             <p class="kal-step-doctor-select__subtext">Our care team will call you within 24 hours to fix a session time.</p>
-            <span class="kal-therapy-awaiting-badge">Awaiting callback</span>
           </div>
         </div>
 
@@ -130,6 +129,14 @@
           submitted), so the --completed/--current modifiers are just
           hardcoded per item instead of computed from a loop.
         {%- endcomment -%}
+        {%- comment -%}
+          Shared wrapper for the "What happens next" card, the visit
+          details card, and the Shop Products/Get directions row — one
+          width/inset (margin 0 25px mobile, max-width:640px + auto
+          desktop) applied here instead of duplicated on all three,
+          which is what kept them from lining up in the first place.
+        {%- endcomment -%}
+        <div class="kal-step-therapy-confirmed__cards">
         <div class="kal-therapy-next-steps">
           <p class="kal-therapy-next-steps__label">What happens next</p>
           <ol class="kal-concern-select__stepper">
@@ -140,7 +147,6 @@
                 </span>
                 <span class="kal-concern-select__stepper-text">
                   <span class="kal-concern-select__stepper-label">Request sent</span>
-                  <span class="kal-concern-select__stepper-state">Today, 4:12 PM</span>
                 </span>
               </div>
               <span class="kal-concern-select__stepper-divider" aria-hidden="true"></span>
@@ -152,7 +158,6 @@
                 </span>
                 <span class="kal-concern-select__stepper-text">
                   <span class="kal-concern-select__stepper-label">Care team calls you</span>
-                  <span class="kal-concern-select__stepper-state">Within 24 hours</span>
                 </span>
               </div>
               <span class="kal-concern-select__stepper-divider" aria-hidden="true"></span>
@@ -163,77 +168,67 @@
                   {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
                 </span>
                 <span class="kal-concern-select__stepper-text">
-                  <span class="kal-concern-select__stepper-label">Session confirmed</span>
-                  <span class="kal-concern-select__stepper-state">Details on WhatsApp</span>
+                  <span class="kal-concern-select__stepper-label">Session confirmation</span>
                 </span>
               </div>
             </li>
           </ol>
         </div>
-      </div>
 
-      {%- comment -%}
-        Visit details card (node 539:2222) — now the exact same
-        bordered card the consultation flow's Confirmation step uses
-        (.kal-confirmation-appointment-card, reused as-is: photo/
-        eyebrow/name header, then icon+label rows below), not a plain
-        rows-only card. Eyebrow reads "Therapy Details" instead of
-        "Your Consultation"; rows are Patient/Location/Payment instead
-        of Mode/Date & Time/Patient. Patient reuses the exact same
-        data-kal-confirm-name hook the rest of this flow already
-        populates; the doctor photo/name and Location/Payment are
-        static mockup values, same "visual match, not wired" treatment
-        as elsewhere in this build (no doctor is actually assigned to a
-        therapy request, and there's no facility-switcher/payment-method
-        step in the therapy flow to reflect a real choice from).
-
-        Kept as a sibling of .kal-step-therapy-confirmed__summary rather
-        than nested inside a shared "cards" wrapper with "What happens
-        next" and the actions row below — same restructure Booking
-        Confirmed's own screen went through: each card is its own flex
-        child of .kal-step-shell__scroll, picking up that container's
-        24px gap for spacing instead of a wrapper div, with its own
-        scoped side-inset/max-width in CSS.
-      {%- endcomment -%}
-      {%- comment -%}
-        Photo removed per explicit instruction (flow-wide) — same
-        .kal-appointment-card__photo--placeholder treatment as the
-        Confirmation step's own copy of this card.
-      {%- endcomment -%}
-      <div class="kal-confirmation-appointment-card">
-        <div class="kal-appointment-card kal-confirmation-appointment-card__top">
-          <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder"></span>
-          <span class="kal-appointment-card__body">
-            <span class="kal-appointment-card__eyebrow">Therapy Details</span>
-            <span class="kal-appointment-card__name">Dr. Neethu Jayachandran</span>
-          </span>
-        </div>
-        <div class="kal-confirmation-appointment-card__rows">
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-appointment-card__key">
-              {%- render 'kal-booking-icons', icon_name: 'user' -%}
-              Patient
+        {%- comment -%}
+          Visit details card (node 539:2222) — now the exact same
+          bordered card the consultation flow's Confirmation step uses
+          (.kal-confirmation-appointment-card, reused as-is: photo/
+          eyebrow/name header, then icon+label rows below), not a plain
+          rows-only card. Eyebrow reads "Therapy Details" instead of
+          "Your Consultation"; rows are Patient/Location/Payment instead
+          of Mode/Date & Time/Patient. Patient reuses the exact same
+          data-kal-confirm-name hook the rest of this flow already
+          populates; the doctor photo/name and Location/Payment are
+          static mockup values, same "visual match, not wired" treatment
+          as elsewhere in this build (no doctor is actually assigned to a
+          therapy request, and there's no facility-switcher/payment-method
+          step in the therapy flow to reflect a real choice from).
+        {%- endcomment -%}
+        {%- comment -%}
+          Photo removed per explicit instruction (flow-wide) — same
+          .kal-appointment-card__photo--placeholder treatment as the
+          Confirmation step's own copy of this card.
+        {%- endcomment -%}
+        <div class="kal-confirmation-appointment-card">
+          <div class="kal-appointment-card kal-confirmation-appointment-card__top">
+            <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder"></span>
+            <span class="kal-appointment-card__body">
+              <span class="kal-appointment-card__eyebrow">Therapy Details</span>
+              <span class="kal-appointment-card__name">Dr. Neethu Jayachandran</span>
             </span>
-            <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
           </div>
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-appointment-card__key">
-              {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
-              Location
-            </span>
-            <span class="kal-confirmation-details__value">Indiranagar, Bengaluru</span>
-          </div>
-          <div class="kal-confirmation-details__row">
-            <span class="kal-confirmation-appointment-card__key">
-              {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
-              Payment
-            </span>
-            <span class="kal-confirmation-details__value">At the clinic</span>
+          <div class="kal-confirmation-appointment-card__rows">
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-appointment-card__key">
+                {%- render 'kal-booking-icons', icon_name: 'user' -%}
+                Patient
+              </span>
+              <span class="kal-confirmation-details__value" data-kal-confirm-name>&mdash;</span>
+            </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-appointment-card__key">
+                {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
+                Location
+              </span>
+              <span class="kal-confirmation-details__value">Indiranagar, Bengaluru</span>
+            </div>
+            <div class="kal-confirmation-details__row">
+              <span class="kal-confirmation-appointment-card__key">
+                {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
+                Payment
+              </span>
+              <span class="kal-confirmation-details__value">At the clinic</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="kal-therapy-confirmed-actions">
+        <div class="kal-therapy-confirmed-actions">
         <button type="button" class="kal-therapy-confirmed-actions__btn">
           <span class="kal-therapy-confirmed-actions__icon">
             {%- render 'kal-booking-icons', icon_name: 'shopping-cart' -%}
@@ -247,6 +242,20 @@
           <span>Get directions</span>
         </button>
       </div>
+      </div>
+      </div>
+    </div>
+
+    {%- comment -%}
+      "Back to homepage" — mobile only (hidden on desktop below), same
+      treatment as Booking Confirmed's own equivalent footer: a plain
+      .kal-step-shell__footer sibling of .kal-step-shell__scroll, which
+      sticks to the panel's bottom edge for free via the scroll region's
+      own flex:1 absorbing the leftover height, no extra margin-top:auto
+      needed (same mechanism Booking Confirmed's mobile footer relies on).
+    {%- endcomment -%}
+    <div class="kal-step-shell__footer">
+      <a href="{{ routes.root_url }}" class="kal-step-doctor-select__continue">Back to Homepage</a>
     </div>
 
   </div>

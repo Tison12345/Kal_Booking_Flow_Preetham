@@ -107,33 +107,45 @@
 <div class="kal-step-booking-confirmed kal-step-shell">
 
   {%- comment -%}
+    Moved OUT of .kal-step-shell__panel to be a direct child of this
+    outer element instead, same reason .kal-step-booking-confirmed__hero
+    below it was pulled out — absolute positioning anchors to the
+    nearest POSITIONED ancestor, not to DOM nesting depth, so this only
+    needs .kal-step-booking-confirmed itself to be position:relative
+    (see CSS). Previously this stayed nested in .kal-step-shell__panel,
+    which worked fine when hero was ALSO inside the panel (its own
+    negative margin-bottom pulled the card below it up, not the panel
+    itself) — but now that hero is a panel sibling for CSS Grid
+    placement, that same negative margin pulls the whole panel up
+    instead, so a header still anchored to the panel landed near the
+    appointment card instead of the dialog's top-right corner on Video
+    Consult's single-column layout. Anchoring to the outer element (which
+    wraps hero + panel in both the single-column and two-column In-Clinic
+    layouts) keeps this pinned to the true top-right corner in both.
+  {%- endcomment -%}
+  <div class="kal-step-booking-confirmed__header">
+    <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">
+      {%- render 'kal-booking-icons', icon_name: 'close' -%}
+    </button>
+  </div>
+
+  {%- comment -%}
     In-Clinic desktop only (node "Frame 3940") — repurposes this step's
     own left info column (previously dead markup: .kal-step-shell__info
     is display:none at every width by the rule further down, so this
-    "You're all set"/location content never actually rendered). Video
-    Consult desktop stays the existing single-column layout untouched —
-    data-kal-mode-offline-only + kal-booking-flow.css's :has() rules
-    below only switch to this two-column grid when this element isn't
-    hidden. Reuses .kal-confirmation-success-icon/.kal-step-doctor-select__heading/
-    __subtext (same as .kal-step-booking-confirmed__hero, which this
-    REPLACES on desktop for In-Clinic — see that hero's own
-    data-kal-mode-online-only — the success icon/heading/subtext live
-    here instead, not on the right, per the export) and
-    .kal-step-entry__help (the same "Need assistance?" line every other
-    step's desktop footer uses).
+    "You're all set"/location content never actually rendered). Just the
+    "Need assistance?" line (reusing .kal-step-entry__help, the same one
+    every other step's desktop footer uses) — no separate copy of the
+    success icon/heading/subtext here. .kal-step-booking-confirmed__hero
+    below is the ONE copy of that content that exists in this file;
+    kal-booking-flow.css repositions that SAME element into this column
+    via CSS Grid placement (grid-column/grid-row, gated by a :has() on
+    this element's own data-kal-mode-offline-only [hidden] state) rather
+    than duplicating it here and hiding one copy — see the CSS's own
+    comment on why grid-row placement (not just grid-column) is what
+    lets these two stack correctly within the one column.
   {%- endcomment -%}
   <div class="kal-step-entry__info kal-step-shell__info kal-step-booking-confirmed__info" data-kal-mode-offline-only>
-    <div class="kal-step-booking-confirmed__info-content">
-      <div class="kal-confirmation-success-icon">
-        <span class="kal-confirmation-success-icon__inner">
-          {%- render 'kal-booking-icons', icon_name: 'check' -%}
-        </span>
-      </div>
-      <div class="kal-step-booking-confirmed__intro">
-        <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
-        <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
-      </div>
-    </div>
     <div class="kal-step-entry__help">
       <span class="kal-icon kal-icon--help">
         {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
@@ -142,55 +154,35 @@
     </div>
   </div>
 
-  <div class="kal-step-shell__panel">
-
-    <div class="kal-step-booking-confirmed__header">
-      <button type="button" class="kal-step-doctor-select__back" data-kal-close aria-label="Close">
-        {%- render 'kal-booking-icons', icon_name: 'close' -%}
-      </button>
+  {%- comment -%}
+    Mint hero band behind the success icon/heading — the export's own
+    markup has this section overlap 24px behind the card below it
+    (mb-[-24px] in the export) on mobile/Video Consult desktop, so the
+    band's bottom edge tucks under the card's rounded top corners
+    instead of stopping flush above it. A direct .kal-step-booking-confirmed
+    child (not nested inside .kal-step-shell__panel) specifically so
+    CSS Grid can place it in the LEFT column on desktop for In-Clinic
+    (see kal-booking-flow.css) — grid item placement only works on
+    direct children of the grid container, and this is the one copy of
+    this content in the file (no duplicate + hide-one-copy).
+  {%- endcomment -%}
+  <div class="kal-step-booking-confirmed__hero">
+    <div class="kal-confirmation-success-icon">
+      <span class="kal-confirmation-success-icon__inner">
+        {%- render 'kal-booking-icons', icon_name: 'check' -%}
+      </span>
     </div>
+
+    <div class="kal-step-booking-confirmed__intro">
+      <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
+      <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
+    </div>
+  </div>
+
+  <div class="kal-step-shell__panel">
 
     <div class="kal-step-shell__scroll">
       {%- comment -%}
-        Wraps the hero band + the card that sits partly on top of it
-        (node 656:5433) in one plain block-flow group, deliberately NOT a
-        flex column — .kal-step-shell__scroll's own flex gap would
-        otherwise land between hero and card too and eat into the
-        overlap below. The export's own structure nests these two the
-        same way (no gap between them, unlike its wider 16/24px gaps
-        elsewhere), so this wrapper is a container flattening fix, not a
-        style choice of its own.
-      {%- endcomment -%}
-      <div class="kal-step-booking-confirmed__summary">
-        {%- comment -%}
-          Mint hero band behind the success icon/heading — the export's
-          own markup has this section overlap 24px behind the card below
-          it (mb-[-24px] in the export), so the band's bottom edge tucks
-          under the card's rounded top corners instead of stopping flush
-          above it.
-
-          data-kal-mode-online-only: on desktop, In-Clinic shows this
-          same success icon/heading/subtext content in the new left info
-          column instead (.kal-step-booking-confirmed__info above), so
-          this copy is hidden there to avoid showing it twice — kept
-          visible on mobile at every mode via the [hidden] override in
-          kal-booking-flow.css (mobile has no left column to move it
-          into).
-        {%- endcomment -%}
-        <div class="kal-step-booking-confirmed__hero" data-kal-mode-online-only>
-          <div class="kal-confirmation-success-icon">
-            <span class="kal-confirmation-success-icon__inner">
-              {%- render 'kal-booking-icons', icon_name: 'check' -%}
-            </span>
-          </div>
-
-          <div class="kal-step-booking-confirmed__intro">
-            <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
-            <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
-          </div>
-        </div>
-
-        {%- comment -%}
           Replaces the old ticket/notch .kal-confirmed-card entirely
           (explicit instruction — remove it) — this is now the one card
           shown for both modes at every width, the exact same
@@ -244,7 +236,6 @@
             </div>
           </div>
         </div>
-      </div>
 
       {%- comment -%}
         "Before your visit" checklist (node 105 export) — In-Clinic

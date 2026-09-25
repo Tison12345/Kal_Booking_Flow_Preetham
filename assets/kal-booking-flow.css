@@ -375,11 +375,14 @@
     display: grid;
     width: 100%;
     height: 100%;
-    /* fr units, not fixed px — matches the real theme's own two-column
-       sections (custom-clinic-consultation-form.css, custom-hero-banner-slider.css),
-       and keeps this fluid down to tablet widths instead of overflowing. 3fr/5fr
-       preserves the original 300px/500px (3:5) ratio from the Figma spec. */
-    grid-template-columns: 3fr 5fr;
+    /* Fixed 300px left column, not the old 3fr proportional split — that
+       only approximated 300px at exactly the 802px reference dialog
+       width and grew wider at any larger width, reading visibly bigger
+       than every other step's own fixed-300px left column (Concern
+       Select, Booking Confirmed, etc. all use .kal-step-shell--progress-panel's
+       same 300px minmax(0, 1fr) pattern). minmax(0, 1fr) keeps the right
+       column fluid/shrinkable, same as those other steps. */
+    grid-template-columns: 300px minmax(0, 1fr);
     /* Without this, the single row defaults to grid-auto-rows:auto (sized to
        its content) rather than stretching to fill this container's own
        height:100% — meaning any child's height:100% below doesn't actually
@@ -1426,7 +1429,14 @@
        not the (now-removed) nowrap alone. min-width:0 is what makes the
        track's 300px the real constraint the text has to wrap within. */
     min-width: 0;
-    padding: 0 24px;
+    /* 16px, not the 24px this originally matched .kal-step-shell__info's
+       own inset with (see comment above) — 24px left this only 228px
+       for the text ("Need assistance? Call us at +91 804012 3456"),
+       which wrapped to 2 lines. 16px gives it 244px, matching the same
+       box width Figma's own spec uses for this exact line elsewhere,
+       where it fits on one line — at the cost of an 8px misalignment
+       from "Consultation Booking" above it. */
+    padding: 0 16px;
     border-top: none;
     justify-content: flex-start;
   }
@@ -4065,12 +4075,24 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   color: var(--kal-booking-flow-color-text-muted);
 }
 
+/* min-width:0 is the actual fix for this row overflowing past its
+   card's edge in narrow contexts (e.g. Booking Confirmed's 428px
+   In-Clinic desktop card) — as a flex child, this defaults to
+   min-width:auto (its own text's natural width), which refuses to
+   shrink below that regardless of the row's own justify-content:
+   space-between, forcing the row to overflow instead of the value
+   wrapping/shrinking to fit. overflow/text-overflow/white-space give it
+   a graceful single-line ellipsis once it's shrunk as far as it can. */
 .kal-confirmation-details__value {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
   font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
   text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Video Consult's combined appointment + details card (node 625:8818) —
@@ -4711,10 +4733,39 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-step-booking-confirmed {
   height: 100%;
+  /* .kal-step-booking-confirmed__header (the close button) now anchors
+     here instead of .kal-step-shell__panel — see this step's own liquid
+     comment on why the panel stopped working as its containing block
+     once .kal-step-booking-confirmed__hero was pulled out to be a
+     sibling of the panel for CSS Grid placement. This element wraps
+     hero + panel (and, for In-Clinic, the left info column too) in
+     every layout this step has, so it stays a stable anchor regardless
+     of which one applies. */
+  position: relative;
+  /* flex column (not plain block) so hero + panel share this element's
+     bounded height correctly — without this, .kal-step-shell__panel's
+     own height:100% below resolved against THIS element's full height,
+     not the space actually left over after hero (a plain block sibling
+     stacked above it), so panel (and everything pinned to its bottom,
+     like the "Back to Homepage" footer) rendered taller than the
+     visible area instead of the footer staying reachable/sticky at the
+     bottom of what's actually on screen. The In-Clinic two-column grid
+     below (:has()) overrides this at 750px+ when that layout applies;
+     this is the single-column (mobile + Video Consult desktop) case. */
+  display: flex;
+  flex-direction: column;
 }
 
 .kal-step-booking-confirmed .kal-step-shell__panel {
-  height: 100%;
+  /* flex:1/min-height:0 (not height:100%) — claims exactly the space
+     left over after .kal-step-booking-confirmed__hero above it in the
+     new flex column, instead of a height measured against the whole
+     outer element regardless of hero's own height. This is what lets
+     .kal-step-shell__scroll's own flex:1/overflow-y:auto below actually
+     bound and scroll internally, keeping the footer pinned at the
+     bottom of the visible area — see the outer rule's own comment. */
+  flex: 1;
+  min-height: 0;
   position: relative;
 }
 
@@ -4732,9 +4783,9 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 /* Same corner-close treatment as Therapy Confirmed's __header — absolutely
    positioned instead of a normal-flow row, so it doesn't reserve its own
-   height above .kal-step-shell__scroll and unbalance the justify-content:
-   center above (that row-in-flow bug is exactly what made Therapy
-   Confirmed's content look top-heavy before it got the same fix). */
+   height and push the hero/card below it down. Anchors to
+   .kal-step-booking-confirmed itself (position:relative, above), not
+   .kal-step-shell__panel — see this step's own liquid comment on why. */
 .kal-step-booking-confirmed__header {
   position: absolute;
   top: 16px;
@@ -4765,8 +4816,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    with its own left info column instead, switched on below via :has(),
    once .kal-step-booking-confirmed__info isn't [hidden] (In-Clinic). */
 @media screen and (min-width: 750px) {
+  /* Stays flex column (set unconditionally above, for mobile), not
+     display:block — the same reason a plain block broke panel's
+     height/the footer's stickiness at mobile applies here too, since
+     hero is this element's plain sibling at every width now. */
   .kal-step-booking-confirmed.kal-step-shell {
-    display: block;
+    display: flex;
+    flex-direction: column;
   }
 
   .kal-step-booking-confirmed .kal-step-shell__info {
@@ -4783,92 +4839,161 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   }
 
   /* In-Clinic override — switches this step's desktop layout from the
-     single-column block above to a real two-column grid (left info
-     column + right panel), same 300px-left-column mechanic
+     single-column block above to a real two-column grid (left column +
+     right panel), same 300px-left-column mechanic
      .kal-step-shell--progress-panel uses elsewhere, once the new left
      info column isn't hidden (i.e. In-Clinic mode — see that element's
      own data-kal-mode-offline-only). :has() naturally outranks the
      plain display:block rule above at equal class count (an extra
      pseudo-class raises specificity), so this doesn't need !important
-     or source-order tricks to win. */
+     or source-order tricks to win.
+
+     Two rows, not one — .kal-step-booking-confirmed__hero and
+     .kal-step-booking-confirmed__info both land in grid-column:1 below,
+     stacked via grid-row (hero row 1, info row 2) instead of nesting
+     hero inside info — hero is a single shared element (see its own
+     liquid comment), also used un-positioned in the single-column
+     Video Consult/mobile layouts above, so it can't be duplicated into
+     info just to get this stacking via a shared flex parent. Row 1 is
+     1fr so hero's own height:100% (below) fills exactly the space above
+     info's row, and .kal-step-shell__panel spans both rows (grid-row:
+     1 / -1) to match the right column's full height. */
   .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) {
     display: grid;
     grid-template-columns: 300px 1fr;
+    grid-template-rows: 1fr auto;
   }
 
   .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-shell__info {
     display: flex;
   }
 
-  /* The right panel needs its own 36px side inset in this two-column
-     layout (node "Frame 3940": 500px right column, 36px padding each
-     side = 428px content) — the single-column Video Consult layout
-     zeroes this out instead (further down this section) so its hero/
-     card can run edge to edge across the full 802px dialog. */
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-booking-confirmed__hero {
+    grid-column: 1;
+    grid-row: 1;
+    height: 100%;
+    /* Top-anchored (84px padding-top), not centered — node "Frame
+       3940"'s own spec only measures a top offset here (84px), with the
+       content's own natural height ("200 Hug") below it, not a
+       symmetric top/bottom pair. Any leftover row height (this row is
+       1fr, so usually taller than the content) just sits below the
+       content as blank space instead of being split above/below it. */
+    padding: 84px 24px 0;
+    /* No overlap here — that trick (below, in the base rule) is for the
+       single-column layouts where hero sits directly above the card;
+       in this two-column layout hero and the card aren't even in the
+       same grid column, so pulling the next element up doesn't apply. */
+    margin-bottom: 0;
+    /* Top-left corner only — .kal-step-booking-confirmed__info (row 2,
+       same column) has the matching bottom-left corner, so together
+       they read as one continuous rounded-left-edge column. */
+    border-radius: 16px 0 0 0;
+  }
+
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-booking-confirmed__info {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
   .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-shell__panel {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    /* The right panel needs its own 36px side inset in this two-column
+       layout (node "Frame 3940": 500px right column, 36px padding each
+       side = 428px content) — the single-column Video Consult layout
+       zeroes this out instead (further up this section) so its hero/
+       card can run edge to edge across the full 802px dialog. */
     padding: 0 36px;
   }
 
-  /* Card/before-visit fill this narrower 428px right column directly —
-     the shared 608px cap (further down this file) is for the
+  /* width:100% (fluid) capped at max-width:428px (node "Frame 3940"'s
+     own value at the 802px reference dialog width) — NOT a fixed
+     width:428px. The dialog itself is width:90% (max-width:802px), so
+     below ~890px viewport width the dialog (and this right column) is
+     narrower than 802px; a hard 428px card stopped fitting there and
+     forced horizontal overflow/scroll, the exact opposite of this
+     flow's mobile-first responsive approach elsewhere. 100% fluidly
+     tracks whatever the panel's own (already-fluid, 1fr) width actually
+     is, landing on 428px only when the dialog happens to be full-size.
+     The shared 608px cap (further down this file) is for the
      single-column Video Consult layout's much wider panel instead. */
   .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-confirmation-appointment-card,
   .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-before-visit {
-    max-width: none;
+    width: 100%;
+    max-width: 428px;
     margin-left: 0;
     margin-right: 0;
   }
 
   /* Vertically centers the card + "Before your visit" as a group in the
-     right column's available height, now that the hero (which used to
-     anchor content to the top) is hidden here — without this they'd sit
-     flush at the top with a large gap of empty space below instead. */
+     right column's available height, since the hero (which used to
+     anchor content to the top in the single-column layout) is now in
+     the left column instead — without this they'd sit flush at the top
+     with a large gap of empty space below instead. */
   .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-shell__scroll {
     justify-content: center;
   }
 }
 
-/* This step's left info column (In-Clinic desktop only, see above) —
-   background/rounded-corner treatment matching
-   .kal-step-shell--progress-panel's own left column elsewhere, reused
-   here rather than duplicated with different values. */
+/* This step's left column footer row (In-Clinic desktop only, see
+   above) — just the "Need assistance?" line; the bottom-left corner of
+   the two-row left column (.kal-step-booking-confirmed__hero has the
+   matching top-left corner, in its own desktop-scoped rule above). */
 .kal-step-booking-confirmed__info {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  /* min-width:0 is the fix for this wrapping differently than Entry's
+     own copy of this same help line — as a grid item, this defaults to
+     min-width:auto (its content's natural width), which can let the
+     nested flex row (icon + text) ignore the 300px column track
+     entirely, same class of bug as .kal-concern-select__footer-help's
+     own min-width:0 fix elsewhere in this file. */
+  min-width: 0;
   background: rgba(246, 241, 232, 0.11);
-  border-radius: 16px 0 0 16px;
-  height: 100%;
+  border-radius: 0 0 0 16px;
   box-sizing: border-box;
+  /* .kal-step-entry__info's shared base rule (further up this file) adds
+     a border-right divider between the left/right columns — but that
+     class is only carried by THIS row (row 2), not .kal-step-booking-confirmed__hero
+     above it (row 1, a separate element with no border of its own), so
+     the divider only ever showed as a short stray segment next to the
+     footer line instead of running the left column's full height.
+     Removed here so this row matches the hero row above it: no divider
+     on either. */
+  border-right: none;
 }
 
-/* Without this, the display:flex above (an author rule) overrides the
-   browser's own [hidden] { display: none } default regardless of the
-   attribute — same class of bug as .kal-confirmation-appointment-card[hidden]
-   elsewhere in this file. Needed since this column is toggled purely
-   via the mode-based data-kal-mode-offline-only JS hook. */
+/* Same total height as the previous step's (Confirmation) shared
+   desktop footer bar — 12px top/bottom + the 20px icon (the row's
+   tallest child) = 44px, not .kal-step-entry__help's own default 24px
+   top/bottom (68px total), which read taller than every other step's
+   footer right before this one. Side padding also trimmed from the
+   shared 16px to 10px — unlike every other step, this line lives inside
+   the narrow 300px left column itself (not a full-width bottom bar
+   spanning both columns), so at the shared class's own padding/font-size
+   "Need assistance? Call us at +91 804012 3456" wrapped onto 2 lines
+   here specifically. The extra 12px this buys back, plus the smaller
+   font-size on .kal-step-entry__help-text below, is what keeps it on one
+   line like every other step's copy of this same text. */
+.kal-step-booking-confirmed__info .kal-step-entry__help {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.kal-step-booking-confirmed__info .kal-step-entry__help-text {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Without this, an author display rule would override the browser's
+   own [hidden] { display: none } default regardless of the attribute —
+   same class of bug as .kal-confirmation-appointment-card[hidden]
+   elsewhere in this file. Kept even though this rule no longer sets its
+   own display itself, since .kal-step-shell--progress-panel or a future
+   edit could reintroduce one. Needed since this column is toggled
+   purely via the mode-based data-kal-mode-offline-only JS hook. */
 .kal-step-booking-confirmed__info[hidden] {
   display: none;
-}
-
-/* Mint-tinted content block (icon/heading/subtext), centered and
-   filling the column's available height above the help line. */
-.kal-step-booking-confirmed__info-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-height: 0;
-  gap: 8px;
-  padding: 84px 24px;
-  background: #ebf2ef;
-  box-sizing: border-box;
-}
-
-.kal-step-booking-confirmed__info-content .kal-step-doctor-select__heading,
-.kal-step-booking-confirmed__info-content .kal-step-doctor-select__subtext {
-  text-align: center;
 }
 
 /* Plain block-flow wrapper (no display:flex) around the hero band + its
@@ -4902,6 +5027,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  /* flex-shrink:0 — this is now a flex item of .kal-step-booking-confirmed
+     itself (a flex column, see that rule's comment), and the default
+     flex-shrink:1 would let it get squeezed below its natural height
+     once combined with .kal-step-shell__panel's own flex:1 if content
+     overflows, same class of bug .kal-confirmation-appointment-card's
+     own flex-shrink:0 elsewhere in this file already guards against. */
+  flex-shrink: 0;
   /* padding-bottom grown from 24px to 40px (was tuned wrong before —
      shrinking margin-bottom's overlap instead, which broke the card's
      rounded top corners sitting on the tint) — margin-bottom stays at
@@ -4915,24 +5047,19 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   box-sizing: border-box;
 }
 
-/* Without this, the display:flex above (an author rule) overrides the
-   browser's own [hidden] { display: none } default regardless of the
-   attribute being set, same class of bug as elsewhere in this file —
-   needed now that this hero is toggled via the mode-based
-   data-kal-mode-online-only JS hook. */
-.kal-step-booking-confirmed__hero[hidden] {
-  display: none;
-}
-
-/* Forces this visible on mobile regardless of the [hidden] state above
-   — mobile has no left info column to show this content in instead
-   (that's desktop-only, In-Clinic; see .kal-step-booking-confirmed__info),
-   so both modes keep this hero on mobile, same as before that attribute
-   existed. Desktop keeps the real [hidden]-to-none behavior above, so
-   In-Clinic correctly hides this once the left column takes over. */
+/* No tint on mobile for In-Clinic — reuses the same
+   data-kal-mode-offline-only [hidden] state
+   .kal-step-booking-confirmed__info already tracks for the desktop
+   two-column switch (JS toggles it by mode regardless of viewport, even
+   though that element itself only ever displays at desktop), via
+   :has() rather than a second JS-driven attribute on the hero itself.
+   Desktop is untouched here — In-Clinic desktop already hides this
+   hero entirely (the left column's own tint takes over instead), so
+   this only ever matters on mobile, where hero stays the visible copy
+   for both modes. Video Consult mobile keeps the #eef3f0 tint above. */
 @media screen and (max-width: 749px) {
-  .kal-step-booking-confirmed__hero[hidden] {
-    display: flex;
+  .kal-step-booking-confirmed:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-booking-confirmed__hero {
+    background: none;
   }
 }
 
@@ -5616,9 +5743,25 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   height: 100%;
 }
 
+/* height:100% (not the old min-height:100%) — a bounded panel is what
+   lets .kal-step-shell__scroll's own flex:1/min-height:0/overflow-y:auto
+   below actually constrain and scroll internally, instead of the whole
+   panel growing to fit all content and letting the footer scroll away
+   with the page — same pattern Therapy Details/Patient Details/Slot
+   Picker all use so their own footers read as truly fixed, not just
+   pushed down by flex:1 on content that happens to be short enough. */
 .kal-step-therapy-confirmed .kal-step-shell__panel {
-  min-height: 100%;
+  height: 100%;
   position: relative;
+}
+
+/* margin-top:auto pins the footer to the bottom on mobile when content
+   is shorter than the viewport, same explicit pattern Slot Picker/
+   Patient Details use for their own sticky footers — more reliable than
+   counting on .kal-step-shell__scroll's own flex:1 alone to push it
+   down. */
+.kal-step-therapy-confirmed .kal-step-shell__footer {
+  margin-top: auto;
 }
 
 @media screen and (min-width: 750px) {
@@ -5643,6 +5786,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   }
 
   .kal-step-therapy-confirmed .kal-step-shell__info {
+    display: none;
+  }
+
+  /* "Back to homepage" removed on desktop only — mobile keeps it, same
+     as Booking Confirmed's own footer. */
+  .kal-step-therapy-confirmed .kal-step-shell__footer {
     display: none;
   }
 }
@@ -5724,6 +5873,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-direction: column;
   gap: 24px;
   min-height: 0;
+  overflow-y: auto;
 }
 
 @media screen and (min-width: 750px) {
@@ -5733,17 +5883,14 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   }
 }
 
-/* Own scoped side-inset/max-width (not a shared "cards" wrapper div
-   around this, .kal-therapy-next-steps and .kal-confirmation-appointment-card
-   — same restructure Booking Confirmed's screen went through, each card
-   a flex child of .kal-step-shell__scroll instead) — 25px/640px matches
-   this step's own export, distinct from Booking Confirmed's 24px/608px.
-   No top/bottom margin needed: .kal-step-shell__scroll's own 24px gap
-   already spaces this from the card above it. */
+/* Side inset/max-width now lives once on .kal-step-therapy-confirmed__cards
+   (the shared wrapper around this, .kal-therapy-next-steps, and
+   .kal-confirmation-appointment-card) instead of being duplicated here —
+   this just needs its own top/bottom spacing. */
 .kal-therapy-confirmed-actions {
   display: flex;
   gap: 16px;
-  margin: 0 25px;
+  margin: 16px 0 24px;
 }
 
 @media screen and (min-width: 750px) {
@@ -5792,15 +5939,28 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 /* Plain block-flow wrapper (no display:flex) around the hero band + the
-   ONE card that overlaps it ("What happens next") — see this step's own
-   liquid comment for why: same technique as Booking Confirmed's
-   .kal-step-booking-confirmed__summary, needed so .kal-step-shell__scroll's
-   own flex gap doesn't land between the hero and that card too. The
-   visit details card and the Shop Products/Get directions row below are
-   plain flex siblings of this instead (no overlap to protect), each
-   with its own scoped side-inset/max-width — see their own rules. */
+   cards that overlap it — see this step's own liquid comment for why:
+   same technique as Booking Confirmed's .kal-step-booking-confirmed__summary,
+   needed so .kal-step-shell__scroll's own flex gap doesn't land between
+   the hero and the card below it too. */
 .kal-step-therapy-confirmed__summary {
   width: 100%;
+}
+
+/* Single shared width/inset for "What happens next", the visit details
+   card, and the Shop Products/Get directions row — previously each of
+   the three carried its own copy of this same margin/max-width, which
+   is what let them drift out of alignment with each other. */
+.kal-step-therapy-confirmed__cards {
+  margin: 0 25px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-confirmed__cards {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* Cream hero band (node 539:2222) — same overlap technique as Booking
@@ -5815,31 +5975,28 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      longer subtext string needs more room than that. A hard height here
      would clip/overflow instead of the hero growing to fit it, same
      class of bug the Confirmation card's own appointment-card height
-     hit earlier. */
-  min-height: 300px;
+     hit earlier.
+
+     274px, not 300px — trimmed by 26px (the removed "Awaiting callback"
+     badge's own 22px height + the 4px gap that used to sit above it in
+     .kal-step-therapy-confirmed__intro) now that the badge is gone, so
+     this box shrinks by the same amount instead of leaving a blank gap
+     where the badge used to be. .kal-step-therapy-confirmed__cards below
+     shifts up by that same 26px for free, via this hero's own
+     margin-bottom:-48px overlap — no separate adjustment needed there. */
+  min-height: 274px;
   padding: 36px 0;
   margin-bottom: -48px;
   background: #fbf6ee;
   box-sizing: border-box;
 }
 
-.kal-therapy-awaiting-badge {
-  align-self: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 119px;
-  height: 22px;
-  padding: 4px 12px;
-  border: 1px solid var(--kal-booking-flow-color-highlight-text);
-  border-radius: 12px;
-  background: var(--kal-booking-flow-color-white);
-  color: var(--kal-booking-flow-color-highlight-text);
-  font-size: var(--kal-booking-flow-font-size-caption);
-  line-height: 100%;
-  font-weight: var(--kal-booking-flow-font-weight-regular);
-  white-space: nowrap;
+/* Hero tint removed on mobile only — desktop keeps its #fbf6ee cream
+   background. */
+@media screen and (max-width: 749px) {
+  .kal-step-therapy-confirmed__hero {
+    background: none;
+  }
 }
 
 /* "What happens next" (node 539:2222) — fixed 3-step timeline card
@@ -5848,28 +6005,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    Progress" doesn't have, since that one sits directly in a left info
    column instead), but the list itself reuses .kal-concern-select__stepper*
    directly — see this step's own liquid comment. */
-/* Own scoped side-inset — sits inside .kal-step-therapy-confirmed__summary,
-   which (like Booking Confirmed's own __summary) has no side padding of
-   its own, so this needs it directly rather than inheriting it from a
-   shared wrapper. Desktop's max-width/centering matches the visit
-   details card and actions row below it, kept below in this file next
-   to those two rather than duplicated here. */
+/* Side inset/max-width now lives once on .kal-step-therapy-confirmed__cards
+   (the shared wrapper around this, the visit details card, and the
+   actions row) instead of being duplicated here. */
 .kal-therapy-next-steps {
   min-height: 224px;
-  margin: 0 25px;
-  padding: 16px 24px;
+  padding: 12px 8px;
   border: 1px solid var(--kal-booking-flow-color-border);
   border-radius: 16px;
   background: var(--kal-booking-flow-color-white);
   box-sizing: border-box;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-therapy-next-steps {
-    width: 640px;
-    margin-left: auto;
-    margin-right: auto;
-  }
 }
 
 /* This card's own connector reads taller/thinner (29px, 1.5px stroke)
@@ -5891,69 +6036,71 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   background: #1f4a3d;
 }
 
-@media screen and (min-width: 750px) {
-  /* Capped and centered, not stretched edge to edge across the full
-     802px dialog — same treatment as Booking Confirmed's own
-     .kal-before-visit card at this width. */
-  .kal-therapy-next-steps {
-    min-height: 134px;
-  }
+/* At every width now, not just 750px+ — explicit instruction to make
+   mobile match this same horizontal layout instead of the stacked
+   vertical list it used to fall back to. Still scoped to
+   .kal-therapy-next-steps specifically (not the bare
+   .kal-concern-select__stepper* classes), so Concern Select's own
+   "Your Progress" list (always in its narrow 300px left column) keeps
+   its vertical layout untouched at every width. */
+.kal-therapy-next-steps {
+  /* Capped, not the mobile-only 224px this used to need for the
+     stacked vertical list — this compact horizontal row needs far less
+     height at any width now. */
+  min-height: 134px;
+}
 
-  /* Desktop-only: the 3 steps run left to right with a horizontal
-     connector through the circles, instead of mobile's stacked vertical
-     list — scoped to this card so Concern Select's own "Your Progress"
-     (always in its narrow 300px left column, never full-width) keeps its
-     vertical layout untouched. */
-  .kal-therapy-next-steps .kal-concern-select__stepper {
-    flex-direction: row;
-    align-items: flex-start;
-  }
+/* The 3 steps run left to right with a horizontal connector through
+   the circles. */
+.kal-therapy-next-steps .kal-concern-select__stepper {
+  flex-direction: row;
+  align-items: flex-start;
+}
 
-  .kal-therapy-next-steps .kal-concern-select__stepper-step {
-    position: relative;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+.kal-therapy-next-steps .kal-concern-select__stepper-step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-  .kal-therapy-next-steps .kal-concern-select__stepper-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-  }
+.kal-therapy-next-steps .kal-concern-select__stepper-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
 
-  .kal-therapy-next-steps .kal-concern-select__stepper-text {
-    align-items: center;
-    text-align: center;
-  }
+.kal-therapy-next-steps .kal-concern-select__stepper-text {
+  align-items: center;
+  text-align: center;
+}
 
-  /* Runs from this step's circle center to the next step's circle
-     center (left:50% + width:100% of this flex:1 item spans exactly one
-     item-width to the right) instead of a short line below the row —
-     top offset centers it on the 28px circle. Sits behind the circles
-     (z-index) rather than needing to stop/start around them. */
-  .kal-therapy-next-steps .kal-concern-select__stepper-divider {
-    position: absolute;
-    top: 14px;
-    left: 50%;
-    width: 100%;
-    height: 1.5px;
-    margin: 0;
-    z-index: 0;
-  }
+/* Runs from this step's circle center to the next step's circle
+   center (left:50% + width:100% of this flex:1 item spans exactly one
+   item-width to the right) instead of a short line below the row —
+   top offset centers it on the 28px circle. Sits behind the circles
+   (z-index) rather than needing to stop/start around them. */
+.kal-therapy-next-steps .kal-concern-select__stepper-divider {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 100%;
+  height: 1.5px;
+  margin: 0;
+  z-index: 0;
+}
 
-  .kal-therapy-next-steps .kal-concern-select__stepper-number {
-    position: relative;
-    z-index: 1;
-  }
+.kal-therapy-next-steps .kal-concern-select__stepper-number {
+  position: relative;
+  z-index: 1;
+}
 
-  /* The connector leaving a completed step reads dark green (matching
-     that step's own filled circle), not the shared component's neutral
-     grey default. */
-  .kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-divider {
-    background: #1f4a3d;
-  }
+/* The connector leaving a completed step reads dark green (matching
+   that step's own filled circle), not the shared component's neutral
+   grey default. */
+.kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-divider {
+  background: #1f4a3d;
 }
 
 .kal-therapy-next-steps__label {
@@ -5961,7 +6108,10 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-weight: var(--kal-booking-flow-font-weight-black);
   letter-spacing: 0;
   text-transform: uppercase;
-  color: var(--kal-booking-flow-color-text-muted);
+  /* #6e6e6e per this card's own export, not the shared
+     --kal-booking-flow-color-text-muted (#646464) other labels use —
+     close, but a genuine one-off here. */
+  color: #6e6e6e;
   margin: 0 0 12px;
 }
 
@@ -6025,21 +6175,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 /* Visit details card (node 539:2222) — this is the exact same
    .kal-confirmation-appointment-card the Confirmation step's own card
-   uses (photo/eyebrow/name header + icon+label rows). Own scoped
-   side-inset/max-width, matching .kal-therapy-next-steps and
-   .kal-therapy-confirmed-actions — it's a flex sibling of
-   .kal-step-therapy-confirmed__summary inside .kal-step-shell__scroll,
-   not nested inside a shared "cards" wrapper, so no top margin either:
-   that scroll container's own 24px gap already spaces it from the
-   summary block above. */
+   uses (photo/eyebrow/name header + icon+label rows), just given its own
+   top margin here since it sits right below "What happens next" inside
+   .kal-step-therapy-confirmed__cards (which has no gap of its own — see
+   this step's own liquid comment on why it's plain block-flow, not a
+   flex column). Side inset/max-width now lives once on that wrapper
+   instead of being duplicated here. */
 .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-  margin: 0 25px;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-    width: 640px;
-    margin-left: auto;
-    margin-right: auto;
-  }
+  margin: 16px 0 0;
 }
