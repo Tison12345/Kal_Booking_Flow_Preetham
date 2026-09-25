@@ -197,6 +197,12 @@
       {%- endcomment -%}
       <div class="kal-payment-section">
         <p class="kal-payment-section__label">Payment Method</p>
+        {%- comment -%}
+          Video Consult only — explains why there's no Pay at clinic
+          choice here (online visits have no front desk to pay at), same
+          data-kal-mode-online-only toggle as the fee card below.
+        {%- endcomment -%}
+        <p class="kal-payment-section__description" data-kal-mode-online-only hidden>Online payment required for video consultation</p>
         <div class="kal-payment-options" data-kal-mode-offline-only>
           <button type="button" class="kal-payment-option kal-payment-option--selected" data-kal-payment-method="pay-now">
             <span class="kal-payment-option__badge">Save 10%</span>
@@ -266,7 +272,7 @@
         just the amount.
       {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        <span data-kal-confirm-payment-label>Pay&nbsp;&#8377;450</span>
+        <span data-kal-confirm-payment-label>Proceed to Payment</span>
       </button>
     </div>
 
@@ -292,7 +298,7 @@
         <span>Back</span>
       </button>
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        <span data-kal-confirm-payment-label>Pay&nbsp;&#8377;450</span>
+        <span data-kal-confirm-payment-label>Proceed to Payment</span>
       </button>
     </div>
   </div>

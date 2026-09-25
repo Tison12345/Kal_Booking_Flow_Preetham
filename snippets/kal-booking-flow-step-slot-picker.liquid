@@ -93,7 +93,7 @@
       fixed — explicit instruction to treat this step differently).
     {%- endcomment -%}
     <div class="kal-step-doctor-select__intro">
-      <h2 class="kal-step-doctor-select__heading">Choose appointment date and time</h2>
+      <h2 class="kal-step-doctor-select__heading">Choose a date and time</h2>
     </div>
 
     <div class="kal-step-shell__scroll">
@@ -141,15 +141,15 @@
         <div class="kal-slot-tabs__bar">
           <button type="button" class="kal-slot-tab kal-slot-tab--active" data-kal-slot-tab="morning">
             {%- render 'kal-booking-icons', icon_name: 'period-morning' -%}
-            MORNING
+            <span class="kal-slot-tab__label">MORNING</span>
           </button>
           <button type="button" class="kal-slot-tab" data-kal-slot-tab="afternoon">
             {%- render 'kal-booking-icons', icon_name: 'period-afternoon' -%}
-            AFTERNOON
+            <span class="kal-slot-tab__label">AFTERNOON</span>
           </button>
           <button type="button" class="kal-slot-tab" data-kal-slot-tab="evening">
             {%- render 'kal-booking-icons', icon_name: 'period-evening' -%}
-            EVENING
+            <span class="kal-slot-tab__label">EVENING</span>
           </button>
         </div>
 

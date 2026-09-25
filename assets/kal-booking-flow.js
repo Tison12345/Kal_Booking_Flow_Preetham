@@ -1379,14 +1379,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ----------------------------------------------------------------------
 
   const setPaymentMethod = (method) => {
-    let selectedPriceText = '';
     flow.querySelectorAll('[data-kal-payment-method]').forEach((btn) => {
-      const isSelected = btn.dataset.kalPaymentMethod === method;
-      btn.classList.toggle('kal-payment-option--selected', isSelected);
-      if (isSelected) {
-        const priceEl = btn.querySelector('.kal-payment-option__price');
-        selectedPriceText = priceEl ? priceEl.textContent : '';
-      }
+      btn.classList.toggle('kal-payment-option--selected', btn.dataset.kalPaymentMethod === method);
     });
 
     // Booking Confirmed's own "Payment" row (data-kal-confirm-payment)
@@ -1397,14 +1391,13 @@ document.addEventListener('DOMContentLoaded', () => {
       el.textContent = method === 'pay-at-clinic' ? 'Pay at clinic' : 'Online payment';
     });
 
-    // Confirm button's own label (mobile + desktop instances) — "Pay ₹X"
-    // for Pay now (reading the price straight off the selected card
-    // rather than duplicating the mock ₹450/₹495 values in JS), but just
-    // "Continue" for Pay at clinic, since no amount is actually being
-    // collected right now for that option and showing a price there
-    // read as if payment was happening immediately.
+    // Confirm button's own label (mobile + desktop instances) — "Proceed
+    // to Payment" for Pay now, "Continue" for Pay at clinic, since no
+    // amount is actually being collected right now for that option and
+    // showing a price there read as if payment was happening
+    // immediately.
     flow.querySelectorAll('[data-kal-confirm-payment-label]').forEach((el) => {
-      el.textContent = method === 'pay-at-clinic' ? 'Continue' : `Pay ${selectedPriceText}`;
+      el.textContent = method === 'pay-at-clinic' ? 'Continue' : 'Proceed to Payment';
     });
   };
 
