@@ -4757,14 +4757,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   gap: var(--kal-booking-flow-space-inset-sm);
 }
 
-/* Full-width single column at every width — per a later export, this
-   screen is NOT the two-column info+panel layout every other
-   consolidated step uses at 750px+ (SHARED STEP SHELL). There's nothing
-   left to navigate back to once booking is done, so there's no need for
-   a left info column here at all; the success content just gets wider,
-   same as mobile, instead of splitting into two columns. Overrides the
-   shared .kal-step-shell grid/.kal-step-shell__info rules specifically
-   for this step. */
+/* Full-width single column on desktop for Video Consult — this screen
+   isn't the two-column info+panel layout every other consolidated step
+   uses at 750px+ (SHARED STEP SHELL), since there's nothing left to
+   navigate back to once booking is done. In-Clinic is the one
+   exception (node "Frame 3940") — it gets a genuine two-column layout
+   with its own left info column instead, switched on below via :has(),
+   once .kal-step-booking-confirmed__info isn't [hidden] (In-Clinic). */
 @media screen and (min-width: 750px) {
   .kal-step-booking-confirmed.kal-step-shell {
     display: block;
@@ -4782,6 +4781,94 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   .kal-step-booking-confirmed .kal-step-shell__footer {
     display: none;
   }
+
+  /* In-Clinic override — switches this step's desktop layout from the
+     single-column block above to a real two-column grid (left info
+     column + right panel), same 300px-left-column mechanic
+     .kal-step-shell--progress-panel uses elsewhere, once the new left
+     info column isn't hidden (i.e. In-Clinic mode — see that element's
+     own data-kal-mode-offline-only). :has() naturally outranks the
+     plain display:block rule above at equal class count (an extra
+     pseudo-class raises specificity), so this doesn't need !important
+     or source-order tricks to win. */
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+  }
+
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-shell__info {
+    display: flex;
+  }
+
+  /* The right panel needs its own 36px side inset in this two-column
+     layout (node "Frame 3940": 500px right column, 36px padding each
+     side = 428px content) — the single-column Video Consult layout
+     zeroes this out instead (further down this section) so its hero/
+     card can run edge to edge across the full 802px dialog. */
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-shell__panel {
+    padding: 0 36px;
+  }
+
+  /* Card/before-visit fill this narrower 428px right column directly —
+     the shared 608px cap (further down this file) is for the
+     single-column Video Consult layout's much wider panel instead. */
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-confirmation-appointment-card,
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-before-visit {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* Vertically centers the card + "Before your visit" as a group in the
+     right column's available height, now that the hero (which used to
+     anchor content to the top) is hidden here — without this they'd sit
+     flush at the top with a large gap of empty space below instead. */
+  .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-shell__scroll {
+    justify-content: center;
+  }
+}
+
+/* This step's left info column (In-Clinic desktop only, see above) —
+   background/rounded-corner treatment matching
+   .kal-step-shell--progress-panel's own left column elsewhere, reused
+   here rather than duplicated with different values. */
+.kal-step-booking-confirmed__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: rgba(246, 241, 232, 0.11);
+  border-radius: 16px 0 0 16px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Without this, the display:flex above (an author rule) overrides the
+   browser's own [hidden] { display: none } default regardless of the
+   attribute — same class of bug as .kal-confirmation-appointment-card[hidden]
+   elsewhere in this file. Needed since this column is toggled purely
+   via the mode-based data-kal-mode-offline-only JS hook. */
+.kal-step-booking-confirmed__info[hidden] {
+  display: none;
+}
+
+/* Mint-tinted content block (icon/heading/subtext), centered and
+   filling the column's available height above the help line. */
+.kal-step-booking-confirmed__info-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  gap: 8px;
+  padding: 84px 24px;
+  background: #ebf2ef;
+  box-sizing: border-box;
+}
+
+.kal-step-booking-confirmed__info-content .kal-step-doctor-select__heading,
+.kal-step-booking-confirmed__info-content .kal-step-doctor-select__subtext {
+  text-align: center;
 }
 
 /* Plain block-flow wrapper (no display:flex) around the hero band + its
@@ -4826,6 +4913,27 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   margin-bottom: -24px;
   background: #eef3f0;
   box-sizing: border-box;
+}
+
+/* Without this, the display:flex above (an author rule) overrides the
+   browser's own [hidden] { display: none } default regardless of the
+   attribute being set, same class of bug as elsewhere in this file —
+   needed now that this hero is toggled via the mode-based
+   data-kal-mode-online-only JS hook. */
+.kal-step-booking-confirmed__hero[hidden] {
+  display: none;
+}
+
+/* Forces this visible on mobile regardless of the [hidden] state above
+   — mobile has no left info column to show this content in instead
+   (that's desktop-only, In-Clinic; see .kal-step-booking-confirmed__info),
+   so both modes keep this hero on mobile, same as before that attribute
+   existed. Desktop keeps the real [hidden]-to-none behavior above, so
+   In-Clinic correctly hides this once the left column takes over. */
+@media screen and (max-width: 749px) {
+  .kal-step-booking-confirmed__hero[hidden] {
+    display: flex;
+  }
 }
 
 .kal-confirmation-success-icon {
@@ -5639,10 +5747,10 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 @media screen and (min-width: 750px) {
+  /* "Shop Products"/"Get directions" removed on desktop only — mobile
+     keeps them. */
   .kal-therapy-confirmed-actions {
-    max-width: 640px;
-    margin-left: auto;
-    margin-right: auto;
+    display: none;
   }
 }
 
@@ -5758,7 +5866,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 @media screen and (min-width: 750px) {
   .kal-therapy-next-steps {
-    max-width: 640px;
+    width: 640px;
     margin-left: auto;
     margin-right: auto;
   }
@@ -5930,7 +6038,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 @media screen and (min-width: 750px) {
   .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-    max-width: 640px;
+    width: 640px;
     margin-left: auto;
     margin-right: auto;
   }

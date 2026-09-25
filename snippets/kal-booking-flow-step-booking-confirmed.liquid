@@ -106,18 +106,39 @@
 
 <div class="kal-step-booking-confirmed kal-step-shell">
 
-  <div class="kal-step-entry__info kal-step-shell__info">
-    <div class="kal-step-entry__info-content">
-      <h2 class="kal-step-entry__heading">You&rsquo;re all set</h2>
-      <p class="kal-step-entry__body-text">Check the details before we hold it for you.</p>
+  {%- comment -%}
+    In-Clinic desktop only (node "Frame 3940") — repurposes this step's
+    own left info column (previously dead markup: .kal-step-shell__info
+    is display:none at every width by the rule further down, so this
+    "You're all set"/location content never actually rendered). Video
+    Consult desktop stays the existing single-column layout untouched —
+    data-kal-mode-offline-only + kal-booking-flow.css's :has() rules
+    below only switch to this two-column grid when this element isn't
+    hidden. Reuses .kal-confirmation-success-icon/.kal-step-doctor-select__heading/
+    __subtext (same as .kal-step-booking-confirmed__hero, which this
+    REPLACES on desktop for In-Clinic — see that hero's own
+    data-kal-mode-online-only — the success icon/heading/subtext live
+    here instead, not on the right, per the export) and
+    .kal-step-entry__help (the same "Need assistance?" line every other
+    step's desktop footer uses).
+  {%- endcomment -%}
+  <div class="kal-step-entry__info kal-step-shell__info kal-step-booking-confirmed__info" data-kal-mode-offline-only>
+    <div class="kal-step-booking-confirmed__info-content">
+      <div class="kal-confirmation-success-icon">
+        <span class="kal-confirmation-success-icon__inner">
+          {%- render 'kal-booking-icons', icon_name: 'check' -%}
+        </span>
+      </div>
+      <div class="kal-step-booking-confirmed__intro">
+        <h2 class="kal-step-doctor-select__heading">Appointment confirmed</h2>
+        <p class="kal-step-doctor-select__subtext">A confirmation is sent to your WhatsApp number.</p>
+      </div>
     </div>
-    <div class="kal-step-entry__location">
-      <span class="kal-icon kal-icon--location">
-        <!-- ICON: location-pin (not received yet) -->
+    <div class="kal-step-entry__help">
+      <span class="kal-icon kal-icon--help">
+        {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
       </span>
-      <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar
-      </span>
+      <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
     </div>
   </div>
 
@@ -147,8 +168,16 @@
           it (mb-[-24px] in the export), so the band's bottom edge tucks
           under the card's rounded top corners instead of stopping flush
           above it.
+
+          data-kal-mode-online-only: on desktop, In-Clinic shows this
+          same success icon/heading/subtext content in the new left info
+          column instead (.kal-step-booking-confirmed__info above), so
+          this copy is hidden there to avoid showing it twice — kept
+          visible on mobile at every mode via the [hidden] override in
+          kal-booking-flow.css (mobile has no left column to move it
+          into).
         {%- endcomment -%}
-        <div class="kal-step-booking-confirmed__hero">
+        <div class="kal-step-booking-confirmed__hero" data-kal-mode-online-only>
           <div class="kal-confirmation-success-icon">
             <span class="kal-confirmation-success-icon__inner">
               {%- render 'kal-booking-icons', icon_name: 'check' -%}
