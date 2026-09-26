@@ -327,7 +327,7 @@
    from Frame 3 in the Figma spec, between the label+cards block and
    whatever follows it. */
 .kal-step-entry__mobile .kal-step-entry__label {
-  margin-top: 40px;
+  margin-top: 80px;
 }
 
 /* margin-top:auto (not the 40px used above) pins this to the bottom of
@@ -471,15 +471,20 @@
 .kal-step-entry__heading--overlay {
   position: absolute;
   left: 0;
-  right: 0;
   bottom: 0;
   z-index: 1;
+  /* 252px per the Figma spec, not full banner width (was left:0;right:0)
+     — the <br> already forces the two-line break, but the box itself
+     should still be the design's own narrower width, not stretch edge to
+     edge. */
+  width: 252px;
   font-size: 28px;
   line-height: 36px;
   font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-white);
   margin: 0;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .kal-step-entry__body-text {
@@ -1066,7 +1071,9 @@
    beats that single-class rule's specificity, so no !important needed. */
 .kal-concern-select__info-pill .kal-step-header__location-badge {
   display: flex;
+  height: 40px;
   padding: 8px 12px;
+  box-sizing: border-box;
 }
 
 .kal-concern-select__info-divider {
@@ -1290,6 +1297,30 @@
     padding-left: 8px;
   }
 
+  /* margin-top:0 cancels the base rule's -8px trim (which brings the
+     shared 16px panel gap down to 8px, mobile's own spec) — desktop
+     wants the full untrimmed 16px between the heading and the banner
+     instead. */
+  .kal-step-concern-select .kal-concern-select__banner {
+    margin-top: 0;
+  }
+
+  /* margin-top:8px grows the shared panel gap (16px, between every
+     child) up to 24px specifically between the banner and the scroll
+     region below it. Scrollbar hidden too — overflow-y:auto (base rule)
+     still lets this region scroll if content overflows, just without the
+     visible track/thumb. Both desktop only; mobile keeps the shared
+     16px gap (trimmed to 8px above the banner, per that rule) and thin
+     scrollbar (see SHARED STEP SHELL). */
+  .kal-step-concern-select .kal-step-shell__scroll {
+    margin-top: 8px;
+    scrollbar-width: none;
+  }
+
+  .kal-step-concern-select .kal-step-shell__scroll::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Every other progress-panel step's own equivalents of the same
      zeroing above — .kal-step-doctor-select__intro (shared across
      Doctor Select, Slot Picker AND Patient Details), Doctor Select's own
@@ -1497,11 +1528,11 @@
     flex: none;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     width: auto;
     min-width: 93px;
-    height: 44px;
-    padding: 12px 16px;
+    height: 40px;
+    padding: 13px;
     border: 1px solid var(--kal-booking-flow-color-border-faint);
     border-radius: 8px;
     background: var(--kal-booking-flow-color-white);
@@ -1528,7 +1559,7 @@
   .kal-step-shell--progress-panel .kal-step-doctor-select__continue {
     flex: none;
     width: auto;
-    min-width: 185px;
+    min-width: 184.64px;
     height: 44px;
     padding: 12px 24px;
     border: 1px solid var(--kal-booking-flow-color-primary-dark);
@@ -1580,9 +1611,16 @@
 }
 
 /* 16px top padding, not the shared class's 0 — same as every other
-   consolidated step's footer. */
-.kal-step-concern-select .kal-step-shell__footer {
-  padding-top: 16px;
+   consolidated step's footer. Mobile only — unscoped, this was also
+   winning the cascade tie against .kal-step-shell--progress-panel's own
+   desktop footer rule (12px top padding), making this step's desktop
+   footer 4px taller than Entry's and every other step whose own override
+   was already scoped correctly, so the footer height drifted instead of
+   staying a uniform 69px across steps. */
+@media screen and (max-width: 749px) {
+  .kal-step-concern-select .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 /* margin-top:-16px cancels the shared .kal-step-shell__panel gap (16px)
@@ -1652,8 +1690,9 @@
   min-width: 0;
   /* Without this, the badge's height was purely content-driven (icon +
      padding + border ~30px) — shorter than the back/close buttons' 32px,
-     so the three elements in this row didn't actually line up. */
-  min-height: 32px;
+     so the three elements in this row didn't actually line up. 34px per
+     the Figma spec (was 32px). */
+  min-height: 34px;
   gap: 4px;
   padding: 4px 8px;
   border: 1px solid var(--kal-booking-flow-color-border-subtle);
@@ -2323,9 +2362,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 /* 16px top padding, not the shared class's 0 — same as every other
-   consolidated step's footer (Confirmation, Slot Picker, Therapy Slot). */
-.kal-step-doctor-select .kal-step-shell__footer {
-  padding-top: 16px;
+   consolidated step's footer (Confirmation, Slot Picker, Therapy Slot).
+   Mobile only — see Concern Select's own identical comment above for why
+   this must be scoped instead of winning the cascade at desktop too. */
+@media screen and (max-width: 749px) {
+  .kal-step-doctor-select .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 /* margin-top:-16px cancels the shared .kal-step-shell__panel gap (16px)
@@ -2646,6 +2689,28 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   color: var(--kal-booking-flow-color-heading);
 }
 
+/* Wraps the degree + experience rows so they sit side by side on one
+   line (languages stays on its own line below, as its own plain
+   .kal-doctor-card__meta-row sibling) — matches the Figma spec's
+   "BAMS   12 Yrs Experience" grouping. */
+.kal-doctor-card__meta-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Degree + experience side by side only at desktop — mobile keeps them
+   stacked one per line (each its own .kal-doctor-card__meta-row), same
+   as languages below. */
+@media screen and (min-width: 750px) {
+  .kal-doctor-card__meta-line {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+}
+
 .kal-doctor-card__meta-row {
   display: flex;
   align-items: center;
@@ -2735,6 +2800,46 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   line-height: 25px;
   font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
+}
+
+/* Desktop-only doctor card layout: photo beside the name/meta/tags column
+   instead of photo+meta on top and tags stacked full-width below it. Uses
+   display:contents on .kal-doctor-card__body to unwrap it so its two
+   children (photo, info) become direct grid items of .kal-doctor-card__top
+   alongside .kal-doctor-card__tags — lets the 120px photo span both rows
+   (grid-row:1/3) and stretch the full height of info+tags together,
+   without touching the markup or the mobile layout (that stays the
+   existing flex column: body row on top, tags full-width below). 120px
+   photo width per the desktop Figma spec (mobile keeps its own 76px). */
+@media screen and (min-width: 750px) {
+  .kal-doctor-card__top {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    column-gap: 12px;
+    row-gap: 8px;
+    padding: 12px;
+  }
+
+  .kal-doctor-card__body {
+    display: contents;
+  }
+
+  .kal-doctor-card__photo {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    width: 120px;
+  }
+
+  .kal-doctor-card__info {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .kal-doctor-card__tags {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 0;
+  }
 }
 
 /* Footer: just the Continue button now — price moved into the doctor
@@ -2874,9 +2979,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    auto margin and space-between distribute the same leftover space). */
 .kal-step-slot-picker .kal-step-shell__footer {
   margin-top: auto;
-  /* 16px top padding, not the shared class's 0 — same as Patient
-     Details' own footer (Figma: 16px 24px 24px on this step too). */
-  padding-top: 16px;
+}
+
+/* 16px top padding, not the shared class's 0 — same as Patient Details'
+   own footer (Figma: 16px 24px 24px on this step too). Mobile only — see
+   Concern Select's own identical comment above for why this must be
+   scoped instead of winning the cascade at desktop too. */
+@media screen and (max-width: 749px) {
+  .kal-step-slot-picker .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 /* Now a real internal scroll region at every width, not just desktop —
@@ -3055,6 +3167,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+
+/* margin-bottom:0 cancels the 10px above, netting the parent
+   .kal-slot-section's own 8px flex gap alone between this head row and
+   the day strip below it — 18px (8 + 10) otherwise. Desktop only; mobile
+   keeps the 18px total. */
+@media screen and (min-width: 750px) {
+  .kal-step-slot-picker .kal-slot-section__head {
+    margin-bottom: 0;
+  }
 }
 
 .kal-slot-section__label {
@@ -3319,7 +3441,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-slot-tabs__bar {
   display: flex;
-  gap: 8px;
+  gap: 16px;
   border-bottom: 1px solid var(--kal-booking-flow-color-border-faint);
 }
 
@@ -3469,9 +3591,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 /* margin-top:8px adds to .kal-step-shell__panel's shared 16px gap
    above, bringing the heading-to-appointment-card gap to 24px
    specifically — the panel's other gaps stay at the shared 16px,
-   untouched. */
+   untouched. Mobile only; desktop wants the untrimmed 16px instead (see
+   override below). */
 .kal-step-patient-details .kal-appointment-card {
   margin-top: 8px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-patient-details .kal-appointment-card {
+    margin-top: 0;
+  }
 }
 
 /* Same 8px addition, targeting only the second .kal-step-doctor-select__intro
@@ -3495,9 +3624,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    margin would. */
 .kal-step-patient-details .kal-step-shell__footer {
   margin-top: auto;
-  /* 16px top padding, not the shared class's 0 — Figma has this step's
-     footer as 16px 24px 24px, distinct from every other step's footer. */
-  padding-top: 16px;
+}
+
+/* 16px top padding, not the shared class's 0 — Figma has this step's
+   footer as 16px 24px 24px, distinct from every other step's footer.
+   Mobile only — see Concern Select's own identical comment above for why
+   this must be scoped instead of winning the cascade at desktop too. */
+@media screen and (max-width: 749px) {
+  .kal-step-patient-details .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 .kal-form {
@@ -3903,9 +4039,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 /* 16px top padding, not the shared class's 0 — Figma has this step's
-   footer as 16px top, distinct from every other step's footer. */
-.kal-step-confirmation .kal-step-shell__footer {
-  padding-top: 16px;
+   footer as 16px top, distinct from every other step's footer. Mobile
+   only — see Concern Select's own identical comment above for why this
+   must be scoped instead of winning the cascade at desktop too. */
+@media screen and (max-width: 749px) {
+  .kal-step-confirmation .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 /* margin-top:-16px cancels the shared .kal-step-shell__panel gap (16px)
@@ -3963,12 +4103,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
     gap: var(--kal-booking-flow-space-inset);
   }
 
-  /* margin-top:-8px trims the scroll's 24px gap above down to 16px
+  /* margin-top:-9px trims the scroll's 24px gap above down to 16px
      specifically between "Review your appointment details" and the
      card below it, now that its subtext is hidden here — desktop only,
-     mobile keeps the shared 24px gap (and its subtext). */
+     mobile keeps the shared 24px gap (and its subtext). (Was -8px,
+     which measured 17px in practice.) */
   .kal-step-confirmation .kal-confirmation-appointment-card {
-    margin-top: -8px;
+    margin-top: -9px;
   }
 }
 
@@ -4123,7 +4264,9 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      that, and a forced min-height just left extra blank space below the
      "Patient" row instead of the card hugging its own content. */
   box-sizing: border-box;
-  padding-bottom: 8px;
+  /* 7px, not 8px — was rendering 1px taller than the design across every
+     usage of this card. */
+  padding-bottom: 7px;
   border: 1px solid var(--kal-booking-flow-color-border);
   border-radius: 12px;
   background: var(--kal-booking-flow-color-white);
@@ -4246,6 +4389,15 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   margin: 0 24px;
 }
 
+/* 269px per the Figma export's mobile measurement — mobile only, since
+   no equivalent height spec has been given for either desktop layout
+   (Video Consult's 608px-wide copy or In-Clinic's 428px one) yet. */
+@media screen and (max-width: 749px) {
+  .kal-step-booking-confirmed .kal-confirmation-appointment-card {
+    min-height: 269px;
+  }
+}
+
 @media screen and (min-width: 750px) {
   .kal-step-booking-confirmed .kal-confirmation-appointment-card {
     width: 608px;
@@ -4263,6 +4415,9 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-direction: column;
   gap: 12px;
   box-sizing: border-box;
+  /* 133px per the Figma export's own "Hug" measurement — same value at
+     mobile and desktop, so one unscoped rule covers both. */
+  min-height: 133px;
   margin: 0 24px;
   padding: 12px 16px;
   border: 1px solid var(--kal-booking-flow-color-divider);
@@ -4434,13 +4589,24 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    down to 8px specifically between the "Payment Method" label and this
    row (In-Clinic mode, where the online-only description is hidden and
    doesn't sit between them) — the section's other gap (to the fee card
-   in Video Consult mode) stays at the shared 16px, untouched. */
+   in Video Consult mode) stays at the shared 16px, untouched. Desktop
+   default; mobile overrides this below. */
 .kal-payment-options {
   display: flex;
   flex-direction: row;
   gap: 24px;
   width: 100%;
   margin-top: -8px;
+}
+
+/* margin-top:16px grows the label-to-row gap to 32px on mobile
+   specifically (16px shared gap + 16px), per the Figma spec — was -8px
+   (8px net) unscoped before, which is now desktop-only (left untouched
+   above) since this step's own instruction is mobile-only. */
+@media screen and (max-width: 749px) {
+  .kal-payment-options {
+    margin-top: 16px;
+  }
 }
 
 /* Without this, this rule's own display:flex above overrides the
@@ -4872,12 +5038,18 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
     grid-column: 1;
     grid-row: 1;
     height: 100%;
+    min-height: 0;
     /* Top-anchored (84px padding-top), not centered — node "Frame
        3940"'s own spec only measures a top offset here (84px), with the
        content's own natural height ("200 Hug") below it, not a
        symmetric top/bottom pair. Any leftover row height (this row is
        1fr, so usually taller than the content) just sits below the
-       content as blank space instead of being split above/below it. */
+       content as blank space instead of being split above/below it.
+       justify-content reset to flex-start — the base rule's own
+       justify-content:center (for the single-column 275px hero) would
+       otherwise re-center this content vertically within the full-height
+       column instead of pinning it to the top. */
+    justify-content: flex-start;
     padding: 84px 24px 0;
     /* No overlap here — that trick (below, in the base rule) is for the
        single-column layouts where hero sits directly above the card;
@@ -4925,13 +5097,18 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
     margin-right: 0;
   }
 
-  /* Vertically centers the card + "Before your visit" as a group in the
-     right column's available height, since the hero (which used to
-     anchor content to the top in the single-column layout) is now in
-     the left column instead — without this they'd sit flush at the top
-     with a large gap of empty space below instead. */
+  /* Top-anchored per the Figma export (node "Frame 3940"/3941): 80px
+     from the panel's top edge to the appointment card, and 36px between
+     the appointment card and the "Before your visit" card below it —
+     not vertically centered as a group (that left the cards drifting to
+     a different position depending on content height instead of this
+     fixed offset). Scoped to In-Clinic only; Video Consult's own
+     single-column scroll keeps its shared 24px gap and top-anchored
+     flow untouched. */
   .kal-step-booking-confirmed.kal-step-shell:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-shell__scroll {
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 80px;
+    gap: 36px;
   }
 }
 
@@ -4959,30 +5136,6 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      Removed here so this row matches the hero row above it: no divider
      on either. */
   border-right: none;
-}
-
-/* Same total height as the previous step's (Confirmation) shared
-   desktop footer bar — 12px top/bottom + the 20px icon (the row's
-   tallest child) = 44px, not .kal-step-entry__help's own default 24px
-   top/bottom (68px total), which read taller than every other step's
-   footer right before this one. Side padding also trimmed from the
-   shared 16px to 10px — unlike every other step, this line lives inside
-   the narrow 300px left column itself (not a full-width bottom bar
-   spanning both columns), so at the shared class's own padding/font-size
-   "Need assistance? Call us at +91 804012 3456" wrapped onto 2 lines
-   here specifically. The extra 12px this buys back, plus the smaller
-   font-size on .kal-step-entry__help-text below, is what keeps it on one
-   line like every other step's copy of this same text. */
-.kal-step-booking-confirmed__info .kal-step-entry__help {
-  padding-top: 12px;
-  padding-bottom: 12px;
-  padding-left: 10px;
-  padding-right: 10px;
-}
-
-.kal-step-booking-confirmed__info .kal-step-entry__help-text {
-  font-size: 11px;
-  white-space: nowrap;
 }
 
 /* Without this, an author display rule would override the browser's
@@ -5026,7 +5179,11 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  /* 275px per the Figma spec — without it, the band's height is purely
+     content-driven (icon + text + padding), which only reached ~220px. */
+  min-height: 275px;
   /* flex-shrink:0 — this is now a flex item of .kal-step-booking-confirmed
      itself (a flex column, see that rule's comment), and the default
      flex-shrink:1 would let it get squeezed below its natural height
@@ -5042,26 +5199,29 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      actually nets the requested 16px gap on top of that (40 - 24 = 16),
      without touching the overlap itself. */
   padding: 32px 24px 40px;
-  margin-bottom: -24px;
+  margin-bottom: -48px;
   background: #eef3f0;
   box-sizing: border-box;
 }
 
-/* No tint on mobile for In-Clinic — reuses the same
-   data-kal-mode-offline-only [hidden] state
-   .kal-step-booking-confirmed__info already tracks for the desktop
-   two-column switch (JS toggles it by mode regardless of viewport, even
-   though that element itself only ever displays at desktop), via
-   :has() rather than a second JS-driven attribute on the hero itself.
-   Desktop is untouched here — In-Clinic desktop already hides this
-   hero entirely (the left column's own tint takes over instead), so
-   this only ever matters on mobile, where hero stays the visible copy
-   for both modes. Video Consult mobile keeps the #eef3f0 tint above. */
+/* No tint on mobile, for either mode — per explicit instruction, mobile
+   never shows the hero band's background at all (a plain white intro:
+   icon, heading, subtext, straight into the card below), only desktop
+   keeps the tint (mint #eef3f0 for Video Consult, or the left column's
+   own tint for In-Clinic). Was scoped to In-Clinic only via a :has()
+   check on .kal-step-booking-confirmed__info; removed so Video Consult's
+   mobile hero loses its tint too, matching the same rule. */
 @media screen and (max-width: 749px) {
-  .kal-step-booking-confirmed:has(.kal-step-booking-confirmed__info:not([hidden])) .kal-step-booking-confirmed__hero {
+  .kal-step-booking-confirmed__hero {
     background: none;
   }
 }
+
+/* Desktop-only Video Consult fix: -36px, not -48px, adding 12px to the
+   visible gap between the subtext and the appointment card below (was
+   measuring 21px, should be 33px). Lower specificity than In-Clinic's
+   own desktop :has() override further up (which sets margin-bottom:0),
+   so that layout is unaffected regardless of source order. */
 
 .kal-confirmation-success-icon {
   align-self: center;
@@ -5102,6 +5262,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* 4px, not the shared 8px, at desktop — per the Figma spec, for both
+   Video Consult's single-column hero and In-Clinic's left-column copy
+   (same intro markup, so one rule covers both instead of two identical
+   :has()-scoped copies). Mobile keeps the 8px gap above. */
+@media screen and (min-width: 750px) {
+  .kal-step-booking-confirmed__intro {
+    gap: 4px;
+  }
 }
 
 .kal-step-booking-confirmed__intro .kal-step-doctor-select__heading,
@@ -5153,9 +5323,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 /* 16px top padding, not the shared class's 0 — this step's footer
    (Confirm button + optional "N selected" summary line) is 16px 24px
-   24px per Figma, distinct from the shared footer's default. */
-.kal-step-therapy-slot .kal-step-shell__footer {
-  padding-top: 16px;
+   24px per Figma, distinct from the shared footer's default. Mobile
+   only — see Concern Select's own identical comment above for why this
+   must be scoped instead of winning the cascade at desktop too. */
+@media screen and (max-width: 749px) {
+  .kal-step-therapy-slot .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 /* margin-top:-16px cancels the shared .kal-step-shell__panel gap (16px)
@@ -5686,9 +5860,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-step-therapy-details .kal-step-shell__footer {
   margin-top: auto;
-  /* 16px top padding, not the shared class's 0 — same as every other
-     consolidated step's footer. */
-  padding-top: 16px;
+}
+
+/* 16px top padding, not the shared class's 0 — same as every other
+   consolidated step's footer. Mobile only — see Concern Select's own
+   identical comment above for why this must be scoped instead of
+   winning the cascade at desktop too. */
+@media screen and (max-width: 749px) {
+  .kal-step-therapy-details .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 /* 24px between each stacked block (heading -> appointment card -> next
@@ -5984,10 +6165,10 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      where the badge used to be. .kal-step-therapy-confirmed__cards below
      shifts up by that same 26px for free, via this hero's own
      margin-bottom:-48px overlap — no separate adjustment needed there. */
-  min-height: 274px;
+  min-height: 260px;
   padding: 36px 0;
-  margin-bottom: -48px;
-  background: #fbf6ee;
+  margin-bottom: -56px;
+  background: #eef3f0;
   box-sizing: border-box;
 }
 
@@ -5996,6 +6177,17 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 @media screen and (max-width: 749px) {
   .kal-step-therapy-confirmed__hero {
     background: none;
+  }
+}
+
+/* Desktop-only spacing fixes per the Figma spec:
+   - icon-to-heading gap is 8px there, not the shared 16px above.
+   - margin-bottom trimmed from -48px to -40px, adding 8px to the visible
+     gap between the subtext and "What happens next" card below (was
+     measuring 14px, should be 22px) without touching the mobile overlap. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-confirmed__hero {
+    gap: 8px;
   }
 }
 

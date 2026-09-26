@@ -73,23 +73,25 @@
       </span>
       <span class="kal-doctor-card__info">
         <span class="kal-doctor-card__name">{{ name }}</span>
-        <span class="kal-doctor-card__meta-row">
-          <span class="kal-doctor-card__meta-icon">
-            {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
+        <span class="kal-doctor-card__meta-line">
+          <span class="kal-doctor-card__meta-row">
+            <span class="kal-doctor-card__meta-icon">
+              {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
+            </span>
+            {{ degree }}
           </span>
-          {{ degree }}
+          <span class="kal-doctor-card__meta-row">
+            <span class="kal-doctor-card__meta-icon">
+              {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
+            </span>
+            {{ experience }}
+          </span>
         </span>
         <span class="kal-doctor-card__meta-row">
           <span class="kal-doctor-card__meta-icon">
             {%- render 'kal-booking-icons', icon_name: 'doctor-language' -%}
           </span>
           {{ languages }}
-        </span>
-        <span class="kal-doctor-card__meta-row">
-          <span class="kal-doctor-card__meta-icon">
-            {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
-          </span>
-          {{ experience }}
         </span>
       </span>
     </span>

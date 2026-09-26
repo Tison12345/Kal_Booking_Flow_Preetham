@@ -192,9 +192,15 @@
           same data-kal-confirm-*/data-kal-doctor-* hooks
           renderConfirmationSummary()/applySelectedDoctorToCards() in
           kal-booking-flow.js already populate — zero JS changes needed.
-          Payment is a static "Paid online" per the export (booking is
-          already confirmed by this point, so there's no Pay now/Pay at
-          clinic distinction to reflect here).
+          Payment reads "Paid online" for Video Consult or "Pay at
+          clinic" for In-Clinic — same data-kal-mode-online-only/
+          -offline-only toggle the Mode row's own icon swap above already
+          uses (applyConsultationModeVisibility() in kal-booking-flow.js
+          is generic over any element carrying those attributes, so this
+          needed no JS changes). Was a single static "Paid online" string
+          regardless of mode, which read wrong for In-Clinic bookings
+          (nothing here is actually paid online once you can pay at the
+          clinic instead).
         {%- endcomment -%}
         <div class="kal-confirmation-appointment-card">
           <div class="kal-appointment-card kal-confirmation-appointment-card__top">
@@ -232,7 +238,10 @@
                 {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
                 Payment
               </span>
-              <span class="kal-confirmation-details__value kal-confirmation-details__value--paid">Paid online</span>
+              <span class="kal-confirmation-details__value kal-confirmation-details__value--paid">
+                <span data-kal-mode-online-only hidden>Paid online</span>
+                <span data-kal-mode-offline-only>Pay at clinic</span>
+              </span>
             </div>
           </div>
         </div>

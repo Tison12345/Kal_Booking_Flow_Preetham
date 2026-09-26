@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const openFlow = () => {
     applyStoredFacility();
+    // TEMPORARY DEBUG CHANGE: using dialog.show() instead of showModal() so the
+    // dialog isn't promoted to the browser Top Layer, letting the Screen Ruler
+    // extension measure over it. Revert to flow.showModal() when done.
     flow.showModal();
     document.body.style.overflow = 'hidden';
   };
@@ -962,8 +965,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${h}:${mStr} ${period}`;
   };
 
+  // Day name shortened to 3 letters (Fri, not Friday) — the full name
+  // pushed "Date & Time" values (e.g. "Friday 6 Aug, 10:30 AM") past the
+  // confirmation card's own width on smaller phones, forcing an ellipsis
+  // truncation instead of the value fitting on one line.
   const formatConfirmationDate = (date) =>
-    `${FULL_DAY_LABELS[date.getDay()]} ${date.getDate()} ${MONTH_LABELS[date.getMonth()].slice(0, 3)}`;
+    `${FULL_DAY_LABELS[date.getDay()].slice(0, 3)} ${date.getDate()} ${MONTH_LABELS[date.getMonth()].slice(0, 3)}`;
 
   // Switches which of the three static [data-kal-slot-panel] grids is
   // visible — Morning/Afternoon/Evening are all static markup now (see
