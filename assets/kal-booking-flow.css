@@ -6145,7 +6145,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-therapy-confirmed-actions {
   display: flex;
   gap: 16px;
-  margin: 16px 0 24px;
+  margin: 24px 0 24px;
 }
 
 @media screen and (min-width: 750px) {
@@ -6236,12 +6236,17 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      badge's own 22px height + the 4px gap that used to sit above it in
      .kal-step-therapy-confirmed__intro) now that the badge is gone, so
      this box shrinks by the same amount instead of leaving a blank gap
-     where the badge used to be. .kal-step-therapy-confirmed__cards below
-     shifts up by that same 26px for free, via this hero's own
-     margin-bottom:-48px overlap — no separate adjustment needed there. */
+     where the badge used to be. */
   min-height: 260px;
   padding: 36px 0;
-  margin-bottom: -56px;
+  /* -20px, not padding-bottom's own 36px — nets a 16px visible gap
+     between the subtext and .kal-step-therapy-confirmed__cards below
+     (36 + -20 = 16), same overlap-trick math as Booking Confirmed's own
+     hero. (Was -56px, which overlapped 20px INTO the subtext text
+     itself instead of leaving a gap below it — drifted from an earlier,
+     already-superseded -48px/-40px tuning pass whose own comment no
+     longer matched this value.) */
+  margin-bottom: -20px;
   background: #eef3f0;
   box-sizing: border-box;
 }
@@ -6254,11 +6259,10 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   }
 }
 
-/* Desktop-only spacing fixes per the Figma spec:
-   - icon-to-heading gap is 8px there, not the shared 16px above.
-   - margin-bottom trimmed from -48px to -40px, adding 8px to the visible
-     gap between the subtext and "What happens next" card below (was
-     measuring 14px, should be 22px) without touching the mobile overlap. */
+/* Desktop-only: icon-to-heading gap is 8px there, not the shared 16px
+   above (margin-bottom's own 16px subtext-to-cards gap, set on the base
+   rule above, is already the same at every width — no separate desktop
+   override needed for that). */
 @media screen and (min-width: 750px) {
   .kal-step-therapy-confirmed__hero {
     gap: 8px;
@@ -6448,5 +6452,5 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    flex column). Side inset/max-width now lives once on that wrapper
    instead of being duplicated here. */
 .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-  margin: 16px 0 0;
+  margin: 24px 0 0;
 }
