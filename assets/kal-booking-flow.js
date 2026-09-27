@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // TEMPORARY DEBUG CHANGE: using dialog.show() instead of showModal() so the
     // dialog isn't promoted to the browser Top Layer, letting the Screen Ruler
     // extension measure over it. Revert to flow.showModal() when done.
-    flow.showModal();
+    flow.show();
     document.body.style.overflow = 'hidden';
   };
 

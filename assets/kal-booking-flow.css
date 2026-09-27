@@ -2320,6 +2320,34 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   opacity: 1;
 }
 
+/* 17x17 at desktop, not the shared 20x20 — per the Figma spec. This
+   class is shared between Concern Select's own health-concern checkboxes
+   (consultation flow) and Therapy Slot's "By concern" list (reuses this
+   exact same .kal-concern-row markup), so one rule covers both. Icon
+   scaled down to fit the smaller box (was 16px, now leaves only ~13px of
+   content area inside the 17px box once the 2px border is subtracted). */
+@media screen and (min-width: 750px) {
+  .kal-concern-row__checkbox {
+    width: 17px;
+    height: 17px;
+  }
+
+  .kal-concern-row__checkbox svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* 11.5px, not the shared 8px — the row's own right inset around the
+     checkbox specifically, per the Figma spec (top/bottom stays the same
+     8px padding; align-items:center already centers the smaller 17px
+     checkbox vertically within the row for free, no extra rule needed
+     for that). Shared between Concern Select and Therapy Slot's "By
+     concern" list, same as the checkbox size above. */
+  .kal-concern-row {
+    padding-right: 11.5px;
+  }
+}
+
 .kal-concern-select__banner {
   display: flex;
   align-items: center;
@@ -5321,6 +5349,35 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   gap: 16px;
 }
 
+/* margin-top:8px grows the shared 16px scroll gap above up to 24px
+   specifically between "Choose your therapy" and the "By therapy" label
+   right below it — the adjacent-sibling combinator only matches an
+   .kal-step-doctor-select__intro directly preceded by another one, which
+   is uniquely this pair ("By concern" further down is preceded by the
+   dropdown wrapper, not an intro, so it's untouched). Desktop only. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-slot .kal-step-doctor-select__intro + .kal-step-doctor-select__intro {
+    margin-top: 8px;
+  }
+
+  /* margin-top:-8px trims the shared 16px scroll gap down to 8px
+     specifically between "By therapy"/"By concern" and the control
+     right below each of them (the dropdown / the checkbox list). Desktop
+     only. */
+  .kal-step-therapy-slot .kal-therapy-select-wrapper,
+  .kal-step-therapy-slot .kal-concern-select__list {
+    margin-top: -8px;
+  }
+
+  /* margin-top:8px grows the shared 16px scroll gap up to 24px
+     specifically between the dropdown and the "By concern" label right
+     below it. Desktop only. */
+  .kal-step-therapy-slot .kal-therapy-select-wrapper + .kal-step-doctor-select__intro {
+    margin-top: 8px;
+  }
+
+}
+
 /* 16px top padding, not the shared class's 0 — this step's footer
    (Confirm button + optional "N selected" summary line) is 16px 24px
    24px per Figma, distinct from the shared footer's default. Mobile
@@ -5469,6 +5526,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   border: 1px solid var(--kal-booking-flow-color-border-faint);
   border-radius: 12px;
   background: var(--kal-booking-flow-color-white);
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.15);
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 140%;
@@ -5511,8 +5569,24 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   padding: 12px 16px;
   border-radius: 12px;
   background: var(--kal-booking-flow-color-white);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  /* 4px/16px, not 2px/5px — the smaller shadow was barely visible against
+     the white/cream backgrounds around this floating card, reading as no
+     shadow at all. Matches the same elevated-card shadow used elsewhere
+     in this flow (selected doctor card, day chip, etc.). */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   box-sizing: border-box;
+}
+
+/* Matches .kal-therapy-select-wrapper's own desktop width — the wrapper's
+   side padding (24px each side on mobile) is zeroed out at 750px+ above,
+   but this panel's left:24px/right:24px insets stayed unscoped, so it
+   kept floating 24px narrower than the trigger/wrapper on desktop
+   instead of spanning the same width. */
+@media screen and (min-width: 750px) {
+  .kal-therapy-dropdown {
+    left: 0;
+    right: 0;
+  }
 }
 
 /* Without this, the `display: flex` above (an author rule) overrides the
