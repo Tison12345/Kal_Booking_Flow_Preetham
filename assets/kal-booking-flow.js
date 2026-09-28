@@ -7,10 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const openFlow = () => {
     applyStoredFacility();
-    // TEMPORARY DEBUG CHANGE: using dialog.show() instead of showModal() so the
-    // dialog isn't promoted to the browser Top Layer, letting the Screen Ruler
-    // extension measure over it. Revert to flow.showModal() when done.
-    flow.show();
+    flow.showModal();
     document.body.style.overflow = 'hidden';
   };
 
