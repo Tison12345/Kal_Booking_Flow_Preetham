@@ -4465,6 +4465,17 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    comment). Same 0 24px side margin as the appointment card above it
    so both align edge to edge; the 750px+ rule below caps it at that
    card's own 608px so the two stay the same width at every size. */
+/* margin-top:8px grows the shared .kal-step-shell__scroll gap (16px on
+   mobile — see that rule) up to 24px specifically between the
+   appointment card and this checklist, without touching the scroll's
+   other gaps. Mobile only — the scroll's own gap is already 24px at
+   750px+, so no extra push is needed there. */
+@media screen and (max-width: 749px) {
+  .kal-confirmation-appointment-card + .kal-before-visit {
+    margin-top: 8px;
+  }
+}
+
 .kal-before-visit {
   display: flex;
   flex-direction: column;
@@ -4520,6 +4531,22 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    data-kal-mode-online-only JS hook. */
 .kal-step-booking-confirmed__online-actions[hidden] {
   display: none;
+}
+
+/* margin-top:8px grows the shared .kal-step-shell__scroll gap (16px on
+   mobile) up to 24px between the appointment card and this row, same
+   fix as .kal-confirmation-appointment-card + .kal-before-visit above.
+   Can't use a plain + selector targeting .kal-step-booking-confirmed__online-actions
+   directly off the card — .kal-before-visit sits between them in the DOM
+   at all times (Video Consult just has it [hidden], not removed), so
+   .kal-before-visit is the card's real adjacent sibling here. Matching
+   on .kal-before-visit[hidden] instead targets exactly the Video Consult
+   case, where this row is the one actually visible right after the
+   card. Mobile only — the scroll's own gap is already 24px at 750px+. */
+@media screen and (max-width: 749px) {
+  .kal-before-visit[hidden] + .kal-step-booking-confirmed__online-actions {
+    margin-top: 8px;
+  }
 }
 
 /* Compound selector here too (not a plain class), same reason as the
@@ -4594,6 +4621,19 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-shrink: 0;
   gap: 16px;
   width: 100%;
+}
+
+/* margin-top:8px grows the shared .kal-step-shell__scroll gap (16px on
+   mobile — see that rule) up to 24px specifically between the
+   appointment card and this section, without touching the scroll's
+   other gaps. Same rule for both modes (In-Clinic/Video Consult) since
+   .kal-payment-section is one shared element sitting directly after the
+   card in both — only its own inner content differs by mode. Mobile
+   only — the scroll's own gap is already 24px at 750px+. */
+@media screen and (max-width: 749px) {
+  .kal-confirmation-appointment-card + .kal-payment-section {
+    margin-top: 8px;
+  }
 }
 
 /* Without this, this rule's own display:flex above overrides the
