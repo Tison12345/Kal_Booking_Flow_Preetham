@@ -473,11 +473,10 @@
   left: 0;
   bottom: 0;
   z-index: 1;
-  /* 252px per the Figma spec, not full banner width (was left:0;right:0)
-     — the <br> already forces the two-line break, but the box itself
-     should still be the design's own narrower width, not stretch edge to
-     edge. */
-  width: 252px;
+  /* 351px, not full banner width (was left:0;right:0) — the <br> already
+     forces the two-line break, but the box itself should still be the
+     design's own width, not stretch edge to edge. */
+  width: 351px;
   font-size: 28px;
   line-height: 36px;
   font-weight: var(--kal-booking-flow-font-weight-medium);
@@ -2106,8 +2105,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 /* --kal-booking-flow-color-location-text (#4b4b4b), not --kal-booking-flow-color-body (#5d5d5d) —
@@ -2135,7 +2134,15 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 .kal-step-progress-bar__track {
-  width: 100%;
+  /* Same 8px side inset as .kal-step-progress-bar__labels above, so both
+     read the same width instead of the track running 16px wider edge-to-
+     edge. margin, not padding — this element's own background IS the
+     visible track fill, so padding would just paint that same
+     background into the inset instead of narrowing it. This whole
+     component is mobile-only (hidden entirely at 750px+, see below), so
+     no separate media query is needed to scope this to mobile. */
+  width: calc(100% - 16px);
+  margin: 0 8px;
   height: 3px;
   border-radius: 999px;
   background: var(--kal-booking-flow-color-track-bg);
@@ -2223,6 +2230,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   gap: 12px;
   width: 100%;
   padding: 8px;
+  /* 11.5px, not 8px, on the right specifically — the row's own inset
+     around the checkbox, per the Figma spec (top/bottom/left stay the
+     shared 8px). Applies at every width now (was desktop-only), since
+     the smaller 17x17 checkbox below is also every-width. Shared between
+     Concern Select and Therapy Slot's "By concern" list (both reuse this
+     exact .kal-concern-row markup). */
+  padding-right: 11.5px;
   border: 1px solid var(--kal-booking-flow-color-border);
   border-radius: 8px;
   background: none;
@@ -2287,22 +2301,28 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    step's own liquid/CSS section comments). Square instead of circular,
    unchecked by default; the check glyph itself is a real
    kal-booking-icons SVG (not a CSS-drawn dot), hidden until selected. */
+/* 17x17, not 20x20 — per the Figma spec, at every width. Shared between
+   Concern Select's own health-concern checkboxes (consultation flow) and
+   Therapy Slot's "By concern" list (reuses this exact same .kal-concern-row
+   markup), so one rule covers both. */
 .kal-concern-row__checkbox {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   border-radius: 2px;
   border: 2px solid var(--kal-booking-flow-color-text-disabled);
   box-sizing: border-box;
   background: var(--kal-booking-flow-color-white);
 }
 
+/* 12px, not 16px — scaled down to fit the smaller 17px box (only ~13px
+   of content area once the 2px border is subtracted). */
 .kal-concern-row__checkbox svg {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   color: var(--kal-booking-flow-color-white);
   opacity: 0;
   transition: opacity 0.1s ease;
@@ -2318,34 +2338,6 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-concern-row--selected .kal-concern-row__checkbox svg {
   opacity: 1;
-}
-
-/* 17x17 at desktop, not the shared 20x20 — per the Figma spec. This
-   class is shared between Concern Select's own health-concern checkboxes
-   (consultation flow) and Therapy Slot's "By concern" list (reuses this
-   exact same .kal-concern-row markup), so one rule covers both. Icon
-   scaled down to fit the smaller box (was 16px, now leaves only ~13px of
-   content area inside the 17px box once the 2px border is subtracted). */
-@media screen and (min-width: 750px) {
-  .kal-concern-row__checkbox {
-    width: 17px;
-    height: 17px;
-  }
-
-  .kal-concern-row__checkbox svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  /* 11.5px, not the shared 8px — the row's own right inset around the
-     checkbox specifically, per the Figma spec (top/bottom stays the same
-     8px padding; align-items:center already centers the smaller 17px
-     checkbox vertically within the row for free, no extra rule needed
-     for that). Shared between Concern Select and Therapy Slot's "By
-     concern" list, same as the checkbox size above. */
-  .kal-concern-row {
-    padding-right: 11.5px;
-  }
 }
 
 .kal-concern-select__banner {
@@ -3049,6 +3041,24 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
        stacked panel-gap issue, and this negative margin isn't needed
        (or safe) there. */
     margin-bottom: 0;
+    /* Desktop-only buffer, same padding+negative-margin trick as
+       .kal-day-strip's own fix above: .kal-slot-section's side padding
+       (the room that trick relies on) gets zeroed out at this width (see
+       .kal-step-shell--progress-panel.kal-step-slot-picker .kal-slot-section),
+       so the day-strip's -16px margin had nowhere left to go and was
+       pushing the strip itself (not just its shadow) past this scroll
+       region's own clip edge — the "Today" chip's left edge was visibly
+       cut off, not just its shadow. box-sizing:border-box keeps this
+       element's own flex-stretched outer width unchanged (padding goes
+       inward, not added on top), and the matching negative margin cancels
+       the resulting inward shift, so every child still lines up exactly
+       where it did before — only now there's real empty space at this
+       container's own edges for the day-strip's buffer to land in. */
+    box-sizing: border-box;
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-left: -16px;
+    margin-right: -16px;
   }
 }
 
@@ -3253,13 +3263,30 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 /* Day strip */
 
+/* Shadow-clipping fix: the selected day chip's box-shadow (Slot Picker's
+   own .kal-day-chip--active, 4px/16px) was getting cut off by this
+   strip's own overflow-x:auto — an ancestor with overflow other than
+   visible on EITHER axis clips content (including box-shadow bleed) that
+   extends past its own padding-box edge on BOTH axes, per the CSS
+   overflow spec (a lone overflow-x:auto forces overflow-y to behave the
+   same way too), and a chip flush against the strip's edges had no room
+   left for its shadow to render into. 16px of padding on every side
+   (matching the shadow's own blur radius) plus an equal negative margin
+   on every side keeps the strip's own outer width/position exactly
+   where it was (box-sizing:border-box absorbs the padding into the
+   existing width instead of growing it, and the negative margin cancels
+   the resulting squeeze on the chips inside) while opening up genuine
+   empty buffer space, inside the strip's own clip boundary, for the
+   shadow to bleed into on every side without being cut off. */
 .kal-day-strip {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
+  box-sizing: border-box;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding: 16px;
+  margin: -16px;
   /* Still horizontally scrollable (5 day chips overflow a narrow phone
      width), just without the native scrollbar track rendering underneath
      it — this strip isn't meant to visibly look like a scroll container. */
