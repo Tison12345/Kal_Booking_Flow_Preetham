@@ -880,7 +880,7 @@
   .kal-step-shell__panel {
     height: 100%;
     justify-content: space-between;
-    padding: 16px 16px 0;
+    padding: 16px 16px 16px;
   }
 }
 
@@ -2795,7 +2795,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 8px 20px 8px 12px;
   background: linear-gradient(to right, rgba(244, 237, 224, 0.5) 25%, rgba(255, 255, 255, 0.5) 100%);
 }
 
@@ -3754,10 +3754,18 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   color: #a8a8a8;
 }
 
+/* No focus treatment at all, per explicit instruction — kills the
+   browser's own native focus ring (the "border and shadow" otherwise
+   visible on click/typing) and keeps border-color exactly as the resting
+   state, so the field looks identical whether focused or not. */
 .kal-form-input:focus {
   outline: none;
-  border-color: var(--kal-booking-flow-color-primary);
+  box-shadow: none;
+  border: 1px solid #D9CDBA;
 }
+
+
+
 
 /* Inline field-validation errors — same "submit attempt reveals it,
    fixing the field clears it" behavior as the CMS's own forms (see this
@@ -3767,33 +3775,24 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   border-color: var(--kal-booking-flow-color-error);
 }
 
-.kal-phone-input--error .kal-phone-input__country,
-.kal-phone-input--error .kal-phone-input__field {
+/* .kal-phone-input itself owns the single continuous pill border now
+   (see that rule), not its two children — this is what actually shows
+   the red error state visibly, since the old per-child rule above is now
+   dead code (both children have border:none unconditionally). */
+.kal-phone-input--error {
   border-color: var(--kal-booking-flow-color-error);
 }
 
-/* Focusing the actual <input> (.kal-phone-input__field) only highlighted
-   its own half of the pill via the shared .kal-form-input:focus rule,
-   leaving the country-code chip beside it looking unfocused/disconnected
-   — :focus-within on the wrapper lets both halves highlight together as
-   one field, same pattern as the --error state above. */
-.kal-phone-input:focus-within .kal-phone-input__country,
-.kal-phone-input:focus-within .kal-phone-input__field {
-  border-color: var(--kal-booking-flow-color-primary);
-}
-
-/* The soft glow visible on focus is the browser's own native focus ring
-   on the <input> itself, scoped to just that half of the pill — killed
-   here and replaced with our own box-shadow on the whole wrapper so the
-   glow actually surrounds both the country chip and the field together,
-   not just the input's own half. */
+/* Kills the browser's own native focus ring on just this half of the
+   pill — the wrapper's own :focus-within rule (see .kal-phone-input
+   above) is what actually highlights the whole pill. border:none here
+   beats .kal-form-input:focus's own border (same specificity, later in
+   source) — without it, that rule would otherwise reintroduce a border
+   on just this field's own box, breaking the wrapper's single continuous
+   outline on focus. */
 .kal-phone-input__field:focus {
   box-shadow: none;
-}
-
-.kal-phone-input:focus-within {
-  box-shadow: 0 0 0 3px rgba(0, 80, 58, 0.15);
-  border-radius: 12px;
+  border: none;
 }
 
 .kal-form-error {
@@ -3828,6 +3827,20 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   align-items: stretch;
   width: 100%;
+  box-sizing: border-box;
+  /* Resting state matches every other .kal-form-input's own default
+     border color — the tan #D9CDBA only applies on focus (see
+     :focus-within below), not here. */
+  border: 1px solid var(--kal-booking-flow-color-border);
+  border-radius: 12px;
+}
+
+/* Active/focus state only — the single continuous pill border (see the
+   base rule above) switches to tan while any part of this field is
+   focused, same tan accent other "selected"/"active" states in this file
+   use. No box-shadow glow (that version of this rule was removed). */
+.kal-phone-input:focus-within {
+  border-color: #D9CDBA;
 }
 
 /* Positions the dropdown panel relative to the toggle button — the
@@ -3851,8 +3864,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   width: 101px;
   height: 40px;
   padding: 8px;
-  border: 1px solid var(--kal-booking-flow-color-border);
-  border-right: none;
+  border: none;
   border-radius: 12px 0 0 12px;
   background: var(--kal-booking-flow-color-surface-tint);
   box-sizing: border-box;
@@ -3903,6 +3915,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex: 1;
   min-width: 0;
   border-radius: 0 12px 12px 0;
+  /* No border of its own, even at rest — .kal-phone-input itself now owns
+     the single continuous pill border around both halves (see that rule),
+     but .kal-form-input's shared base rule still gives this element a
+     full 4-side border of its own, which would otherwise show through on
+     top of/alongside the wrapper's. */
+  border: none;
 }
 
 .kal-country-picker__panel {
@@ -3978,7 +3996,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 .kal-gender-btn--active {
-  border-color: var(--kal-booking-flow-color-heading);
+  border: 1px solid #D9CDBA;
+  background: linear-gradient(271.23deg, var(--kal-booking-flow-color-surface-cream-deep) 11.88%, var(--kal-booking-flow-color-surface-cream) 43.44%);
   color: #0b0b0c;
 }
 
