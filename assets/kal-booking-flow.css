@@ -5438,9 +5438,34 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
   /* margin-top:8px grows the shared 16px scroll gap up to 24px
      specifically between the dropdown and the "By concern" label right
-     below it. Desktop only. */
+     below it. Selector is DOM-based (dropdown-wrapper really is
+     .kal-step-doctor-select__intro's immediate preceding sibling in the
+     markup — see this step's own liquid comment on why the chip list
+     keeps mobile's real DOM position instead of being physically moved),
+     so it still correctly targets the "By concern" intro specifically;
+     margin-top itself then adds its 8px wherever this element actually
+     lands in the reordered flex visual order below, i.e. right after the
+     chip list once that's visible. Desktop only. */
   .kal-step-therapy-slot .kal-therapy-select-wrapper + .kal-step-doctor-select__intro {
     margin-top: 8px;
+  }
+
+  /* Desktop-only visual reorder: mobile's real DOM order keeps the
+     "Selected therapies" chip list above the dropdown (.kal-therapy-selected
+     is this scroll's first child — see this step's own liquid comment),
+     but the desktop Figma export shows it sitting below the dropdown
+     instead. `order` reflows this visually without duplicating markup for
+     each breakpoint — chips move to right after the (order:0, default)
+     "Choose your therapy"/"By therapy"/dropdown trio, and "By
+     concern"/the checkbox list move to order:2 so they stay after the
+     chips rather than being leapfrogged by them. */
+  .kal-step-therapy-slot .kal-therapy-selected {
+    order: 1;
+  }
+
+  .kal-step-therapy-slot .kal-therapy-select-wrapper ~ .kal-step-doctor-select__intro,
+  .kal-step-therapy-slot .kal-concern-select__list {
+    order: 2;
   }
 
 }
@@ -5470,7 +5495,10 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 }
 
 /* "Selected therapies" chip summary (node 623:7592) — shown above the
-   dropdown, hidden via [hidden] until >=1 therapy is selected (toggled by
+   dropdown on mobile (its real DOM position — see this step's own liquid
+   comment), visually reordered below it on desktop only (see the
+   desktop-only `order` rule above). Hidden via [hidden] until >=1 therapy
+   is selected (toggled by
    renderTherapySelectedChips() in kal-booking-flow.js). Needs its own
    [hidden] override, same class of bug as .kal-therapy-dropdown[hidden]
    above: the unconditional `display: flex` below would otherwise beat the
@@ -5811,6 +5839,52 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   margin: 0;
 }
 
+/* "By concern" category-count badge — desktop only, see this step's own
+   liquid comment above the markup. Hidden by default (mobile never
+   shows it), turned into the real 24x24 circle + 8px gap only at
+   750px+. Count text itself comes from toggleTherapyConcern() in
+   kal-booking-flow.js, which already owns therapyConcernSelect's
+   selection state. */
+.kal-therapy-category-count {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-therapy-category-label--concern {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .kal-therapy-category-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #d9cdba;
+    border-radius: 99px;
+    background: rgba(217, 205, 186, 0.1);
+    font-size: 14px;
+    font-weight: var(--kal-booking-flow-font-weight-regular);
+    color: #191919;
+  }
+
+  /* Needs its own [hidden] override — same class of bug as this file's
+     other author-`display`-vs-[hidden] rules — since the desktop
+     display:flex above would otherwise beat the browser's own
+     [hidden] { display: none } default regardless of the attribute.
+     Toggled by updateTherapyConcernContinueButton()/
+     updateTherapyDropdownSummary() in kal-booking-flow.js: at least 1
+     selection required, same minimum-selection rule this flow already
+     applies to the Confirm button. */
+  .kal-therapy-category-count[hidden] {
+    display: none;
+  }
+}
+
 /* This step's own category cards read taller (58px, matching Concern
    Select's --selected state) and use a larger 24x24 checkbox than
    Concern Select's own 20x20 default — scoped here so Concern Select's
@@ -5887,6 +5961,18 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   padding: 0;
   text-align: right;
   white-space: nowrap;
+}
+
+/* Desktop only: per explicit instruction, the "N therapy categories
+   selected" summary doesn't show here at all, regardless of selection
+   state — JS still toggles this same element's [hidden] attribute (it's
+   shared with the mobile footer instance above), so this has to beat
+   that with its own unconditional display:none rather than relying on
+   [hidden] staying set. */
+@media screen and (min-width: 750px) {
+  .kal-therapy-concern-desktop-continue .kal-therapy-concern-summary {
+    display: none;
+  }
 }
 
 /* Therapy Details' own appointment card (node 543:1462) — NOT the shared
@@ -6279,7 +6365,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 @media screen and (min-width: 750px) {
   .kal-step-therapy-confirmed__cards {
-    max-width: 640px;
+    max-width: 608px;
     margin-left: auto;
     margin-right: auto;
   }
@@ -6333,6 +6419,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 @media screen and (min-width: 750px) {
   .kal-step-therapy-confirmed__hero {
     gap: 8px;
+    margin-bottom: -56px;
   }
 }
 
@@ -6520,4 +6607,11 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    instead of being duplicated here. */
 .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
   margin: 24px 0 0;
+}
+
+/* 16px, not the shared 24px above — desktop only, per Figma. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
+    margin-top: 16px;
+  }
 }

@@ -662,6 +662,15 @@ document.addEventListener('DOMContentLoaded', () => {
       el.hidden = !showSummary;
       el.textContent = summaryText;
     });
+
+    // Desktop-only "By concern" count badge (see this step's own liquid
+    // comment) — reuses categoryCount above rather than recomputing it,
+    // kept in sync here since every category toggle already calls this
+    // function via toggleTherapyConcern().
+    flow.querySelectorAll('[data-kal-therapy-concern-count]').forEach((el) => {
+      el.hidden = categoryCount === 0;
+      el.textContent = String(categoryCount);
+    });
   };
 
   const toggleTherapyConcern = (concern) => {
@@ -766,6 +775,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     flow.querySelectorAll('[data-kal-therapy-dropdown-count]').forEach((el) => {
       el.textContent = `${count} selected`;
+    });
+
+    // Desktop-only "By therapy" count badge (see this step's own liquid
+    // comment) — separate data attribute from data-kal-therapy-dropdown-count
+    // above since that one feeds "N selected" text inside the dropdown
+    // panel itself, not this badge's bare number.
+    flow.querySelectorAll('[data-kal-therapy-dropdown-category-count]').forEach((el) => {
+      el.hidden = count === 0;
+      el.textContent = String(count);
     });
     // The trigger's own label stays "Select the therapy" regardless of
     // selection count — explicit instruction — the count is communicated

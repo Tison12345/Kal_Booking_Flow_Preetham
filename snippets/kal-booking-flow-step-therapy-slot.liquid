@@ -113,6 +113,13 @@
         single global control (the dropdown panel below has no instance
         of its own) — data-kal-therapy-dropdown-clear calls
         clearTherapyDropdownSelection().
+
+        Source order stays chips-before-dropdown (mobile's real order, per
+        Figma) at every width — desktop visually reorders this to sit
+        below the dropdown instead via CSS `order` (see
+        .kal-therapy-selected's own desktop-only rule in
+        kal-booking-flow.css), rather than duplicating this markup, since
+        mobile and desktop share one DOM here.
       {%- endcomment -%}
       <div class="kal-therapy-selected" data-kal-therapy-selected hidden>
         <div class="kal-therapy-selected__head">
@@ -126,7 +133,14 @@
         <h2 class="kal-step-doctor-select__heading">Choose your therapy</h2>
       </div>
       <div class="kal-step-doctor-select__intro">
-        <p class="kal-therapy-category-label">By therapy</p>
+        {%- comment -%}
+          Desktop-only count badge, same as "By concern" below — mirrors
+          therapyDropdownSelect.selected.size, kept in sync by the
+          existing updateTherapyDropdownSummary() in kal-booking-flow.js
+          (already called on every dropdown option toggle), no separate
+          listener added.
+        {%- endcomment -%}
+        <p class="kal-therapy-category-label kal-therapy-category-label--concern">By therapy<span class="kal-therapy-category-count" data-kal-therapy-dropdown-category-count aria-hidden="true" hidden>0</span></p>
       </div>
 
       <div class="kal-therapy-select-wrapper" data-kal-therapy-dropdown>
@@ -156,7 +170,17 @@
       </div>
 
       <div class="kal-step-doctor-select__intro">
-        <p class="kal-therapy-category-label">By concern</p>
+        {%- comment -%}
+          Desktop-only category count badge (node/export spec: 24x24,
+          rgba(217,205,186,0.1) fill, #D9CDBA border) — mirrors
+          therapyConcernSelect.selected.size, kept in sync by the
+          existing toggleTherapyConcern() handler in kal-booking-flow.js
+          (same data-kal-therapy-concern click handler the checkbox rows
+          below already use, no separate listener). Hidden outright on
+          mobile via CSS, not just visually empty, since this flow's
+          mobile composition doesn't have this badge at all per Figma.
+        {%- endcomment -%}
+        <p class="kal-therapy-category-label kal-therapy-category-label--concern">By concern<span class="kal-therapy-category-count" data-kal-therapy-concern-count aria-hidden="true" hidden>0</span></p>
       </div>
 
       <div class="kal-concern-select__list">
