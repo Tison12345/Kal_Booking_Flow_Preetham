@@ -1271,12 +1271,15 @@
     display: none;
   }
 
-  /* The panel's shared 16px/16px/0 (see SHARED STEP SHELL) becomes this
+  /* The panel's shared 16px/16px/16px (see SHARED STEP SHELL) becomes this
      layout's own 40px/20px inset instead; each step's own intro/list
      content zeroes its mobile side-padding below so it isn't applied
-     twice on top of that. */
+     twice on top of that. Higher specificity than the plain shared rule
+     (--progress-panel modifier + the same class), so it wins for every
+     step using this layout — its own bottom padding has to be set here
+     too, not just on the shared rule. */
   .kal-step-shell--progress-panel .kal-step-shell__panel {
-    padding: 36px 24px 0px 24px;
+    padding: 36px 24px 16px 24px;
   }
 
   .kal-step-concern-select .kal-step-doctor-select__intro,
