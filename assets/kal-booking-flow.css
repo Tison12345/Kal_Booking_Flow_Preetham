@@ -323,11 +323,15 @@
   gap: 16px;
 }
 
-/* 40px extra on top of the base 16px flex gap = 56px, the exact gap value
-   from Frame 3 in the Figma spec, between the label+cards block and
-   whatever follows it. */
+/* Flexible, not a fixed 80px — per explicit instruction, this gap (body
+   text -> "WHAT WOULD YOU LIKE TO DO?") and the location line's own
+   margin-top:auto below should both be auto springs, splitting whatever
+   vertical space is left over between the two of them instead of one
+   fixed gap here and all the leftover space dumped on the location line
+   alone. Same flex-auto-margin mechanic as that rule — see its own
+   comment. */
 .kal-step-entry__mobile .kal-step-entry__label {
-  margin-top: 80px;
+  margin-top: auto;
 }
 
 /* margin-top:auto (not the 40px used above) pins this to the bottom of
@@ -710,6 +714,14 @@
   box-shadow: 0px 14px 28px -10px rgba(25, 25, 25, 0.5);
 }
 
+/* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
+   above — this is a <button>, so the theme's global button:hover rule
+   (specificity 0,1,1) would otherwise beat this plain class (0,1,0) on
+   hover and swap in a heavy black shadow. */
+.kal-option-card--primary:hover {
+  box-shadow: 0px 14px 28px -10px rgba(25, 25, 25, 0.5);
+}
+
 .kal-option-card--secondary {
   background: var(--kal-booking-flow-color-white);
   border: 1px solid var(--kal-booking-flow-color-border);
@@ -880,8 +892,22 @@
   .kal-step-shell__panel {
     height: 100%;
     justify-content: space-between;
-    padding: 16px 16px 16px;
+    padding: 16px 16px 0;
   }
+}
+
+/* Shared parent for the header row and the mobile-only progress labels
+   line below it (see kal-booking-flow-step-header.liquid's own comment)
+   — own 8px gap between the two, replacing the shared panel gap (16px)
+   that used to apply when they were both direct .kal-step-shell__panel
+   children. flex-shrink:0 for the same reason .kal-step-shell__header
+   itself has it below — this group shouldn't shrink in the panel's own
+   flex column. */
+.kal-step-header-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* Header: back + progress dots + close. Back/close only make sense on
@@ -1271,15 +1297,12 @@
     display: none;
   }
 
-  /* The panel's shared 16px/16px/16px (see SHARED STEP SHELL) becomes this
+  /* The panel's shared 16px/16px/0 (see SHARED STEP SHELL) becomes this
      layout's own 40px/20px inset instead; each step's own intro/list
      content zeroes its mobile side-padding below so it isn't applied
-     twice on top of that. Higher specificity than the plain shared rule
-     (--progress-panel modifier + the same class), so it wins for every
-     step using this layout — its own bottom padding has to be set here
-     too, not just on the shared rule. */
+     twice on top of that. */
   .kal-step-shell--progress-panel .kal-step-shell__panel {
-    padding: 36px 24px 16px 24px;
+    padding: 36px 24px 0px 24px;
   }
 
   .kal-step-concern-select .kal-step-doctor-select__intro,
@@ -2088,14 +2111,19 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   cursor: pointer;
 }
 
-/* Mobile-only step progress bar, directly below the header. Hidden
-   entirely at 750px+ — desktop never had this element. */
+/* Header row + .kal-step-progress-bar__labels now share one parent
+   (.kal-step-header-group, see kal-booking-flow-step-header.liquid's own
+   comment) with its own 8px gap between them, instead of both living
+   inside this element. This wrapper now holds just the track, still
+   hidden entirely at 750px+ same as before — desktop never had either
+   piece. margin-top:-12px trims the shared .kal-step-shell__panel gap
+   (16px) above it down to 4px, matching the original gap this had to
+   .kal-step-progress-bar__labels back when both were still inside this
+   same flex column together. */
 .kal-step-progress-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   padding: 0 24px;
   flex-shrink: 0;
+  margin-top: -12px;
 }
 
 @media screen and (min-width: 750px) {
@@ -2104,12 +2132,23 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   }
 }
 
+/* Own parent now (.kal-step-header-group, see this step's own liquid
+   comment), not nested inside .kal-step-progress-bar — its own left/right
+   padding absorbs what used to be that wrapper's ambient 24px side inset
+   (8px own + 24px ambient = 32px total before, preserved here as one
+   value) so it still lines up with the track below it exactly as before. */
 .kal-step-progress-bar__labels {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-step-progress-bar__labels {
+    display: none;
+  }
 }
 
 /* --kal-booking-flow-color-location-text (#4b4b4b), not --kal-booking-flow-color-body (#5d5d5d) —
@@ -2188,7 +2227,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   gap: var(--kal-booking-flow-space-inset-sm);
-  padding: 0 25px var(--kal-booking-flow-space-inset);
+  padding: 0 24px 8px;
 }
 
 /* Floating "more below" hint, shown at every width per this pass's
@@ -2220,6 +2259,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   cursor: pointer;
 }
 
+/* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
+   above (0,1,0) vs the theme's global button:hover (0,1,1). */
+.kal-concern-select__scroll-hint:hover {
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+}
+
 .kal-concern-select__scroll-hint svg {
   width: 20px;
   height: 20px;
@@ -2232,6 +2277,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   justify-content: space-between;
   gap: 12px;
   width: 100%;
+  min-height: 58px;
   padding: 8px;
   /* 11.5px, not 8px, on the right specifically — the row's own inset
      around the checkbox, per the Figma spec (top/bottom/left stay the
@@ -2258,8 +2304,13 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-concern-row--selected {
   border-color: var(--kal-booking-flow-color-accent-tan);
   border-radius: 12px;
-  min-height: 58px;
   background: linear-gradient(-83deg, var(--kal-booking-flow-color-surface-cream) 49.541%, var(--kal-booking-flow-color-surface-cream-deep) 88.071%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
+   above (0,1,0) vs the theme's global button:hover (0,1,1). */
+.kal-concern-row--selected:hover {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
@@ -2462,7 +2513,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      dialog's top edge with no breathing room, unlike the Figma spec which
      shows a clear gap above it. Fixed here so every step using this
      header gets the same spacing, not just one. */
-  padding: 24px 24px 0;
+  padding: 16px 24px 0;
 }
 
 .kal-step-doctor-select__back {
@@ -2564,7 +2615,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   justify-content: center;
   align-items: center;
   gap: 16px;
-  margin: 0 25px;
+  margin: 0 24px;
   padding: 8px 0;
 }
 
@@ -2608,7 +2659,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 25px;
+  padding: 0 24px;
 }
 
 .kal-step-doctor-select__list-empty {
@@ -2652,6 +2703,16 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-doctor-card--selected {
   border-color: var(--kal-booking-flow-color-accent-tan);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* The theme's own base stylesheet has a global `button:hover { box-shadow:
+   0 0 1rem rgba(0,0,0,.6); }` (specificity 0,1,1) — since this card is a
+   <button>, that external rule beats the plain class selector above
+   (0,1,0) on hover, replacing the tan accent shadow with a heavy black
+   one. Adding :hover here raises this to 0,2,0, which wins regardless of
+   source order. */
+.kal-doctor-card--selected:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
@@ -2885,7 +2946,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 50px;
+  height: auto;
   padding: 14px 24px;
   border: none;
   border-radius: 16px;
@@ -2904,6 +2965,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   box-sizing: border-box;
   box-shadow: 0px 8px 16px -6px rgba(30, 75, 60, 0.35);
   cursor: pointer;
+}
+
+/* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
+   above (0,1,0) vs the theme's global button:hover (0,1,1). */
+.kal-step-doctor-select__continue:hover {
+  box-shadow: 0px 8px 16px -6px rgba(30, 75, 60, 0.35);
 }
 
 /* Desktop composition — left column reuses .kal-step-entry__info and friends
@@ -3377,51 +3444,127 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    rules above, since those are shared with Therapy Slot's own
    unchanged, smaller day chips. */
 .kal-step-slot-picker .kal-day-chip {
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
   width: 64px;
   height: 83px;
-  justify-content: center;
-  gap: 4px;
+
   padding: 8px 4px;
+  gap: 4px;
+
+  background: #FFFFFF;
+  border: 1px solid #E5E1D9;
   border-radius: 12px;
-  border-color: var(--kal-booking-flow-color-border);
+
+  box-shadow: none;
+
+  flex: none;
+  flex-shrink: 0;
 }
 
-.kal-step-slot-picker .kal-day-chip__label,
+.kal-step-slot-picker .kal-day-chip__label {
+  width: 29px;
+  height: 14px;
+
+  font-family: 'Avenir';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  color: #4B4B4B;
+}
 .kal-step-slot-picker .kal-day-chip__date {
-  font-size: var(--kal-booking-flow-font-size-small);
-  line-height: 140%;
-  font-weight: var(--kal-booking-flow-font-weight-regular);
-  color: var(--kal-booking-flow-color-location-text);
+  width: 8px;
+  height: 14px;
+
+  font-family: 'Avenir';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  color: #4B4B4B;
 }
 
+/* Only the properties that actually differ from the base .kal-day-chip
+   rule above — layout (box-sizing/display/flex/padding/size/radius) is
+   identical between the two and already applies here via that same-
+   specificity base rule, since active chips match both selectors at
+   once. */
 .kal-step-slot-picker .kal-day-chip--active {
-  background: linear-gradient(0deg, var(--kal-booking-flow-color-surface-cream) 27.047%, var(--kal-booking-flow-color-surface-cream-deep) 71.937%);
-  border-color: var(--kal-booking-flow-color-accent-tan);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(360deg, #FBF9F4 27.05%, #F6F1E8 71.94%);
+  border-color: #D9CDBA;
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.kal-step-slot-picker .kal-day-chip--active .kal-day-chip__label,
+/* Only the properties that differ from the base __label/__date rules
+   above (font-family/style/size, display/align/justify/text-align are
+   identical and still apply via that same-specificity base rule). */
+.kal-step-slot-picker .kal-day-chip--active .kal-day-chip__label {
+  width: 38px;
+  height: 20px;
+  font-weight: 500;
+  line-height: 140%;
+  color: var(--kal-booking-flow-color-heading);
+}
+
 .kal-step-slot-picker .kal-day-chip--active .kal-day-chip__date {
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  height: 20px;
+  font-weight: 500;
+  line-height: 140%;
   color: var(--kal-booking-flow-color-heading);
 }
 
 .kal-step-slot-picker .kal-day-chip__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  align-self: stretch;
+
   width: 54px;
-  height: 21px;
+  height: 20px;
+
   padding: 4px 8px;
+
+  background: #E4F2EB;
+  border: none;
   border-radius: 12px;
-  font-size: var(--kal-booking-flow-font-size-caption);
+
+  font-family: 'Avenir';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 12px;
   line-height: 100%;
+
+  color: #1E4B3C;
 }
 
+/* Only the properties that differ from the base __badge rule above. */
 .kal-step-slot-picker .kal-day-chip--active .kal-day-chip__badge {
+  height: 21px;
+  background: var(--kal-booking-flow-color-primary-tint);
   border: 0.5px solid rgba(30, 75, 60, 0.8);
-  box-sizing: border-box;
+  color: var(--kal-booking-flow-color-primary-dark);
 }
 
 /* A third tier alongside the shared --high/--low/--none above — an
@@ -3474,6 +3617,15 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   color: var(--kal-booking-flow-color-heading);
   font-weight: var(--kal-booking-flow-font-weight-medium);
+}
+
+/* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
+   above (0,1,0) vs the theme's global button:hover (0,1,1). The
+   .kal-step-slot-picker-scoped copy of this rule further down is already
+   compound (0,2,0) and doesn't need this — only this plain base version
+   (used by Therapy Slot's own grid) does. */
+.kal-slot-chip--active:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .kal-slot-chip:disabled {
@@ -3564,6 +3716,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-step-slot-picker .kal-slot-grid {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  padding-bottom: 8px;
 }
 
 @media screen and (min-width: 750px) {
@@ -3698,7 +3851,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   gap: var(--kal-booking-flow-space-inset);
-  padding: 0 var(--kal-booking-flow-space-inset);
+  padding: 8px var(--kal-booking-flow-space-inset);
 }
 
 /* Desktop: the panel already supplies 16px of horizontal padding (Figma's
@@ -3786,16 +3939,23 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   border-color: var(--kal-booking-flow-color-error);
 }
 
-/* Kills the browser's own native focus ring on just this half of the
-   pill — the wrapper's own :focus-within rule (see .kal-phone-input
-   above) is what actually highlights the whole pill. border:none here
-   beats .kal-form-input:focus's own border (same specificity, later in
-   source) — without it, that rule would otherwise reintroduce a border
-   on just this field's own box, breaking the wrapper's single continuous
-   outline on focus. */
+/* The soft glow visible on focus is the browser's own native focus ring
+   on the <input> itself, scoped to just that half of the pill — killed
+   here and replaced with our own box-shadow on the whole wrapper below,
+   so the highlight actually surrounds the entire kal-phone-input pill
+   (country chip + field together) as one unit, not just the input's own
+   half. border:none here beats .kal-form-input:focus's own border (same
+   specificity, later in source) — without it, that rule would otherwise
+   reintroduce a border on just this field's own box, breaking the
+   wrapper's single continuous outline on focus. */
 .kal-phone-input__field:focus {
   box-shadow: none;
   border: none;
+}
+
+.kal-phone-input:focus-within {
+  box-shadow: 0 0 0 3px rgba(0, 80, 58, 0.15);
+  border-radius: 12px;
 }
 
 .kal-form-error {
@@ -3844,6 +4004,8 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    use. No box-shadow glow (that version of this rule was removed). */
 .kal-phone-input:focus-within {
   border-color: #D9CDBA;
+  outline: none;
+  box-shadow: none;
 }
 
 /* Positions the dropdown panel relative to the toggle button — the
@@ -4160,7 +4322,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
      matches the footer instead of fighting it. Padding uses
      --kal-booking-flow-space-inset directly (not the mobile-only gap variable above),
      since it's the same 24px at every width here. */
-  padding: 0 var(--kal-booking-flow-space-inset);
+  padding: 0px var(--kal-booking-flow-space-inset) 24px;
 }
 
 /* Desktop: the right panel already supplies its own side inset
@@ -4761,6 +4923,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
+/* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
+   above (0,1,0) vs the theme's global button:hover (0,1,1). */
+.kal-payment-option--selected:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
 /* Original mobile design's floating "Save 10%" pill — only ever on the
    "Pay now" card (see liquid). Desktop-only __price-strike communicates
    the discount there instead, so this is hidden at 750px+ below. */
@@ -5089,6 +5257,22 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   gap: var(--kal-booking-flow-space-inset-sm);
+}
+
+/* 16px top padding, not the shared class's 0 — same as every other
+   consolidated step's footer (Concern Select, Doctor Select, Slot
+   Picker, Patient Details, Confirmation, Therapy Slot, Therapy Details,
+   Therapy Confirmed). This step was missing it, leaving its mobile
+   footer shorter/inconsistent with the uniform 69px height every other
+   step has. Mobile only — see Concern Select's own identical comment for
+   why this must be scoped instead of winning the cascade at desktop too
+   (this step's footer is hidden outright at desktop anyway, see below,
+   but scoping stays consistent with every other step's own version of
+   this fix). */
+@media screen and (max-width: 749px) {
+  .kal-step-booking-confirmed .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 /* Full-width single column on desktop for Video Consult — this screen
@@ -5651,6 +5835,12 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   cursor: pointer;
 }
 
+/* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
+   above (0,1,0) vs the theme's global button:hover (0,1,1). */
+.kal-therapy-select:hover {
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.15);
+}
+
 .kal-therapy-select__placeholder {
   font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-text-muted);
@@ -6192,6 +6382,19 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    down. */
 .kal-step-therapy-confirmed .kal-step-shell__footer {
   margin-top: auto;
+}
+
+/* 16px top padding, not the shared class's 0 — same as every other
+   consolidated step's footer (Concern Select, Doctor Select, Slot
+   Picker, Patient Details, Confirmation, Therapy Slot, Therapy
+   Details). This step was the one missing it, leaving its mobile footer
+   shorter/inconsistent with the uniform 69px height every other step
+   has. Mobile only — see Concern Select's own identical comment for why
+   this must be scoped instead of winning the cascade at desktop too. */
+@media screen and (max-width: 749px) {
+  .kal-step-therapy-confirmed .kal-step-shell__footer {
+    padding-top: 16px;
+  }
 }
 
 @media screen and (min-width: 750px) {
