@@ -910,6 +910,25 @@
   flex-shrink: 0;
 }
 
+/* margin-top:-16px cancels the shared .kal-step-shell__panel gap (16px)
+   between the header row and whatever heading element follows it.
+   Targets .kal-step-progress-bar + *, NOT .kal-step-header-group + * —
+   the step-header snippet renders TWO top-level siblings
+   (.kal-step-header-group, then .kal-step-progress-bar for the track),
+   so the heading's real DOM-adjacent previous sibling is the track
+   wrapper, not the header group. At desktop .kal-step-progress-bar is
+   display:none (see its own rule) — invisible and out of the flex
+   layout entirely, but still the element `+` matches against, since
+   sibling combinators go by DOM order, not visibility. (A first attempt
+   using .kal-step-header-group + * silently applied this margin to that
+   hidden track element instead, with no visual effect.) Desktop only —
+   mobile keeps the shared 16px gap, which is wanted there. */
+@media screen and (min-width: 750px) {
+  .kal-step-progress-bar + * {
+    margin-top: -16px;
+  }
+}
+
 /* Header: back + progress dots + close. Back/close only make sense on
    mobile — desktop has no in-panel back/close on any step in this file,
    same as Entry/Confirmation/Booking Confirmed's desktop compositions;
@@ -1078,7 +1097,7 @@
 
 .kal-concern-select__info-label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-black);
+  font-weight: var(--kal-booking-flow-font-weight-heavy);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
@@ -1367,6 +1386,28 @@
   .kal-step-shell--progress-panel .kal-step-shell__scroll {
     padding-left: 0;
     padding-right: 0;
+  }
+
+  /* Re-applies side padding the shared zero-out above just removed —
+     same specificity (0,2,0), so this has to come AFTER it in source to
+     win the tie. .kal-concern-select__list's own side margin gets
+     zeroed at this width too (see its own rule), which is what gave the
+     selected row's box-shadow (.kal-concern-row--selected, 10px blur)
+     room to bleed into at mobile (that 24px margin). Without it, the row
+     sits flush against this scroll region's own overflow-y:auto clip
+     edge (forced to clip both axes per the CSS overflow spec) and the
+     shadow gets cut off on click/select. box-sizing:border-box keeps
+     this element's own flex-stretched outer width unchanged, and the
+     matching negative margin cancels the resulting inward shift, so
+     every child still lines up exactly where it did before — only now
+     there's real empty space at this scroll's own edges for the shadow
+     to land in, same as mobile already had. */
+  .kal-step-concern-select .kal-step-shell__scroll {
+    box-sizing: border-box;
+    padding-left: 24px;
+    padding-right: 24px;
+    margin-left: -24px;
+    margin-right: -24px;
   }
 
   /* .kal-toggle-group is the one element in this list whose mobile inset
@@ -2271,7 +2312,11 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   height: 20px;
   color: var(--kal-booking-flow-color-body);
 }
-
+@media screen and (min-width: 750px) {
+  .kal-concern-select__scroll-hint {
+    bottom: 0px; /* clears the footer's Continue button */
+  }
+}
 .kal-concern-row {
   display: flex;
   align-items: center;
@@ -4210,6 +4255,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
        stacked panel-gap issue, and this negative margin isn't needed
        (or safe) there. */
     margin-bottom: 0;
+    padding-bottom: 16px;
   }
 }
 
@@ -4750,7 +4796,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-before-visit__label {
   margin: 0;
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-black);
+  font-weight: var(--kal-booking-flow-font-weight-heavy);
   line-height: 150%;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -4833,11 +4879,21 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 .kal-payment-section__label {
   font-size: 14px;
   line-height: 150%;
-  font-weight: var(--kal-booking-flow-font-weight-black);
+  font-weight: var(--kal-booking-flow-font-weight-heavy);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
   margin: 0;
+}
+
+/* margin-bottom:-4px trims .kal-payment-section's shared 16px gap down
+   to 12px specifically below the label — whatever follows it (the
+   online-only description, or straight into .kal-payment-options for
+   In-Clinic). Desktop only. */
+@media screen and (min-width: 750px) {
+  .kal-payment-section__label {
+    margin-bottom: 4px;
+  }
 }
 
 /* Tighter than the label-to-cards spacing below it — negative margin-top
@@ -5041,22 +5097,23 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
     text-align: left;
     height: 64px;
     gap: 12px;
-    padding: 12px;
+    /* 16px top/bottom here (12px left/right unchanged) — the selected
+       card's own 12px top/bottom override lives below, scoped to
+       .kal-payment-option--selected specifically. */
+    padding: 16px 12px;
+    margin: 0 12px;
   }
 
   .kal-payment-option__left {
     flex-direction: row;
-    align-items: center;
   }
 
+  /* flex-start, not center — this was already the baseline for both
+     cards before this payment-card pass (title left-aligned above
+     subtitle, not centered against it), unrelated to the selected-only
+     Figma changes below. */
   .kal-payment-option__text {
     align-items: flex-start;
-  }
-
-  .kal-payment-option__price-group {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
   }
 
   .kal-payment-option__icon {
@@ -5066,15 +5123,86 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
   .kal-payment-option__title {
     font-size: var(--kal-booking-flow-font-size-base);
+    /* Tightened to line-height:1 — without this, the title+subtitle
+       column's ambient (inherited) line-height makes the text block
+       taller than the 38px icon beside it, so the icon's own box doesn't
+       reach as far down as the text does. Applies in both states — the
+       icon is the same 38px height whether selected or not. */
+    line-height: 1;
   }
 
   .kal-payment-option__subtitle {
     display: block;
+    line-height: 1;
   }
 
   .kal-payment-option__badge,
   .kal-payment-option__divider {
     display: none;
+  }
+
+  /* Row, not the base column stack — matches the Figma dev-mode export's
+     own Container spec exactly (flex row, justify-content:flex-end,
+     align-items:center, gap:4px) — the struck-through original price and
+     the larger discounted price sit side by side on one line, not
+     stacked. Same in both selected/unselected states — "Pay at clinic"
+     only ever renders the one price (no strike sibling), so this is a
+     no-op there, but the layout itself must not change when a card's
+     selected state toggles, or the price jumps between a row and a
+     stacked layout when you click. */
+  .kal-payment-option__price-group {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* DOM order is .kal-payment-option__price (₹450, discounted) then
+     .kal-payment-option__price-strike (₹495, original) — see this card's
+     own liquid — but the export shows the struck-through original price
+     FIRST (left), discounted price second (right). order:-1 moves it
+     ahead of its sibling visually without touching the markup. Not
+     selected-scoped — this ordering must stay fixed regardless of
+     selection, or the two prices visibly swap sides when the card's
+     selected state toggles. */
+  .kal-payment-option__price-strike {
+    order: -1;
+    /* Exact Figma dev-mode values for this node. */
+    color: #A9A9A9;
+    line-height: 100%;
+    text-align: right;
+  }
+
+  /* Exact Figma dev-mode values for this node — overrides the mobile
+     rule's --font-size-heading(24px)/--color-heading(#191919), which
+     this node doesn't actually match. Not selected-scoped — same reason
+     as __price-strike above, this must not change when selection
+     toggles. */
+  .kal-payment-option__price {
+    font-size: var(--kal-booking-flow-font-size-name);
+    font-weight: var(--kal-booking-flow-font-weight-regular);
+    line-height: 130%;
+    text-align: right;
+    color: #191919;
+  }
+
+  /* Only the icon/text alignment and the card's own top/bottom padding
+     differ by selection state — per explicit instruction, everything
+     else (price layout/colors/sizes above) stays fixed. */
+  .kal-payment-option--selected {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* flex-start, not center — per Figma, the title+subtitle text block
+     (127 Hug x 32 Hug) sits flush with the icon's own top edge, not
+     vertically centered against it. The icon (38px) is taller than the
+     text block's own natural height, so this naturally leaves empty
+     space below the subtitle equal to that difference — text + its own
+     internal gap + this leftover space together equal the icon's
+     height, matching the reference image exactly. */
+  .kal-payment-option--selected .kal-payment-option__left {
+    align-items: flex-start;
   }
 }
 
