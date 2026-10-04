@@ -2201,10 +2201,11 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
    in lightness to its own background that it was effectively invisible at
    this 3px height. Red gives real contrast instead. */
 .kal-step-progress-bar__fill {
+  display: block !important;
   width: var(--kal-booking-flow-step-progress, 20%);
   height: 100%;
   border-radius: 999px;
-  background: #e0483c;
+  background: var(--kal-booking-flow-color-accent-tan);
 }
 
 /* Banner moved here from the footer (Figma: directly under the title,
@@ -3145,7 +3146,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   align-items: stretch;
   gap: 12px;
   padding: 12px 24px;
-  background: linear-gradient(93.35deg, rgba(235, 242, 239, 0.5) 30.526%, rgba(255, 255, 255, 0.5) 94.033%);
+  background: linear-gradient(93.35deg, rgba(235, 242, 239, 0.5) 75%, rgba(255, 255, 255, 0.5) 100%);
 }
 
 .kal-appointment-card__photo {
@@ -3683,6 +3684,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-text-muted);
   cursor: pointer;
+  margin-bottom: -1px;
 }
 
 .kal-slot-tab svg {
@@ -3691,7 +3693,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   flex-shrink: 0;
 }
 
-/* Safety net once the tab has shrunk as far as min-width:0 allows —
+/* Safety net once the tab has shrunk as far as min-width:0 al.lows —
    truncates with an ellipsis instead of forcing the row to overflow
    again on an even narrower viewport than this was tuned for. */
 .kal-slot-tab__label {
@@ -3703,7 +3705,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
 
 .kal-slot-tab--active {
   background: rgba(245, 241, 234, 0.5);
-  border-bottom-color: var(--kal-booking-flow-color-accent-tan);
+  border-bottom: 1px solid var(--kal-booking-flow-color-accent-tan);
   border-radius: 4px 4px 0 0;
   color: var(--kal-booking-flow-color-heading);
 }
@@ -3851,7 +3853,7 @@ button.kal-step-header__location-badge:disabled .kal-step-header__location-chevr
   display: flex;
   flex-direction: column;
   gap: var(--kal-booking-flow-space-inset);
-  padding: 8px var(--kal-booking-flow-space-inset);
+  padding: 0px var(--kal-booking-flow-space-inset) 16px;
 }
 
 /* Desktop: the panel already supplies 16px of horizontal padding (Figma's
