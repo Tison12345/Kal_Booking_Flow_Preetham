@@ -1044,7 +1044,7 @@
   .kal-step-shell--progress-panel .kal-step-shell__info {
     background: rgba(246, 241, 232, 0.11);
     border-right: none;
-    padding: 24px 24px 0;
+    padding: 32px 24px 0;
     box-sizing: border-box;
     /* Explicit height, matching .kal-step-shell__panel's own height:100%
        right next to it, rather than relying only on the grid's implicit
@@ -1085,7 +1085,7 @@
   font-size: 34px;
   line-height: 130%;
   font-weight: var(--kal-booking-flow-font-weight-medium);
-  margin-bottom: 0;
+  margin-bottom: 8px;
 }
 
 .kal-concern-select__info-section {
@@ -1098,6 +1098,7 @@
 .kal-concern-select__info-label {
   font-size: var(--kal-booking-flow-font-size-small);
   font-weight: var(--kal-booking-flow-font-weight-heavy);
+  line-height: 150%;
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
@@ -2539,6 +2540,16 @@ div.kal-calendar-modal__backdrop {
    only the doctor list itself scrolls, in the space left over — so this
    region's own overflow is turned off at 750px and flex:1/overflow-y:auto
    moves onto .kal-step-doctor-select__list instead (see below). */
+/* box-sizing/padding-top/margin-top: the selected doctor card's own
+   box-shadow (.kal-doctor-card--selected, 4px/16px) was getting clipped
+   flat at the top — this element's overflow-y:auto forces overflow-x to
+   also become non-visible (per the CSS overflow spec), and with no top
+   padding the first card sits flush against that clip boundary, leaving
+   its shadow nowhere to bleed into above it. 16px of padding (matching
+   the shadow's blur radius) opens that buffer space up; the equal
+   negative margin cancels it positionally (box-sizing:border-box makes
+   the padding eat into the box instead of growing it) so nothing shifts
+   down — same trick used for the Slot Picker's day-strip. */
 .kal-step-doctor-select .kal-step-shell__scroll {
   flex: 1;
   min-height: 0;
@@ -2546,6 +2557,9 @@ div.kal-calendar-modal__backdrop {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
+  padding-top: 16px;
+  margin-top: -16px;
 }
 
 @media screen and (min-width: 750px) {
@@ -2557,6 +2571,21 @@ div.kal-calendar-modal__backdrop {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+  }
+
+  /* Same shadow-clipping fix as the mobile scroll region above, just
+     moved here — at this width .kal-step-doctor-select__list (not
+     .kal-step-shell__scroll) is the one with overflow-y:auto, so it's
+     the one actually clipping the first card's shadow now. Scoped with
+     the extra .kal-step-doctor-select class (not just the bare
+     .kal-step-doctor-select__list above) to out-specificity this list's
+     own later padding:0 24px base rule further down this file — both
+     are needed at equal specificity otherwise, and the later one in
+     source would win the padding-top/margin-top tie back to 0. */
+  .kal-step-doctor-select .kal-step-doctor-select__list {
+    box-sizing: border-box;
+    padding-top: 16px;
+    margin-top: -16px;
   }
 
   .kal-step-doctor-select .kal-doctor-card {
