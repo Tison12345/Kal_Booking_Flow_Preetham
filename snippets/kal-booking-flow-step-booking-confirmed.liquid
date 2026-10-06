@@ -238,9 +238,29 @@
                 {%- render 'kal-booking-icons', icon_name: 'credit-card' -%}
                 Payment
               </span>
-              <span class="kal-confirmation-details__value kal-confirmation-details__value--paid">
-                <span data-kal-mode-online-only hidden>Paid online</span>
-                <span data-kal-mode-offline-only>Pay at clinic</span>
+              {%- comment -%}
+                Video Consult has no payment-method choice (always paid
+                online, see Confirmation step's own comment on
+                data-kal-mode-online-only there) so that case stays a
+                static "Paid online", teal per the export. In-Clinic DOES
+                have a choice (Confirmation step's Pay now/Pay at clinic
+                cards) — this nested data-kal-payment-method-display pair
+                mirrors whichever of those two was actually selected,
+                toggled by setPaymentMethod() in kal-booking-flow.js
+                alongside the Pay now/Pay at clinic cards themselves. Only
+                "Paid online" (video, or in-clinic + Pay now) gets the teal
+                --paid color — Pay at clinic stays the row's normal
+                heading-dark color, since nothing's actually been paid yet.
+                Defaults to the pay-now variant visible, matching Pay now's
+                own kal-payment-option--selected default on the
+                Confirmation step.
+              {%- endcomment -%}
+              <span class="kal-confirmation-details__value">
+                <span data-kal-mode-online-only hidden class="kal-confirmation-details__value--paid">Paid online</span>
+                <span data-kal-mode-offline-only>
+                  <span data-kal-payment-method-display="pay-now" class="kal-confirmation-details__value--paid">Paid online</span>
+                  <span data-kal-payment-method-display="pay-at-clinic" hidden>Pay at clinic</span>
+                </span>
               </span>
             </div>
           </div>

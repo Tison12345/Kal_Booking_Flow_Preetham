@@ -270,9 +270,34 @@
         now. Whole label is one span so setPaymentMethod() in
         kal-booking-flow.js can swap its full text per method instead of
         just the amount.
+
+        In-Clinic only (data-kal-mode-offline-only, same generic toggle
+        applyConsultationModeVisibility() already drives flow-wide — no JS
+        changes needed here). Video Consult gets its own
+        .kal-confirm-pay-cta variant instead (data-kal-mode-online-only):
+        "Proceed and pay" + a row of small overlapping payment-method
+        circles (Google Pay/PhonePe/Paytm/UPI, kal-booking-icons.liquid's
+        own 'payment-*' icons) + the ₹450 price + a right-arrow, matching
+        the mobile export for this CTA. The desktop footer below carries
+        the identical markup (see its own comment) — this button's own
+        height grows to fit the 24px icon circles at 750px+ instead of
+        shrinking them, see kal-booking-flow.css's own comment on that.
       {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        <span data-kal-confirm-payment-label>Proceed to Payment</span>
+        <span data-kal-mode-offline-only data-kal-confirm-payment-label>Proceed to Payment</span>
+        <span class="kal-confirm-pay-cta" data-kal-mode-online-only hidden>
+          <span class="kal-confirm-pay-cta__label">Proceed and pay</span>
+          <span class="kal-confirm-pay-cta__icons">
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-gpay' -%}</span>
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-phonepe' -%}</span>
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-paytm' -%}</span>
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-upi' -%}</span>
+          </span>
+          <span class="kal-confirm-pay-cta__amount">
+            <span class="kal-confirm-pay-cta__price">&#8377;450</span>
+            {%- render 'kal-booking-icons', icon_name: 'arrow-right', class: 'kal-confirm-pay-cta__arrow' -%}
+          </span>
+        </span>
       </button>
     </div>
 
@@ -297,8 +322,26 @@
         {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
         <span>Back</span>
       </button>
+      {%- comment -%}
+        Same In-Clinic/Video Consult split as the mobile instance of this
+        button above (see that one's own comment for the full rationale) —
+        data-kal-mode-offline-only/-online-only, no JS changes needed.
+      {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
-        <span data-kal-confirm-payment-label>Proceed to Payment</span>
+        <span data-kal-mode-offline-only data-kal-confirm-payment-label>Proceed to Payment</span>
+        <span class="kal-confirm-pay-cta" data-kal-mode-online-only hidden>
+          <span class="kal-confirm-pay-cta__label">Proceed and pay</span>
+          <span class="kal-confirm-pay-cta__icons">
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-gpay' -%}</span>
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-phonepe' -%}</span>
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-paytm' -%}</span>
+            <span class="kal-confirm-pay-cta__icon-circle">{%- render 'kal-booking-icons', icon_name: 'payment-upi' -%}</span>
+          </span>
+          <span class="kal-confirm-pay-cta__amount">
+            <span class="kal-confirm-pay-cta__price">&#8377;450</span>
+            {%- render 'kal-booking-icons', icon_name: 'arrow-right', class: 'kal-confirm-pay-cta__arrow' -%}
+          </span>
+        </span>
       </button>
     </div>
   </div>

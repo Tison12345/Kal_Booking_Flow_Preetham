@@ -82,7 +82,7 @@
 
   <div class="kal-step-shell__panel">
 
-    {%- render 'kal-booking-flow-step-header', back_target: 'doctor-select', step_number: 3, step_total: 5, next_label: 'Personal details', location_switchable: true -%}
+    {%- render 'kal-booking-flow-step-header', back_target: 'doctor-select', step_number: 3, step_total: 5, next_label: 'Personal details' -%}
 
     {%- comment -%}
       Heading moved OUTSIDE .kal-step-shell__scroll (still a sibling
@@ -109,31 +109,33 @@
         </div>
 
         <div class="kal-day-strip">
-          <button type="button" class="kal-day-chip kal-day-chip--active" data-kal-slot-day-offset="0">
-            <span class="kal-day-chip__label">Today</span>
-            <span class="kal-day-chip__date">6</span>
-            <span class="kal-day-chip__badge kal-day-chip__badge--high">5 slots</span>
-          </button>
-          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="1">
-            <span class="kal-day-chip__label">Mon</span>
-            <span class="kal-day-chip__date">7</span>
-            <span class="kal-day-chip__badge kal-day-chip__badge--high">4 slots</span>
-          </button>
-          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="2">
-            <span class="kal-day-chip__label">Tue</span>
-            <span class="kal-day-chip__date">8</span>
-            <span class="kal-day-chip__badge kal-day-chip__badge--high">3 slots</span>
-          </button>
-          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="3" disabled>
-            <span class="kal-day-chip__label">Wed</span>
-            <span class="kal-day-chip__date">9</span>
-            <span class="kal-day-chip__badge kal-day-chip__badge--none">0 slots</span>
-          </button>
-          <button type="button" class="kal-day-chip" data-kal-slot-day-offset="4">
-            <span class="kal-day-chip__label">Thu</span>
-            <span class="kal-day-chip__date">10</span>
-            <span class="kal-day-chip__badge kal-day-chip__badge--busy">5 slots</span>
-          </button>
+          <div class="kal-day-strip__track">
+            <button type="button" class="kal-day-chip kal-day-chip--active" data-kal-slot-day-offset="0">
+              <span class="kal-day-chip__label">Today</span>
+              <span class="kal-day-chip__date">6</span>
+              <span class="kal-day-chip__badge kal-day-chip__badge--high">5 slots</span>
+            </button>
+            <button type="button" class="kal-day-chip" data-kal-slot-day-offset="1">
+              <span class="kal-day-chip__label">Mon</span>
+              <span class="kal-day-chip__date">7</span>
+              <span class="kal-day-chip__badge kal-day-chip__badge--high">4 slots</span>
+            </button>
+            <button type="button" class="kal-day-chip" data-kal-slot-day-offset="2">
+              <span class="kal-day-chip__label">Tue</span>
+              <span class="kal-day-chip__date">8</span>
+              <span class="kal-day-chip__badge kal-day-chip__badge--high">3 slots</span>
+            </button>
+            <button type="button" class="kal-day-chip" data-kal-slot-day-offset="3" disabled>
+              <span class="kal-day-chip__label">Wed</span>
+              <span class="kal-day-chip__date">9</span>
+              <span class="kal-day-chip__badge kal-day-chip__badge--none">0 slots</span>
+            </button>
+            <button type="button" class="kal-day-chip" data-kal-slot-day-offset="4">
+              <span class="kal-day-chip__label">Thu</span>
+              <span class="kal-day-chip__date">10</span>
+              <span class="kal-day-chip__badge kal-day-chip__badge--busy">5 slots</span>
+            </button>
+          </div>
         </div>
       </div>
 

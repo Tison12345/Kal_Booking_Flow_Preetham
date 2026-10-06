@@ -40,9 +40,11 @@
        patientMobile, patientGender } -> books it and fires the WhatsApp
        confirmation
   This step's job when that's wired up: collect patientName/patientGender/
-  patientMobile/patientEmail into slotPicker.patientDetails (see JS) so
-  they're ready to send in step 2 above once the next step (booking
-  confirmation) actually triggers it.
+  patientMobile/patientEmail/patientConcern into slotPicker.patientDetails
+  (see JS) so they're ready to send in step 2 above once the next step
+  (booking confirmation) actually triggers it. patientConcern (the new open-
+  text Concern field below) isn't part of that POST body today — add it if/
+  when the backend is extended to accept it, same caveat as patientEmail.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
@@ -305,6 +307,36 @@
               <span data-kal-field-error-text></span>
             </p>
           </div>
+        </div>
+
+        {%- comment -%}
+          Concern — open text, not the Concern Select checkbox list.
+          Experiment B (kal-consult-cta, see kal-booking-flow.js's BOOKING
+          EXPERIMENT comment) skips Entry and Concern Select entirely and
+          opens straight to Doctor Select, so a visitor coming through that
+          path never gets a chance to pick a concern anywhere upstream of
+          here. Experiment A visitors already picked one on Concern Select,
+          so this field would just be a redundant second ask for them —
+          data-kal-concern-field starts hidden and is only revealed by
+          applyExperimentVisibility() in kal-booking-flow.js when the flow
+          was opened via .kal-consult-cta (Experiment B). That same
+          function also skips/restores this field's required-ness in
+          isPatientDetailsValid/validatePatientDetailsAndShowErrors so a
+          hidden field can never block Experiment A's Continue button.
+        {%- endcomment -%}
+        <div class="kal-form-field" data-kal-concern-field hidden>
+          <label class="kal-form-label" for="kal-patient-concern">Concern*</label>
+          <input
+            type="text"
+            id="kal-patient-concern"
+            class="kal-form-input"
+            data-kal-field="concern"
+            placeholder="What brings you in today?"
+          >
+          <p class="kal-form-error" data-kal-field-error="concern" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
         </div>
       </div>
     </div>

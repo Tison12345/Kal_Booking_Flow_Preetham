@@ -29,9 +29,17 @@ document.addEventListener('DOMContentLoaded', () => {
   //      Select, opens straight to Doctor Select.
   // Everything else — Concern Select (when reached via A)/Doctor Select/
   // Slot Picker/Patient Details/Confirmation/Booking Confirmed — is
-  // identical between the two; no separate flag needed for anything past
-  // the initial goToStep() call below.
+  // identical between the two, with ONE exception: Patient Details' open-
+  // text Concern field (see that step's own liquid comment) only shows for
+  // B, set via isExperimentB below — A visitors already picked a concern
+  // on Concern Select, so asking again there would be redundant.
   // ----------------------------------------------------------------------
+
+  // Set/cleared by the two CTA click handlers below, read by Patient
+  // Details' applyExperimentVisibility() to show/hide + validate its
+  // Concern field. Starts false (Experiment A's own default) since that's
+  // also what a direct flow open — bypassing either CTA — falls back to.
+  let isExperimentB = false;
 
   // ----------------------------------------------------------------------
   // FACILITY SELECTION — see docs/facility-selection-plan.md. A visitor
@@ -1093,11 +1101,100 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const openCalendarModal = () => {
+  // Anchors the panel just below the calendar icon that opened it, instead
+  // of centering it on screen — per explicit instruction. The panel stays
+  // position:fixed (see CSS, and this file's own liquid comment on why
+  // this whole modal lives as a direct <dialog> child rather than nested
+  // near the trigger button — .kal-step-slot-picker .kal-step-shell__scroll
+  // has overflow-y:auto, which per the CSS overflow spec forces BOTH axes
+  // to clip, so a position:absolute popup sharing a positioning context
+  // with the trigger would get clipped by that ancestor the moment it's
+  // taller than the scroll area's own visible height, which this popup
+  // always is. Keeping it a <dialog>-level sibling and positioning it via
+  // JS is what avoids that), so this computes where "below the icon"
+  // actually is and sets it via inline style.
+  //
+  // At desktop widths the <dialog> itself gets a CSS transform (centering
+  // it — see kal-booking-flow.css), which per spec makes the DIALOG the
+  // containing block for any position:fixed descendant instead of the
+  // true viewport; mobile has no such transform, so position:fixed there
+  // really is relative to the viewport. Rather than detecting which one
+  // applies (fragile — environments like the theme editor's preview
+  // iframe can make that unreliable), this resets the panel to CSS (0,0),
+  // measures where that actually lands on screen (its "baseline"), and
+  // compares that against the trigger's own rect — both
+  // getBoundingClientRect() calls are always true screen coordinates, so
+  // the delta between them is correct regardless of which containing
+  // block is actually in effect.
+  //
+  // Always opens below the icon, never flips above it — per explicit
+  // instruction, the popup's own size must not change which direction it
+  // opens. Both the icon and the popup are always positioned relative to
+  // the <dialog>'s own bounds (not the full browser viewport, which may
+  // be much taller/wider than the booking modal itself), so the popup
+  // stays within the visible modal at every width, mobile included. If
+  // there isn't enough room between the icon and the dialog's own bottom
+  // edge for the calendar's full height, the popup's own content scrolls
+  // internally (max-height + overflow-y:auto) instead of the popup
+  // itself moving or shrinking its intended size.
+  // Desktop-only (750px+, matching this flow's shared breakpoint) wants
+  // the panel centered in the dialog instead of anchored below the icon —
+  // per explicit instruction, mobile keeps the below-icon anchor, desktop
+  // doesn't.
+  const CALENDAR_DESKTOP_BREAKPOINT = 750;
+
+  const positionCalendarPanel = (triggerBtn) => {
+    const modal = flow.querySelector('[data-kal-calendar-modal]');
+    const panel = modal ? modal.querySelector('.kal-calendar-modal__panel') : null;
+    if (!panel || !triggerBtn) return;
+
+    panel.style.top = '0px';
+    panel.style.left = '0px';
+    panel.style.maxHeight = 'none';
+    const baseline = panel.getBoundingClientRect();
+    const boundsRect = flow.getBoundingClientRect();
+    const margin = 16;
+    const panelWidth = panel.offsetWidth;
+
+    if (window.innerWidth >= CALENDAR_DESKTOP_BREAKPOINT) {
+      // Centered in the dialog, not anchored to the icon.
+      const panelHeight = panel.offsetHeight;
+      const screenLeft = boundsRect.left + (boundsRect.width - panelWidth) / 2;
+      const screenTop = boundsRect.top + (boundsRect.height - panelHeight) / 2;
+      panel.style.left = `${screenLeft - baseline.left}px`;
+      panel.style.top = `${Math.max(margin, screenTop - baseline.top)}px`;
+      panel.style.maxHeight = `${Math.max(160, boundsRect.height - margin * 2)}px`;
+      panel.style.overflowY = 'auto';
+      return;
+    }
+
+    const triggerRect = triggerBtn.getBoundingClientRect();
+
+    // Right-aligned to the icon by default (it sits near the right edge
+    // of its row), clamped so the panel never runs past either edge of
+    // the dialog's own bounds.
+    let screenLeft = triggerRect.right - panelWidth;
+    screenLeft = Math.max(
+      boundsRect.left + margin,
+      Math.min(screenLeft, boundsRect.right - panelWidth - margin),
+    );
+
+    const screenTop = triggerRect.bottom + 8;
+    const availableHeight = boundsRect.bottom - screenTop - margin;
+
+    panel.style.left = `${screenLeft - baseline.left}px`;
+    panel.style.top = `${screenTop - baseline.top}px`;
+    panel.style.maxHeight = `${Math.max(160, availableHeight)}px`;
+    panel.style.overflowY = 'auto';
+  };
+
+  const openCalendarModal = (triggerBtn) => {
     slotPicker.calendarMonth = firstOfMonth(slotPicker.selectedDate);
     renderCalendarMonth();
     const modal = flow.querySelector('[data-kal-calendar-modal]');
-    if (modal) modal.hidden = false;
+    if (!modal) return;
+    modal.hidden = false;
+    positionCalendarPanel(triggerBtn);
   };
 
   const closeCalendarModal = () => {
@@ -1131,8 +1228,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // PATIENT DETAILS — form state, validation, and the gender pill toggle.
   // NOT wired to the backend yet (explicit instruction). Once it is, this
   // state is exactly what POST /api/public/appointments needs for
-  // patientName/patientGender/patientMobile (email isn't sent there today —
-  // add it if/when the backend is extended to accept it).
+  // patientName/patientGender/patientMobile (email and concern aren't sent
+  // there today — add them if/when the backend is extended to accept them).
+  // `concern` is an open text field (not the Concern Select checkbox list)
+  // — added so Experiment B visitors (kal-consult-cta, skips Entry/Concern
+  // Select straight to Doctor Select) have somewhere to say what they're
+  // coming in for, since that path never reaches Concern Select at all.
   // ----------------------------------------------------------------------
 
   const patientDetails = {
@@ -1140,6 +1241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gender: '',
     whatsapp: '',
     email: '',
+    concern: '',
   };
 
   // Country-code picker — real 9-country list matching the CMS's own
@@ -1296,7 +1398,8 @@ document.addEventListener('DOMContentLoaded', () => {
     patientDetails.name.trim() !== '' &&
     (patientDetails.gender === 'male' || patientDetails.gender === 'female') &&
     isValidWhatsapp(patientDetails.whatsapp) &&
-    isValidEmail(patientDetails.email);
+    isValidEmail(patientDetails.email) &&
+    (!isExperimentB || patientDetails.concern.trim() !== '');
 
   const updatePatientContinueButton = () => {
     flow.querySelectorAll('[data-kal-patient-continue]').forEach((btn) => {
@@ -1381,7 +1484,36 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFieldError('email');
     }
 
+    if (isExperimentB) {
+      if (patientDetails.concern.trim() === '') {
+        showFieldError('concern', 'Please tell us your concern.');
+        allValid = false;
+      } else {
+        clearFieldError('concern');
+      }
+    }
+
     return allValid;
+  };
+
+  // Shows/hides Patient Details' Concern field per isExperimentB (see
+  // BOOKING EXPERIMENT above) and keeps its state harmless when hidden —
+  // cleared value + cleared error, so switching from B back to A (e.g. the
+  // visitor closes the flow and reopens it via the other CTA) never leaves
+  // a stale concern value sitting in patientDetails or an error showing on
+  // a field they can no longer see.
+  const applyExperimentVisibility = () => {
+    flow.querySelectorAll('[data-kal-concern-field]').forEach((el) => {
+      el.hidden = !isExperimentB;
+    });
+    if (!isExperimentB) {
+      patientDetails.concern = '';
+      flow.querySelectorAll('[data-kal-field="concern"]').forEach((el) => {
+        el.value = '';
+      });
+      clearFieldError('concern');
+    }
+    updatePatientContinueButton();
   };
 
   const setGender = (gender) => {
@@ -1411,6 +1543,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // other data-kal-confirm-* hooks.
     flow.querySelectorAll('[data-kal-confirm-payment]').forEach((el) => {
       el.textContent = method === 'pay-at-clinic' ? 'Pay at clinic' : 'Online payment';
+    });
+
+    // Same row's In-Clinic variant (see that file's own comment) — only
+    // one of the two data-kal-payment-method-display spans is shown at a
+    // time, so the teal kal-confirmation-details__value--paid color only
+    // ever applies to the "Paid online" one, never to "Pay at clinic".
+    flow.querySelectorAll('[data-kal-payment-method-display]').forEach((el) => {
+      el.hidden = el.dataset.kalPaymentMethodDisplay !== method;
     });
 
     // Confirm button's own label (mobile + desktop instances) — "Proceed
@@ -1446,6 +1586,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // (Experiment A — see BOOKING EXPERIMENT above).
   document.addEventListener('click', (e) => {
     if (e.target.closest('.kal-request-appointment-cta')) {
+      isExperimentB = false;
+      applyExperimentVisibility();
       openFlow();
       goToStep('entry');
     }
@@ -1453,6 +1595,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Experiment B — a doctor card's own "Consult" CTA, skipping straight
     // to Doctor Select. See BOOKING EXPERIMENT above.
     if (e.target.closest('.kal-consult-cta')) {
+      isExperimentB = true;
+      applyExperimentVisibility();
       openFlow();
       goToStep('doctor-select');
     }
@@ -1469,6 +1613,8 @@ document.addEventListener('DOMContentLoaded', () => {
         name: facilityTrigger.dataset.locationName,
         address: facilityTrigger.dataset.clinicAddress,
       });
+      isExperimentB = false;
+      applyExperimentVisibility();
       openFlow();
       goToStep('entry');
     }
@@ -1558,8 +1704,17 @@ document.addEventListener('DOMContentLoaded', () => {
       applyCalendarDateSelection(addDays(todayStart(), offset));
     }
 
-    if (e.target.closest('[data-kal-open-calendar]')) {
-      openCalendarModal();
+    const calendarOpenTrigger = e.target.closest('[data-kal-open-calendar]');
+    if (calendarOpenTrigger) {
+      // Toggle, not always-open — clicking the icon again while the
+      // panel is already showing closes it instead of re-opening/
+      // re-positioning it.
+      const modal = flow.querySelector('[data-kal-calendar-modal]');
+      if (modal && !modal.hidden) {
+        closeCalendarModal();
+      } else {
+        openCalendarModal(calendarOpenTrigger);
+      }
     }
 
     if (e.target.closest('[data-kal-close-calendar]')) {
@@ -1593,7 +1748,11 @@ document.addEventListener('DOMContentLoaded', () => {
         dayNum,
       );
       applyCalendarDateSelection(picked);
-      closeCalendarModal();
+      // Stays open — per explicit instruction, picking a date is not
+      // itself a close action (only the icon toggle, "Done", or clicking
+      // outside close it). Re-render so the grid's own --selected cell
+      // reflects the new pick while it's still showing.
+      renderCalendarMonth();
     }
 
     const slotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');
