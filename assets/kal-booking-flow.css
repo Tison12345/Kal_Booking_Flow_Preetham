@@ -1041,9 +1041,15 @@
 }
 
 @media screen and (min-width: 750px) {
+  /* border-right restored (was explicitly none) — this is the two-panel
+     layout's own vertical divider between the left info column and the
+     right content panel. It needs to visually continue all the way down
+     through the footer row below (not just stop at this row's own
+     bottom edge), which is why .kal-concern-select__footer-actions
+     further down also carries its own border-left at the same column
+     boundary, instead of this divider being the only one. */
   .kal-step-shell--progress-panel .kal-step-shell__info {
     background: rgba(246, 241, 232, 0.11);
-    border-right: none;
     padding: 32px 24px 0;
     box-sizing: border-box;
     /* Explicit height, matching .kal-step-shell__panel's own height:100%
@@ -1097,7 +1103,7 @@
 
 .kal-concern-select__info-label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-heavy);
+  font-weight: var(--kal-booking-flow-font-weight-bold);
   line-height: 150%;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -1471,13 +1477,19 @@
     display: none;
   }
 
-  /* Second grid row, spanning both columns, with a border-top separating
-     it from the concern list above — matches the design's full-width
-     Footer frame (node 775:12866) rather than sitting only inside the
-     right panel's own width. Scoped with .kal-step-shell--progress-panel
-     (not just the bare class) so its padding/margin-top tie the shared
-     row rule's specificity above and win by coming later in source,
-     instead of losing to it.
+  /* Second grid row, spanning both columns — TWO INDEPENDENT footers
+     (.kal-concern-select__footer-help / __footer-actions below), each
+     with its own background (no border on either — explicit
+     instruction), not one shared full-width bar. An earlier pass
+     matched the design's full-width Footer frame (node 775:12866) as a
+     single bar spanning both columns; per a later, explicit "split the
+     footer into 2 independent footers" fix, each column now reads as
+     its own strip confined to its own panel — the left one
+     assistance-only, the right one navigation-only — instead of one box
+     that happens to contain both. Scoped with .kal-step-shell--progress-panel
+     (not just the bare class) so its margin-top ties the shared row
+     rule's specificity above and wins by coming later in source, instead
+     of losing to it.
 
      display:grid with the EXACT SAME grid-template-columns as the
      content grid above (.kal-step-shell--progress-panel's own 300px
@@ -1488,10 +1500,10 @@
      the right column actually starts; mirroring the real column
      template is what makes the footer's own left/right divide land on
      the exact same x as the divider between .kal-step-shell__info and
-     .kal-step-shell__panel above it. No horizontal padding on the bar
-     itself — each column below supplies its own inset instead, matching
-     its content column's own padding (see .kal-concern-select__footer-help
-     / __footer-actions below), same as the content grid does.
+     .kal-step-shell__panel above it, even without a visible border
+     continuing it down through this row. No padding/border/background
+     on the wrapper itself anymore — each column below supplies its own
+     now that they're independent boxes.
 
      No [hidden] on this element anymore (unlike the mobile instance) —
      the help text on its left is always visible, so the bar itself
@@ -1504,12 +1516,15 @@
        would sit BETWEEN the two columns, shifting the boundary 16px off
        from the 300px the content grid actually uses. */
     gap: 0;
-    align-items: center;
+    align-items: stretch;
     grid-column: 1 / -1;
-    padding: 12px 0;
+    /* Cancels the shared row rule's padding:12px 0 0 above — each
+       independent footer column supplies its own padding now, so the
+       wrapper itself needs none, otherwise its leftover top padding
+       would stack on top of each column's own and read as lopsided
+       (extra space above, none below). */
+    padding: 0;
     margin-top: 0;
-    border-top: 1px solid var(--kal-booking-flow-color-border);
-    background: var(--kal-booking-flow-color-white);
   }
 
   /* The help line (icon + phone number) reuses .kal-step-entry__help for
@@ -1518,7 +1533,11 @@
      justify-content:center) — wrong here, where it's just this grid's
      left column. Reset those three, and pad left/right 24px to match
      .kal-step-shell__info's own 24px inset above it, so "Need
-     assistance" starts at the exact same x as "Consultation Booking". */
+     assistance" starts at the exact same x as "Consultation Booking".
+     background is this independent footer's own now (moved off the
+     shared wrapper above) — this is the "assistance only" left footer
+     from the split-footer fix. No border on it — explicit instruction
+     that neither of the two independent footers should have one. */
   .kal-concern-select__footer-help {
     /* Grid items default to min-width:auto (their content's min-content
        size), which for a flex row containing text ignores the 300px
@@ -1527,6 +1546,7 @@
        not the (now-removed) nowrap alone. min-width:0 is what makes the
        track's 300px the real constraint the text has to wrap within. */
     min-width: 0;
+    align-items: center;
     /* 16px, not the 24px this originally matched .kal-step-shell__info's
        own inset with (see comment above) — 24px left this only 228px
        for the text ("Need assistance? Call us at +91 804012 3456"),
@@ -1534,9 +1554,10 @@
        box width Figma's own spec uses for this exact line elsewhere,
        where it fits on one line — at the cost of an 8px misalignment
        from "Consultation Booking" above it. */
-    padding: 0 16px;
-    border-top: none;
+    padding: 12px 16px;
+    background: var(--kal-booking-flow-color-white);
     justify-content: flex-start;
+    border-top: 1px solid var(--kal-booking-flow-color-border);
   }
 
   /* Back + Continue — this grid's right column, matching
@@ -1547,13 +1568,21 @@
      buttons huddled together at the bar's far right. space-between here
      is what spreads them across the FULL right-column width, unlike the
      old flex row on the whole bar which only had this column's hug-fit
-     content width to work with. */
+     content width to work with. background is this independent footer's
+     own (moved off the shared wrapper above) — the "navigation only"
+     right footer from the split-footer fix. No border on it either (same
+     explicit instruction as .kal-concern-select__footer-help above) —
+     the left/right panel divider (.kal-step-shell--progress-panel
+     .kal-step-shell__info's own border-right) no longer continues down
+     through this row as a result; it stops above the footer. */
   .kal-concern-select__footer-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 0 24px;
+    padding: 12px 24px;
+    background: var(--kal-booking-flow-color-white);
+    border-top: 1px solid var(--kal-booking-flow-color-border);
   }
 
   /* Keep the actions group occupying its box even while "hidden" —
@@ -2593,11 +2622,26 @@ div.kal-calendar-modal__backdrop {
      .kal-step-doctor-select__list above) to out-specificity this list's
      own later padding:0 24px base rule further down this file — both
      are needed at equal specificity otherwise, and the later one in
-     source would win the padding-top/margin-top tie back to 0. */
+     source would win the padding-top/margin-top tie back to 0.
+
+     Left/right need the same treatment too, same reason the
+     .kal-step-concern-select .kal-step-shell__scroll rule above
+     re-applies its own 24px side padding: .kal-step-shell--progress-panel
+     .kal-step-doctor-select__list (further up this file) zeroes this
+     list's side padding at this width to avoid stacking with the panel's
+     own inset, which left the selected card sitting flush against this
+     list's own overflow-y:auto clip edge on both sides — same flat-cut
+     clipping as the unfixed top used to have, just left/right instead of
+     top. padding-left/right real again, negative margin-left/right
+     cancels the resulting inward shift so layout doesn't move. */
   .kal-step-doctor-select .kal-step-doctor-select__list {
     box-sizing: border-box;
     padding-top: 16px;
+    padding-left: 24px;
+    padding-right: 24px;
     margin-top: -16px;
+    margin-left: -24px;
+    margin-right: -24px;
   }
 
   .kal-step-doctor-select .kal-doctor-card {
@@ -6808,6 +6852,7 @@ div.kal-calendar-modal__backdrop {
        stacked panel-gap issue, and this negative margin isn't needed
        (or safe) there. */
     margin-bottom: 0;
+    padding-bottom: 24px;
   }
 }
 
@@ -7234,11 +7279,20 @@ div.kal-calendar-modal__backdrop {
    matching the desktop export exactly (mobile's 14px top is unchanged
    above). */
 @media screen and (min-width: 750px) {
+  /* 16px = 13px circle radius + 3px gap, on both ends. left is this
+     step's own circle-right-edge (50% + 13px) pushed out another 3px.
+     right is the mirror of that for the NEXT step's circle-left-edge
+     (150% - 13px - 3px = 150% - 16px, i.e. 50% - 16px past this step's
+     own right edge — right is measured inward from the right edge, so a
+     negative base value here means "extend past it"). Using right
+     instead of width keeps both ends expressed the same way (an inset
+     from each circle), rather than left + a derived total span. */
   .kal-therapy-next-steps .kal-concern-select__stepper-divider {
     top: 13px;
     left: calc(50% + 16px);
+    right: calc(16px - 50%);
     transform: none;
-    width: calc(100% - 32px);
+    width: auto;
   }
 }
 
@@ -7247,12 +7301,6 @@ div.kal-calendar-modal__backdrop {
   z-index: 1;
 }
 
-/* The connector leaving a completed step reads dark green (matching
-   that step's own filled circle), not the shared component's neutral
-   grey default. */
-.kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-divider {
-  background: #1f4a3d;
-}
 
 .kal-therapy-next-steps__label {
   font-size: var(--kal-booking-flow-font-size-small);
