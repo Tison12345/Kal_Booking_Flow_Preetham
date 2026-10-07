@@ -479,6 +479,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // Concern Select's floating scroll hint (see data-kal-scroll-hint's click
+  // handler further below) hides itself once its scroll region has reached
+  // the bottom — nothing left to hint at scrolling towards past that point.
+  // Defined here (ahead of goToStep) so goToStep can recompute it on every
+  // step transition — a step that was just hidden has 0 scrollHeight/
+  // clientHeight, and a step that's just been revealed needs its real
+  // post-layout measurements re-checked, not whatever scroll position
+  // happened to be true the last time this ran.
+  const SCROLL_HINT_BOTTOM_THRESHOLD = 4;
+  const updateScrollHintVisibility = (scrollRegion, hintButton) => {
+    const atBottom = scrollRegion.scrollTop + scrollRegion.clientHeight
+      >= scrollRegion.scrollHeight - SCROLL_HINT_BOTTOM_THRESHOLD;
+    hintButton.hidden = atBottom;
+  };
+  const updateAllScrollHints = () => {
+    flow.querySelectorAll('[data-kal-scroll-hint]').forEach((hintButton) => {
+      const scrollRegion = hintButton.closest('.kal-step-shell__panel')?.querySelector('.kal-step-shell__scroll');
+      if (scrollRegion) updateScrollHintVisibility(scrollRegion, hintButton);
+    });
+  };
+
   // Step navigation: each step screen is a direct child of #kal-booking-flow-content
   // with data-kal-step="name". Clicking anything with data-kal-goto="name" (a card,
   // a continue button) or data-kal-back="name" (a back button) switches to that step.
@@ -534,6 +555,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stepName === 'therapy-confirmed') {
       renderTherapyConfirmedSummary();
     }
+
+    // Recomputed after every transition — see this function's own
+    // definition above for why a plain one-time check isn't enough.
+    updateAllScrollHints();
   };
 
   // ----------------------------------------------------------------------
@@ -1906,6 +1931,17 @@ document.addEventListener('DOMContentLoaded', () => {
       closeFlow();
     }
   });
+
+  // `scroll` doesn't bubble, so the scroll-hint's own visibility (computed
+  // by updateScrollHintVisibility/updateAllScrollHints, defined up near
+  // goToStep) needs a listener on each scroll region directly rather than
+  // delegating from a single listener higher up.
+  flow.querySelectorAll('[data-kal-scroll-hint]').forEach((hintButton) => {
+    const scrollRegion = hintButton.closest('.kal-step-shell__panel')?.querySelector('.kal-step-shell__scroll');
+    if (!scrollRegion) return;
+    scrollRegion.addEventListener('scroll', () => updateScrollHintVisibility(scrollRegion, hintButton));
+  });
+  window.addEventListener('resize', updateAllScrollHints);
 
   // Patient Details form fields — delegated the same way as clicks, so this
   // keeps working once a desktop composition duplicates these inputs.

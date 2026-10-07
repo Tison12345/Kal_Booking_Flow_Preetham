@@ -2324,6 +2324,18 @@ div.kal-calendar-modal__backdrop {
   cursor: pointer;
 }
 
+/* Needs its own [hidden] override — same class of author-`display`-vs-
+   [hidden] bug as .kal-payment-options[hidden]/.kal-therapy-dropdown[hidden]
+   elsewhere in this file: the rule above's own `display: flex` is equal
+   specificity to the browser's UA `[hidden] { display: none }` default,
+   and author styles win that tie regardless of source order — so without
+   this, kal-booking-flow.js's own data-kal-scroll-hint hiding (toggled
+   once the scroll region reaches its bottom) would have no visible
+   effect at all. */
+.kal-concern-select__scroll-hint[hidden] {
+  display: none;
+}
+
 /* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
    above (0,1,0) vs the theme's global button:hover (0,1,1). */
 .kal-concern-select__scroll-hint:hover {
@@ -2728,7 +2740,7 @@ div.kal-calendar-modal__backdrop {
   flex: 1;
   height: 48px;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--kal-booking-flow-color-border);
   background: var(--kal-booking-flow-color-white);
   color: var(--kal-booking-flow-color-location-text);
