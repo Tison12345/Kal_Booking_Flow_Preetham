@@ -118,16 +118,15 @@
           decorative status content.
         {%- endcomment -%}
         {%- comment -%}
-          Reuses the exact same stepper classes as Concern Select's "Your
-          Progress" (.kal-concern-select__stepper*,
-          kal-booking-flow-step-progress.liquid) for pixel-for-pixel the
-          same look — circle size/colors, label/state typography, divider
-          styling — rather than a parallel set of near-duplicate classes.
-          Unlike that 5-step flow tracker, this is a fixed 3-item list
-          with no current_step param and no state that ever changes once
-          rendered (this screen only shows after the request is already
-          submitted), so the --completed/--current modifiers are just
-          hardcoded per item instead of computed from a loop.
+          Own dedicated .kal-therapy-next-steps__* classes, not Concern
+          Select's shared "Your Progress" stepper (.kal-concern-select__stepper*,
+          kal-booking-flow-step-progress.liquid) — see the comment right
+          above the markup below for why. Unlike that 5-step flow tracker,
+          this is a fixed 3-item list with no current_step param and no
+          state that ever changes once rendered (this screen only shows
+          after the request is already submitted), so the --completed/
+          --current modifiers are just hardcoded per item instead of
+          computed from a loop.
         {%- endcomment -%}
         {%- comment -%}
           Shared wrapper for the "What happens next" card, the visit
@@ -136,45 +135,51 @@
           desktop) applied here instead of duplicated on all three,
           which is what kept them from lining up in the first place.
         {%- endcomment -%}
+        {%- comment -%}
+          Own dedicated classes (.kal-therapy-next-steps__*), not the
+          shared .kal-concern-select__stepper* ("Your Progress") component
+          — per explicit instruction, this fixed 3-item timeline shouldn't
+          reuse that sidebar stepper's markup/CSS even though it used to
+          look identical, since the two are conceptually different
+          (a 5-step flow tracker vs. a fixed "what happens after
+          submitting" list) and any future change to one was at risk of
+          silently affecting the other. Sized/positioned straight from
+          this card's own Figma export (mobile + desktop dev-mode CSS),
+          not ported from the sidebar stepper's values.
+        {%- endcomment -%}
         <div class="kal-step-therapy-confirmed__cards">
         <div class="kal-therapy-next-steps">
           <p class="kal-therapy-next-steps__label">What happens next</p>
-          <ol class="kal-concern-select__stepper">
-            <li class="kal-concern-select__stepper-step kal-concern-select__stepper-step--completed">
-              <div class="kal-concern-select__stepper-row">
-                <span class="kal-concern-select__stepper-number">
-                  {%- render 'kal-booking-icons', icon_name: 'check' -%}
-                </span>
-                <span class="kal-concern-select__stepper-text">
-                  <span class="kal-concern-select__stepper-label">Request sent</span>
-                  <span class="kal-concern-select__stepper-state">Today, 4:12 PM</span>
-                </span>
-              </div>
-              <span class="kal-concern-select__stepper-divider" aria-hidden="true"></span>
+          <ol class="kal-therapy-next-steps__list">
+            <li class="kal-therapy-next-steps__item kal-therapy-next-steps__item--completed">
+              <span class="kal-therapy-next-steps__circle">
+                {%- render 'kal-booking-icons', icon_name: 'check' -%}
+              </span>
+              <span class="kal-therapy-next-steps__text">
+                <span class="kal-therapy-next-steps__item-label">Request sent</span>
+                <span class="kal-therapy-next-steps__state">Today, 4:12 PM</span>
+              </span>
+              <span class="kal-therapy-next-steps__divider-one" aria-hidden="true"></span>
             </li>
-            <li class="kal-concern-select__stepper-step kal-concern-select__stepper-step--current">
-              <div class="kal-concern-select__stepper-row">
-                <span class="kal-concern-select__stepper-number">
-                  {%- render 'kal-booking-icons', icon_name: 'phone' -%}
-                </span>
-                <span class="kal-concern-select__stepper-text">
-                  <span class="kal-concern-select__stepper-label">Care team calls you</span>
-                  <span class="kal-concern-select__stepper-state">Within 24 hours</span>
-                </span>
-              </div>
-              <span class="kal-concern-select__stepper-divider" aria-hidden="true"></span>
+            <li class="kal-therapy-next-steps__item kal-therapy-next-steps__item--current">
+              <span class="kal-therapy-next-steps__circle">
+                {%- render 'kal-booking-icons', icon_name: 'phone' -%}
+              </span>
+              <span class="kal-therapy-next-steps__text">
+                <span class="kal-therapy-next-steps__item-label">Care team calls you</span>
+                <span class="kal-therapy-next-steps__state">Within 24 hours</span>
+              </span>
+              <span class="kal-therapy-next-steps__divider-two" aria-hidden="true"></span>
             </li>
-            <li class="kal-concern-select__stepper-step">
-              <div class="kal-concern-select__stepper-row">
-                <span class="kal-concern-select__stepper-number">
-                  {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
-                </span>
-                <span class="kal-concern-select__stepper-text">
-                  <span class="kal-concern-select__stepper-label kal-therapy-next-steps__label--mobile">Session confirmation</span>
-                  <span class="kal-concern-select__stepper-label kal-therapy-next-steps__label--desktop">Session confirmed</span>
-                  <span class="kal-concern-select__stepper-state">Details on WhatsApp</span>
-                </span>
-              </div>
+            <li class="kal-therapy-next-steps__item">
+              <span class="kal-therapy-next-steps__circle">
+                {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
+              </span>
+              <span class="kal-therapy-next-steps__text">
+                <span class="kal-therapy-next-steps__item-label kal-therapy-next-steps__label--mobile">Session confirmation</span>
+                <span class="kal-therapy-next-steps__item-label kal-therapy-next-steps__label--desktop">Session confirmed</span>
+                <span class="kal-therapy-next-steps__state">Details on WhatsApp</span>
+              </span>
             </li>
           </ol>
         </div>

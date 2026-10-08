@@ -18,8 +18,9 @@
     "visual match, not wired" treatment as the location badge's dropdown
     chevron elsewhere in this flow). Label text changed from "WhatsApp
     Number" to "Phone Number" to match the export; the underlying
-    data-kal-field="whatsapp" identifier is untouched (JS validation
-    keys off that, not the label).
+    data-kal-field="phone" identifier (and patientDetails.phone/
+    isValidPhone() in the JS) were renamed to match — this field is a
+    plain phone number now, not WhatsApp-specific.
   - Labels/inputs restyled to match the export (sentence-case medium-
     weight labels instead of bold uppercase eyebrow-style ones, #e5e1d9
     borders instead of #e6e6e8) — see kal-booking-flow.css's own comments.
@@ -52,7 +53,7 @@
   data-kal-gender/data-kal-patient-continue hooks either way, so the JS
   validation and input-delegation logic in kal-booking-flow.js needs no
   changes to cover both sizes — it was already written expecting exactly
-  this (see the comment above the `input` listener in that file). WhatsApp
+  this (see the comment above the `input` listener in that file). Phone
   Number + Email are wrapped in .kal-form-row, which CSS stacks on mobile
   and puts side by side on desktop — the one genuine layout-only difference
   on this step.
@@ -91,24 +92,27 @@
     {%- render 'kal-booking-flow-step-header', back_target: 'slot-picker', step_number: 4, step_total: 5, next_label: 'Review & Payment' -%}
 
     {%- comment -%}
-      Heading + appointment card + "Who is this visit for?" moved OUTSIDE
-      .kal-step-shell__scroll (still siblings within .kal-step-shell__panel)
-      per explicit instruction — only the form fields should scroll, with
-      these staying fixed right below the progress bar, same treatment as
-      Concern Select's own heading/banner.
+      Only the top heading stays OUTSIDE .kal-step-shell__scroll (still a
+      sibling within .kal-step-shell__panel) — same treatment as Slot
+      Picker's own "Choose a date and time" heading. The appointment card,
+      "Who is this visit for?" and the form fields all scroll together
+      inside it now, matching Slot Picker's scroll behavior (previously
+      the card and second heading stayed fixed too, scoped differently
+      from every other progress-panel step — per explicit instruction,
+      this step should behave the same way as the one before it).
     {%- endcomment -%}
     <div class="kal-step-doctor-select__intro">
       <h2 class="kal-step-doctor-select__heading">Enter your patient details</h2>
     </div>
 
-    {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
-    {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
-
-    <div class="kal-step-doctor-select__intro">
-      <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
-    </div>
-
     <div class="kal-step-shell__scroll">
+      {%- assign appointment_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
+      {%- render 'kal-booking-flow-appointment-card', photo_url: appointment_photo_url, name: 'Dr. Neethu Jayachandran', price: '&#8377;500' -%}
+
+      <div class="kal-step-doctor-select__intro">
+        <h2 class="kal-step-doctor-select__heading">Who is this visit for?</h2>
+      </div>
+
       <div class="kal-form">
         {%- comment -%}
           Inline field errors — same pattern as the CMS's own forms
@@ -149,9 +153,43 @@
           </p>
         </div>
 
+        {%- comment -%}
+          Concern — open text, not the Concern Select checkbox list.
+          Experiment B (kal-consult-cta, see kal-booking-flow.js's BOOKING
+          EXPERIMENT comment) skips Entry and Concern Select entirely and
+          opens straight to Doctor Select, so a visitor coming through that
+          path never gets a chance to pick a concern anywhere upstream of
+          here. Experiment A visitors already picked one on Concern Select,
+          so this field would just be a redundant second ask for them —
+          data-kal-concern-field starts hidden and is only revealed by
+          applyExperimentVisibility() in kal-booking-flow.js when the flow
+          was opened via .kal-consult-cta (Experiment B). That same
+          function also skips/restores this field's required-ness in
+          isPatientDetailsValid/validatePatientDetailsAndShowErrors so a
+          hidden field can never block Experiment A's Continue button.
+          Placed above Phone Number/Email (not after them) per explicit
+          instruction, so Experiment B's own order reads Name/Gender/
+          Concern/Phone/Email instead of Experiment A's Name/Gender/
+          Phone/Email.
+        {%- endcomment -%}
+        <div class="kal-form-field" data-kal-concern-field hidden>
+          <label class="kal-form-label" for="kal-patient-concern">Concern*</label>
+          <input
+            type="text"
+            id="kal-patient-concern"
+            class="kal-form-input"
+            data-kal-field="concern"
+            placeholder="What brings you in today?"
+          >
+          <p class="kal-form-error" data-kal-field-error="concern" hidden>
+            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+            <span data-kal-field-error-text></span>
+          </p>
+        </div>
+
         <div class="kal-form-row">
           <div class="kal-form-field">
-            <label class="kal-form-label" for="kal-patient-whatsapp">Phone Number*</label>
+            <label class="kal-form-label" for="kal-patient-phone">Phone Number*</label>
             {%- comment -%}
               Real, functional country-code picker — 9 countries, matching
               the CMS's own single source of truth for phone handling
@@ -171,15 +209,15 @@
               position 0 must be "1" and position 1 one of "5"/"6"/"7";
               single-position countries like India's "6789" need no
               separator). kal-booking-flow.js ports the same
-              matchesStartSoFar/matchesStartFully/sanitizePhoneDigits
-              logic the CMS forms use, so typing here is restricted the
-              same way — max digit count enforced live (not just at
-              submit), and a leading digit that can never be valid for
-              the selected country is dropped as you type instead of
-              being left sitting in the field.
+              matchesStartSoFar/sanitizePhoneDigits logic the CMS forms
+              use, so typing here is restricted the same way — max digit
+              count enforced live (not just at submit), and a leading
+              digit that can never be valid for the selected country is
+              dropped as you type instead of being left sitting in the
+              field.
 
-              The field's own identifier (data-kal-field="whatsapp") is
-              unchanged, since JS validation keys off that.
+              The field's own identifier is data-kal-field="phone" — JS
+              validation keys off that.
             {%- endcomment -%}
             <div class="kal-phone-input">
               <div class="kal-country-picker" data-kal-country-picker>
@@ -266,16 +304,16 @@
               </div>
               <input
                 type="tel"
-                id="kal-patient-whatsapp"
+                id="kal-patient-phone"
                 class="kal-form-input kal-phone-input__field"
-                data-kal-field="whatsapp"
+                data-kal-field="phone"
                 placeholder="10-digit mobile number"
                 autocomplete="tel"
                 inputmode="numeric"
                 maxlength="10"
               >
             </div>
-            <p class="kal-form-error" data-kal-field-error="whatsapp" hidden>
+            <p class="kal-form-error" data-kal-field-error="phone" hidden>
               <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
               <span data-kal-field-error-text></span>
             </p>
@@ -307,36 +345,6 @@
               <span data-kal-field-error-text></span>
             </p>
           </div>
-        </div>
-
-        {%- comment -%}
-          Concern — open text, not the Concern Select checkbox list.
-          Experiment B (kal-consult-cta, see kal-booking-flow.js's BOOKING
-          EXPERIMENT comment) skips Entry and Concern Select entirely and
-          opens straight to Doctor Select, so a visitor coming through that
-          path never gets a chance to pick a concern anywhere upstream of
-          here. Experiment A visitors already picked one on Concern Select,
-          so this field would just be a redundant second ask for them —
-          data-kal-concern-field starts hidden and is only revealed by
-          applyExperimentVisibility() in kal-booking-flow.js when the flow
-          was opened via .kal-consult-cta (Experiment B). That same
-          function also skips/restores this field's required-ness in
-          isPatientDetailsValid/validatePatientDetailsAndShowErrors so a
-          hidden field can never block Experiment A's Continue button.
-        {%- endcomment -%}
-        <div class="kal-form-field" data-kal-concern-field hidden>
-          <label class="kal-form-label" for="kal-patient-concern">Concern*</label>
-          <input
-            type="text"
-            id="kal-patient-concern"
-            class="kal-form-input"
-            data-kal-field="concern"
-            placeholder="What brings you in today?"
-          >
-          <p class="kal-form-error" data-kal-field-error="concern" hidden>
-            <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
-            <span data-kal-field-error-text></span>
-          </p>
         </div>
       </div>
     </div>

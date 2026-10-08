@@ -2100,7 +2100,11 @@ div.kal-calendar-modal__backdrop {
   display: block;
   position: absolute;
   inset: 0;
-  background: var(--kal-booking-flow-color-overlay);
+  /* A light grey tint, not the shared dark overlay other modals use
+     (var(--kal-booking-flow-color-overlay)) — per explicit instruction,
+     the booking flow card behind the calendar popup should stay mostly
+     visible instead of dimming to black. */
+  background: rgba(60, 60, 60, 0.25);
 }
 
 /* data-kal-close-calendar on .kal-calendar-modal__backdrop (see liquid)
@@ -4112,29 +4116,12 @@ div.kal-calendar-modal__backdrop {
   height: 100%;
 }
 
-/* margin-top:8px adds to .kal-step-shell__panel's shared 16px gap
-   above, bringing the heading-to-appointment-card gap to 24px
-   specifically — the panel's other gaps stay at the shared 16px,
-   untouched. Mobile only; desktop wants the untrimmed 16px instead (see
-   override below). */
-.kal-step-patient-details .kal-appointment-card {
-  margin-top: 8px;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-step-patient-details .kal-appointment-card {
-    margin-top: 0;
-  }
-}
-
-/* Same 8px addition, targeting only the second .kal-step-doctor-select__intro
-   ("Who is this visit for?") via the adjacent-sibling combinator — this
-   step reuses that same intro class twice, and only the one right after
-   the appointment card should get the extra 8px (bringing its gap to
-   24px too), not the first one above the card. */
-.kal-step-patient-details .kal-appointment-card + .kal-step-doctor-select__intro {
-  margin-top: 8px;
-}
+/* The card now lives inside .kal-step-shell__scroll (see that step's own
+   liquid comment — it scrolls with the form now, matching Slot Picker's
+   behavior), so its gap to the fixed heading above comes from the scroll
+   region's own margin-top below, and its gap to "Who is this visit for?"
+   right after it comes from the scroll region's own flex gap — this rule
+   no longer needs a margin of its own. */
 
 /* "Who is this visit for?" removed on desktop only — mobile keeps it. */
 @media screen and (min-width: 750px) {
@@ -4253,14 +4240,6 @@ div.kal-calendar-modal__backdrop {
   border-color: var(--kal-booking-flow-color-error);
 }
 
-/* .kal-phone-input itself owns the single continuous pill border now
-   (see that rule), not its two children — this is what actually shows
-   the red error state visibly, since the old per-child rule above is now
-   dead code (both children have border:none unconditionally). */
-.kal-phone-input--error {
-  border-color: var(--kal-booking-flow-color-error);
-}
-
 /* The soft glow visible on focus is the browser's own native focus ring
    on the <input> itself, scoped to just that half of the pill — killed
    here and replaced with our own box-shadow on the whole wrapper below,
@@ -4328,6 +4307,21 @@ div.kal-calendar-modal__backdrop {
   border-color: #D9CDBA;
   outline: none;
   box-shadow: none;
+}
+
+/* .kal-phone-input itself owns the single continuous pill border now
+   (see the base rule above), not its two children — this is what
+   actually shows the red error state visibly, since the old per-child
+   rule is dead code (both children have border:none unconditionally).
+   Placed after the base rule and :focus-within above (not before them,
+   where it previously sat — same specificity as each, so an earlier
+   position there meant the base/focus rules silently won the cascade
+   and the red border never actually showed), and repeated as its own
+   :focus-within combo so the error color stays red even while the
+   field still has focus, instead of focus's own tan taking back over. */
+.kal-phone-input--error,
+.kal-phone-input--error:focus-within {
+  border-color: var(--kal-booking-flow-color-error);
 }
 
 /* Positions the dropdown panel relative to the toggle button — the
@@ -4499,13 +4493,16 @@ div.kal-calendar-modal__backdrop {
    each other with zero space between them. */
 /* Now a real internal scroll region at every width, not just desktop —
    flex:1/min-height:0/overflow-y:auto here (paired with the panel's own
-   bounded height:100% above) is what actually keeps the form fields as
-   the only thing that scrolls, with the heading/appointment card/"Who is
-   this visit for?" (siblings above this, outside it) and the footer
-   staying fixed in place. */
+   bounded height:100% above) is what actually keeps the appointment
+   card/"Who is this visit for?"/form fields as the only things that
+   scroll (same behavior as Slot Picker's own scroll region — see this
+   step's liquid comment), with the fixed heading above and the footer
+   below staying in place. gap:24px spaces its own children (card/intro/
+   form) apart from each other. */
 /* margin-top:8px adds to .kal-step-shell__panel's shared 16px gap
-   above, bringing the "Who is this visit for?"-to-form gap to 24px
-   specifically, same as this step's other two intro/card gaps. */
+   above, bringing the heading-to-appointment-card gap to 24px
+   specifically. Mobile only; desktop wants the untrimmed 16px instead
+   (see override below), same as this step always has. */
 .kal-step-patient-details .kal-step-shell__scroll {
   display: flex;
   flex-direction: column;
@@ -4525,6 +4522,7 @@ div.kal-calendar-modal__backdrop {
 @media screen and (min-width: 750px) {
   .kal-step-patient-details .kal-step-shell__scroll {
     min-width: 0;
+    margin-top: 0;
     /* Resets the mobile-only fix above — desktop's own
        .kal-step-shell--progress-panel layout doesn't have the same
        stacked panel-gap issue, and this negative margin isn't needed
@@ -4534,7 +4532,7 @@ div.kal-calendar-modal__backdrop {
   }
 }
 
-/* WhatsApp Number + Email: stacked on mobile (each its own full-width
+/* Phone Number + Email: stacked on mobile (each its own full-width
    .kal-form-field, same as Full Name/Gender above them), side by side on
    desktop — the only genuine layout-only difference between the two sizes
    on this step, now expressed as one wrapper + a media query instead of
@@ -6312,19 +6310,28 @@ div.kal-calendar-modal__backdrop {
 
 /* Dropdown panel — absolutely positioned below the trigger, inside
    .kal-therapy-select-wrapper (position:relative above), so it floats
-   over the category checkboxes below rather than pushing them down.
-   overflow-y:auto moved off this element onto .kal-therapy-dropdown__list
-   below — scrolling the whole panel scrolled .kal-therapy-dropdown__head
-   (the "All Therapies" title/"Clear all") out of view along with the
-   options, which isn't wanted; this element now just clips to its own
-   rounded corners (overflow:hidden) while __head stays put and only
-   __list scrolls internally. */
+   over the category checkboxes below rather than pushing them down (not
+   position:fixed/JS-positioned — it should stay exactly where it
+   visually was, right below the trigger, not become a detached floating
+   panel). max-height here is just a fallback/cap for whenever JS hasn't
+   set one yet — setTherapyDropdownOpen() in kal-booking-flow.js
+   overwrites it inline every time the panel opens, computed from the
+   actual remaining room between the trigger and whichever
+   [data-kal-therapy-concern-footer] is currently visible below it, so
+   the panel always stops short of the footer instead of overlapping or
+   being clipped by it. overflow-y:auto moved off this element onto
+   .kal-therapy-dropdown__list below — scrolling the whole panel
+   scrolled .kal-therapy-dropdown__head (the "All Therapies" title/
+   "Clear all") out of view along with the options, which isn't wanted;
+   this element now just clips to its own rounded corners (overflow:hidden)
+   while __head stays put and only __list scrolls internally once the
+   content exceeds the computed max-height. */
 .kal-therapy-dropdown {
   position: absolute;
   top: 100%;
   left: 24px;
   right: 24px;
-  z-index: 3;
+  z-index: 5;
   max-height: 420px;
   overflow: hidden;
   display: flex;
@@ -7157,16 +7164,20 @@ div.kal-calendar-modal__backdrop {
 }
 
 /* "What happens next" (node 539:2222) — fixed 3-step timeline card
-   replacing the old "Consultation Details" list on this screen. This
-   wrapper/label are its own (the card box Concern Select's own "Your
-   Progress" doesn't have, since that one sits directly in a left info
-   column instead), but the list itself reuses .kal-concern-select__stepper*
-   directly — see this step's own liquid comment. */
-/* Side inset/max-width now lives once on .kal-step-therapy-confirmed__cards
+   replacing the old "Consultation Details" list on this screen. Own
+   dedicated .kal-therapy-next-steps__* classes throughout (list/item/
+   circle/text/label/state/divider), not Concern Select's shared "Your
+   Progress" stepper (.kal-concern-select__stepper*) — per explicit
+   instruction, this fixed 3-item timeline shouldn't reuse that sidebar
+   component's markup/CSS even though the two used to look identical; see
+   this step's own liquid comment. Values below are taken straight from
+   this card's own Figma dev-mode export (mobile + desktop), not ported
+   from the sidebar stepper's. */
+/* Side inset/max-width lives once on .kal-step-therapy-confirmed__cards
    (the shared wrapper around this, the visit details card, and the
    actions row) instead of being duplicated here. */
 .kal-therapy-next-steps {
-  min-height: 224px;
+  min-height: 134px;
   padding: 12px 8px;
   border: 1px solid var(--kal-booking-flow-color-border);
   border-radius: 16px;
@@ -7182,125 +7193,6 @@ div.kal-calendar-modal__backdrop {
     padding: 16px 24px;
   }
 }
-
-/* This card's own connector reads taller/thinner (29px, 1.5px stroke)
-   than the shared stepper component's default (13px, 2px) — scoped here
-   so Concern Select/Doctor Select's own "Your Progress" list (same
-   shared .kal-concern-select__stepper-divider class) keeps its shorter
-   default. Desktop's own horizontal version below already uses this
-   same 1.5px thickness, just rotated into a width instead of a height. */
-.kal-therapy-next-steps .kal-concern-select__stepper-divider {
-  width: 1.5px;
-  height: 29px;
-}
-
-/* The connector leaving a completed step reads dark green (matching
-   that step's own filled circle), not the shared component's neutral
-   grey default — same override desktop's horizontal version already
-   has below, just missing here at the base/mobile level until now. */
-.kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-divider {
-  background: #1f4a3d;
-}
-
-/* At every width now, not just 750px+ — explicit instruction to make
-   mobile match this same horizontal layout instead of the stacked
-   vertical list it used to fall back to. Still scoped to
-   .kal-therapy-next-steps specifically (not the bare
-   .kal-concern-select__stepper* classes), so Concern Select's own
-   "Your Progress" list (always in its narrow 300px left column) keeps
-   its vertical layout untouched at every width. */
-.kal-therapy-next-steps {
-  /* Capped, not the mobile-only 224px this used to need for the
-     stacked vertical list — this compact horizontal row needs far less
-     height at any width now. */
-  min-height: 134px;
-}
-
-/* The 3 steps run left to right with a horizontal connector through
-   the circles. */
-.kal-therapy-next-steps .kal-concern-select__stepper {
-  flex-direction: row;
-  align-items: flex-start;
-}
-
-.kal-therapy-next-steps .kal-concern-select__stepper-step {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* gap:8 — per this card's own export ("Item", circle to text). */
-.kal-therapy-next-steps .kal-concern-select__stepper-row {
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.kal-therapy-next-steps .kal-concern-select__stepper-text {
-  align-items: center;
-  text-align: center;
-}
-
-/* Fixed-length 30px connector (per this card's own export, "Horizontal
-   Divider" inside a 30 Hug x 25.5 Hug frame) centered on the boundary
-   between this step and the next, not a line stretching the full
-   item-to-item width. left:100% is this step's own right edge — since
-   each step's circle is horizontally centered within equal-width steps,
-   that edge is exactly the midpoint between this circle and the next
-   one, regardless of how wide a step actually renders — translateX(-50%)
-   centers the fixed 30px connector on that point. top offset centers it
-   on the 26px circle. Mobile-only now — desktop overrides this below
-   with a width that stays gap-correct at its own, wider card. */
-.kal-therapy-next-steps .kal-concern-select__stepper-divider {
-  position: absolute;
-  top: 14px;
-  left: 100%;
-  transform: translateX(-50%);
-  width: 30px;
-  height: 1.5px;
-  margin: 0;
-  z-index: 0;
-}
-
-/* Desktop-only: the mobile 30px fixed-length connector above only lands
-   its 3px gap off each circle at mobile's own narrow card width — at
-   desktop's wider 608px-max card the same fixed 30px segment leaves a
-   much bigger gap. Sized relative to THIS step's own box instead (100%
-   = this step's width, call it W, same for every step since they're
-   equal-width flex:1 columns): this circle's right edge sits at
-   50% + 13px, so the gap-adjusted start is 50% + 16px (13 + 3). The next
-   circle is centered in the next, equal-width step immediately to the
-   right, so its left edge sits at 150% - 13px, giving a gap-adjusted end
-   of 150% - 16px. Width is then that span, (150% - 16px) - (50% + 16px)
-   = 100% - 32px — holds at any desktop width. top:13px centers the
-   1.5px stroke on the 26px circle's own vertical center (26 / 2),
-   matching the desktop export exactly (mobile's 14px top is unchanged
-   above). */
-@media screen and (min-width: 750px) {
-  /* 16px = 13px circle radius + 3px gap, on both ends. left is this
-     step's own circle-right-edge (50% + 13px) pushed out another 3px.
-     right is the mirror of that for the NEXT step's circle-left-edge
-     (150% - 13px - 3px = 150% - 16px, i.e. 50% - 16px past this step's
-     own right edge — right is measured inward from the right edge, so a
-     negative base value here means "extend past it"). Using right
-     instead of width keeps both ends expressed the same way (an inset
-     from each circle), rather than left + a derived total span. */
-  .kal-therapy-next-steps .kal-concern-select__stepper-divider {
-    top: 13px;
-    left: calc(50% + 16px);
-    right: calc(16px - 50%);
-    transform: none;
-    width: auto;
-  }
-}
-
-.kal-therapy-next-steps .kal-concern-select__stepper-number {
-  position: relative;
-  z-index: 1;
-}
-
 
 .kal-therapy-next-steps__label {
   font-size: var(--kal-booking-flow-font-size-small);
@@ -7327,110 +7219,128 @@ div.kal-calendar-modal__backdrop {
   }
 }
 
-/* This card's own circles read 26x26 at every state (completed/current/
-   upcoming), not the shared component's 28x28 default — scoped here so
-   Concern Select's own "Your Progress" stepper keeps its 28x28. */
-.kal-therapy-next-steps .kal-concern-select__stepper-number {
-  width: 26px;
-  height: 26px;
+/* The 3 steps run left to right with a horizontal connector through
+   the circles — "Ordered List" per this card's own export. */
+.kal-therapy-next-steps__list {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-/* Kept at their previous, larger size — the shared
-   .kal-concern-select__stepper-number svg rule sizes down to 14px for
-   Concern Select's own checkmark-in-place-of-a-number use, but this
-   step's own check/phone/calendar-days icons (not numbers, all three
-   steps) read better at their original 16px. Scoped here so Concern
-   Select's stepper is untouched. */
-.kal-therapy-next-steps .kal-concern-select__stepper-number svg {
+/* "Item" per this card's own export — circle + text stacked and
+   centered, each step taking an equal share of the row's width. */
+.kal-therapy-next-steps__item {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* "Background+Border" per this card's own export — 26x26 circle, same
+   size/shape at every state (completed/current/upcoming), unlike the
+   sidebar stepper's 28x28 default. Resting/upcoming border color
+   (#E6E3DE) per that export; completed/current override it below.
+   z-index:1 keeps it above the divider (see __divider below), which
+   passes directly through its vertical center. */
+.kal-therapy-next-steps__circle {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid #e6e3de;
+  background: var(--kal-booking-flow-color-white);
+  color: var(--kal-booking-flow-color-text-muted);
+}
+
+.kal-therapy-next-steps__circle svg {
   width: 16px;
   height: 16px;
 }
 
-/* "Care team calls you" (the --current step) — the shared component's
-   dark-green ring/icon-color + mint focus halo (used elsewhere for
-   Concern Select's own "Your Progress" stepper) read as green here, not
-   the tan/sand look this card's own export shows. Exact values from that
-   export's own spec: #C8B08C circle border, #B5935E icon color (the
-   phone icon's own original stroke color), 26x26 (not the shared 28x28),
-   and a cream #FBF6EE halo (not the shared component's mint one). */
-.kal-therapy-next-steps .kal-concern-select__stepper-step--current .kal-concern-select__stepper-number {
-  width: 26px;
-  height: 26px;
+/* Completed — filled dark-green circle, white checkmark. */
+.kal-therapy-next-steps__item--completed .kal-therapy-next-steps__circle {
+  border-color: #1f4a3d;
+  background: #1f4a3d;
+  color: var(--kal-booking-flow-color-white);
+}
+
+/* Current — tan ring + cream fill + cream focus halo, per this card's
+   own export (#C8B08C border, #F6F0E7 fill, #B5935E icon color — the
+   phone icon's own original stroke color — and a #FBF6EE halo), not the
+   sidebar stepper's green ring/mint halo. */
+.kal-therapy-next-steps__item--current .kal-therapy-next-steps__circle {
   border-color: #c8b08c;
+  background: #f6f0e7;
   color: #b5935e;
   box-shadow: 0 0 0 4px #fbf6ee;
 }
 
-/* "Within 24 hours" — the shared component's default stepper-state color
-   (dark green, for a completed step's timestamp elsewhere) applies here
-   too since there's no --current-specific state color otherwise; per
-   this export's own spec it's amber (#955609), same family as the
-   tan/cream circle above. */
-.kal-therapy-next-steps .kal-concern-select__stepper-step--current .kal-concern-select__stepper-state {
-  color: #955609;
+.kal-therapy-next-steps__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  line-height: 1;
 }
 
-/* This card's own labels read 16px ("Body Base" per its export), not the
-   shared component's 15px default ("Body") — scoped here so Concern
-   Select's own "Your Progress" stepper keeps its 15px. Applies to all
-   three steps; the completed/current rules below only touch
-   weight/color, not size. */
-.kal-therapy-next-steps .kal-concern-select__stepper-label {
+/* "Request sent"/"Care team calls you"/"Session confirmed" — 16px at
+   every state (not the sidebar stepper's 15px), regular weight
+   throughout (this card's own export never bolds/medium-weights any of
+   the three, unlike the sidebar stepper's --current/--completed
+   treatment). Color is upcoming/resting's own #646464 by default;
+   completed and current override it below. */
+.kal-therapy-next-steps__item-label {
   font-size: 16px;
-}
-
-/* Default (upcoming/third-step) label+state color — the shared base
-   stepper rules this falls through to otherwise (no --completed/--current
-   class on this step) are tuned for Concern Select's own "Your Progress"
-   list, where the state color is dark green even for a not-yet-reached
-   step. This card's export shows the upcoming step's label/state in the
-   same plain grey as everywhere else — only the filled circle plus the
-   current step's tan ring communicate progress, so an upcoming step's
-   text shouldn't read as already "active" in brand green. Lower
-   specificity than the --completed/--current STATE rules below (2
-   classes vs 3), so those still win for the other two steps' state text.
-   The --current step's LABEL color has no such scoped override below
-   though — it comes from a shared, unscoped rule elsewhere in this file
-   (same 2-class specificity as this one, just earlier in source), so
-   without the explicit .kal-therapy-next-steps-scoped --current label
-   override just below, this rule would incorrectly win there too and
-   turn "Care team calls you" grey. */
-.kal-therapy-next-steps .kal-concern-select__stepper-label {
+  font-weight: var(--kal-booking-flow-font-weight-regular);
+  /* 120% mobile, 100% desktop (see override below) — per the two
+     exports. */
+  line-height: 120%;
   color: var(--kal-booking-flow-color-text-muted);
 }
 
-.kal-therapy-next-steps .kal-concern-select__stepper-state {
-  color: var(--kal-booking-flow-color-text-muted);
+@media screen and (min-width: 750px) {
+  .kal-therapy-next-steps__item-label {
+    line-height: 100%;
+  }
 }
 
-/* "Care team calls you" (the --current step) — pins the label back to
-   this card's own export (#191919, 400 weight) against the grey default
-   just above, which would otherwise win here too (see that rule's own
-   comment). Also corrects weight: the shared --current label rule this
-   would otherwise fall through to uses 500 (medium), tuned for Concern
-   Select's own "Your Progress" list — this card's export is 400
-   (regular) instead. */
-.kal-therapy-next-steps .kal-concern-select__stepper-step--current .kal-concern-select__stepper-label {
-  font-weight: var(--kal-booking-flow-font-weight-regular);
-  color: var(--kal-booking-flow-color-heading);
-}
-
-/* "Request sent" (the --completed step) — reads as dull/muted here, not
-   the shared component's bold dark-heading label + dark-green state
-   (used elsewhere for Concern Select's own "Your Progress" stepper,
-   where "done" should stand out). This card's own export shows the
-   completed step's text no more prominent than the upcoming step below
-   it — only the filled circle communicates "done". Color is #6e6e6e per
-   that export specifically, not the shared --text-muted (#646464) the
-   --completed state uses elsewhere — same genuine one-off as this card's
-   own __label above. */
-.kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-label {
-  font-weight: var(--kal-booking-flow-font-weight-regular);
+/* "Request sent" reads dull/muted here (#6e6e6e per this card's own
+   export), not a bold dark heading the way a completed step would read
+   elsewhere in this flow — only the filled circle communicates "done"
+   on this card. */
+.kal-therapy-next-steps__item--completed .kal-therapy-next-steps__item-label {
   color: #6e6e6e;
 }
 
-.kal-therapy-next-steps .kal-concern-select__stepper-step--completed .kal-concern-select__stepper-state {
+/* "Care team calls you" reads as the darkest/most prominent label
+   (#191919 per this card's own export) — the only one of the three that
+   isn't some flavor of grey. */
+.kal-therapy-next-steps__item--current .kal-therapy-next-steps__item-label {
+  color: var(--kal-booking-flow-color-heading);
+}
+
+.kal-therapy-next-steps__state {
+  font-size: 12px;
+  line-height: 100%;
   color: var(--kal-booking-flow-color-text-muted);
+}
+
+/* "Within 24 hours" — amber (#955609 per this card's own export), same
+   family as the current step's own tan/cream circle above. */
+.kal-therapy-next-steps__item--current .kal-therapy-next-steps__state {
+  color: #955609;
 }
 
 /* Mobile vs desktop text split for this card (per the two exports): the
@@ -7443,7 +7353,7 @@ div.kal-calendar-modal__backdrop {
    two separate --mobile/--desktop label spans in the liquid markup
    (same pattern as this flow's other __footer--mobile/__footer--desktop
    element pairs) rather than one span whose text can't vary by width. */
-.kal-therapy-next-steps .kal-concern-select__stepper-state {
+.kal-therapy-next-steps__state {
   display: none;
 }
 
@@ -7452,7 +7362,7 @@ div.kal-calendar-modal__backdrop {
 }
 
 @media screen and (min-width: 750px) {
-  .kal-therapy-next-steps .kal-concern-select__stepper-state {
+  .kal-therapy-next-steps__state {
     display: block;
   }
 
@@ -7462,6 +7372,74 @@ div.kal-calendar-modal__backdrop {
 
   .kal-therapy-next-steps__label--desktop {
     display: block;
+  }
+}
+
+/* Two fully independent dividers — divider-one (between step 1/
+   "completed" and step 2/"current") and divider-two (between step 2 and
+   step 3/"upcoming") — deliberately not sharing one base class the way
+   an earlier pass had them, per explicit instruction.
+   Mobile (base rule, per this card's own mobile export): a fixed-length
+   30px segment ("Horizontal Divider" inside a 30 Hug x 25.5 Hug frame)
+   centered on the boundary between this step and the next — left:100%
+   is this step's own right edge, which (since each circle is centered
+   in its own equal-width item) is exactly the midpoint between this
+   circle and the next one; translateX(-50%) centers the fixed 30px
+   segment on that point. top:14px centers it on the 26px circle.
+   Desktop (750px+ override): the 3px-gap instruction is desktop-only —
+   mobile keeps the fixed 30px segment above untouched. 16px = 13px
+   circle radius (half of the 26px circle) + 3px gap, on both ends. left
+   is THIS step's own circle-right-edge (50% + 13px) pushed out another
+   3px; right is the mirror of that for the NEXT circle's left edge
+   (150% - 13px - 3px = 150% - 16px, i.e. 50% - 16px past this step's own
+   right edge — right is measured inward from the right edge, so a
+   negative base value here means "extend past it"). top:13px re-centers
+   the stroke on the circle at desktop's own slightly different layout. */
+.kal-therapy-next-steps__divider-one {
+  position: absolute;
+  top: 14px;
+  left: 100%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 1.5px;
+  /* Always the completed→current segment on this fixed 3-item card, so
+     always dark green — no state modifier class needed. */
+  background: #1f4a3d;
+  z-index: 0;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-therapy-next-steps__divider-one {
+    top: 13px;
+    left: calc(50% + 16px);
+    right: calc(16px - 47%);
+    transform: none;
+    width: auto;
+  }
+}
+
+/* Same mobile/desktop split as divider-one above (own separate rule,
+   not shared with it), but always the current→upcoming segment on this
+   fixed card, so always resting grey (#E5E5E5 per this card's own
+   export) — step 2 is never itself "completed" here. */
+.kal-therapy-next-steps__divider-two {
+  position: absolute;
+  top: 14px;
+  left: 100%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 1.5px;
+  background: #e5e5e5;
+  z-index: 0;
+}
+
+@media screen and (min-width: 750px) {
+  .kal-therapy-next-steps__divider-two {
+    top: 13px;
+    left: calc(53% + 16px);
+    right: calc(16px - 50%);
+    transform: none;
+    width: auto;
   }
 }
 

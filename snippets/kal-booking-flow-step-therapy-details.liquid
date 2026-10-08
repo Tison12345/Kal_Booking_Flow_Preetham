@@ -6,7 +6,7 @@
 
   Same shape as the consultation flow's Patient Details step (name,
   gender, phone, email) — reuses that step's exact data attributes
-  (data-kal-field="name"/"whatsapp"/"email", data-kal-gender,
+  (data-kal-field="name"/"phone"/"email", data-kal-gender,
   data-kal-patient-continue) so it shares the SAME patientDetails state
   and isPatientDetailsValid()/updatePatientContinueButton() validation in
   kal-booking-flow.js with zero new JS needed for the form itself — one
@@ -139,7 +139,7 @@
 
         <div class="kal-form-row">
           <div class="kal-form-field">
-            <label class="kal-form-label" for="kal-therapy-patient-whatsapp">Phone Number*</label>
+            <label class="kal-form-label" for="kal-therapy-patient-phone">Phone Number*</label>
             <div class="kal-phone-input">
               <div class="kal-country-picker" data-kal-country-picker>
                 <button
@@ -225,16 +225,16 @@
               </div>
               <input
                 type="tel"
-                id="kal-therapy-patient-whatsapp"
+                id="kal-therapy-patient-phone"
                 class="kal-form-input kal-phone-input__field"
-                data-kal-field="whatsapp"
+                data-kal-field="phone"
                 placeholder="10-digit mobile number"
                 autocomplete="tel"
                 inputmode="numeric"
                 maxlength="10"
               >
             </div>
-            <p class="kal-form-error" data-kal-field-error="whatsapp" hidden>
+            <p class="kal-form-error" data-kal-field-error="phone" hidden>
               <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
               <span data-kal-field-error-text></span>
             </p>
@@ -263,7 +263,7 @@
     </div>
 
     <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue disabled>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue>
         Submit Request
       </button>
     </div>
@@ -293,7 +293,7 @@
         {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
         <span>Back</span>
       </button>
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue disabled>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue>
         Submit Request
       </button>
     </div>

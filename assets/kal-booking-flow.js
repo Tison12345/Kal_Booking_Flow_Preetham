@@ -727,6 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
       row.setAttribute('aria-pressed', String(isSelected));
     });
     updateTherapyConcernContinueButton();
+    reconstrainOpenTherapyDropdowns();
   };
 
   // ----------------------------------------------------------------------
@@ -865,6 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTherapySelectedChips();
     updateTherapyDropdownSummary();
     updateTherapyConcernContinueButton();
+    reconstrainOpenTherapyDropdowns();
   };
 
   const clearTherapyDropdownSelection = () => {
@@ -877,6 +879,48 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTherapySelectedChips();
     updateTherapyDropdownSummary();
     updateTherapyConcernContinueButton();
+    reconstrainOpenTherapyDropdowns();
+  };
+
+  // Caps the (still absolutely positioned, right below the trigger — not
+  // floating/fixed) panel's height to whatever room is actually left
+  // between it and whichever Confirm footer is currently on screen below
+  // it (therapy-slot renders both a --mobile and a --desktop
+  // [data-kal-therapy-concern-footer] instance; only one is ever actually
+  // rendered at a time — offsetParent is null for the other), so the
+  // panel always stops short of the footer instead of overlapping or
+  // running behind it. .kal-therapy-dropdown__list's own overflow-y:auto
+  // (see kal-booking-flow.css) is what then lets the list scroll
+  // internally once its content taller than that.
+  const constrainTherapyDropdownHeight = (wrapper) => {
+    const panel = wrapper.querySelector('[data-kal-therapy-dropdown-panel]');
+    const stepPanel = wrapper.closest('.kal-step-shell__panel');
+    // The desktop Confirm footer is a full-width bar OUTSIDE
+    // .kal-step-shell__panel (sibling of it in the step's own grid, same
+    // as every other progress-panel step's desktop footer) — only the
+    // mobile instance lives inside it — so footers are searched for from
+    // the whole step wrapper, not just the panel, to find whichever one
+    // (mobile or desktop) is actually on screen right now.
+    const stepRoot = wrapper.closest('[data-kal-step]');
+    if (!panel || !stepPanel || !stepRoot) return;
+    const panelTop = panel.getBoundingClientRect().top;
+    // Whichever is reached first: the scroll region's own clip edge
+    // (still in play for the mobile footer's case, where it sits inside
+    // .kal-step-shell__panel and the scroll region's flex:1 already ends
+    // right above it) or the footer's top (the desktop footer's case,
+    // where it's a separate bar below the grid and the scroll region's
+    // own box ends well above it with room to spare).
+    const scrollRegion = wrapper.closest('.kal-step-shell__scroll');
+    let stopY = stepPanel.getBoundingClientRect().bottom;
+    if (scrollRegion) stopY = Math.min(stopY, scrollRegion.getBoundingClientRect().bottom);
+    stepRoot.querySelectorAll('[data-kal-therapy-concern-footer]').forEach((footer) => {
+      if (footer.offsetParent === null) return;
+      const footerTop = footer.getBoundingClientRect().top;
+      if (footerTop < stopY) stopY = footerTop;
+    });
+    const margin = 8;
+    const available = stopY - panelTop - margin;
+    panel.style.maxHeight = `${Math.max(120, Math.min(420, available))}px`;
   };
 
   const setTherapyDropdownOpen = (wrapper, open) => {
@@ -884,6 +928,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const panel = wrapper.querySelector('[data-kal-therapy-dropdown-panel]');
     if (toggle) toggle.setAttribute('aria-expanded', String(open));
     if (panel) panel.hidden = !open;
+    if (open) constrainTherapyDropdownHeight(wrapper);
+  };
+
+  // Re-runs constrainTherapyDropdownHeight() for whichever dropdown is
+  // currently open (if any) — picking a therapy option re-renders the
+  // "Selected therapies" chip row above the trigger (renderTherapySelectedChips()),
+  // which can grow tall enough to push the trigger (and this panel, which
+  // is positioned right below it) further down the page while the
+  // footer below stays put, shrinking the room actually left for the
+  // panel. Without re-measuring after every selection change, the
+  // max-height set once when the dropdown first opened would go stale
+  // and the panel would start overlapping the footer again as more
+  // chips stack up.
+  const reconstrainOpenTherapyDropdowns = () => {
+    flow.querySelectorAll('[data-kal-therapy-dropdown]').forEach((wrapper) => {
+      const panel = wrapper.querySelector('[data-kal-therapy-dropdown-panel]');
+      if (panel && !panel.hidden) constrainTherapyDropdownHeight(wrapper);
+    });
   };
 
   // "Therapy" row on the Request Sent screen (node 539:2222) — joins
@@ -1264,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const patientDetails = {
     name: '',
     gender: '',
-    whatsapp: '',
+    phone: '',
     email: '',
     concern: '',
   };
@@ -1299,12 +1361,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!rule[i].includes(digits[i])) return false;
     }
     return true;
-  };
-
-  // True only once `digits` is long enough to satisfy every position of `rule`.
-  const matchesStartFully = (rule, digits) => {
-    if (digits.length < rule.length) return false;
-    return matchesStartSoFar(rule, digits);
   };
 
   // Strips non-digits and, when the selected country has a known mobile
@@ -1368,9 +1424,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Scoped to this picker's own .kal-phone-input sibling, not
     // flow-wide — Patient Details and Therapy Details each have their
-    // own whatsapp field, and switching country in one must never touch
+    // own phone field, and switching country in one must never touch
     // the other (hidden) step's field.
-    const phoneField = wrapper.closest('.kal-phone-input')?.querySelector('[data-kal-field="whatsapp"]');
+    const phoneField = wrapper.closest('.kal-phone-input')?.querySelector('[data-kal-field="phone"]');
     if (phoneField) {
       phoneField.placeholder =
         selectedCountry.min === selectedCountry.max
@@ -1395,41 +1451,31 @@ document.addEventListener('DOMContentLoaded', () => {
       el.hidden = isIndia;
     });
 
-    // A country switch can resolve an already-shown whatsapp/email error
+    // A country switch can resolve an already-shown phone/email error
     // (different digit rule, or email no longer required) — clear it
     // immediately rather than leaving a stale message up until the next
     // Continue click. Doesn't newly show one just from switching country.
-    if (isValidWhatsapp(patientDetails.whatsapp)) clearFieldError('whatsapp');
+    if (isValidPhone(patientDetails.phone)) clearFieldError('phone');
     if (isValidEmail(patientDetails.email)) clearFieldError('email');
 
     setCountryPickerOpen(wrapper, false);
-    updatePatientContinueButton();
   };
 
-  const isValidWhatsapp = (value) => {
+  // Only flags a number as invalid when it's short of the selected
+  // country's required digit count — per explicit instruction, the max
+  // digit count (already enforced by the input's own maxLength/
+  // sanitizePhoneDigits capping what can be typed) and the start-digit
+  // rule (also already enforced while typing) don't need a second,
+  // redundant validation error here on top of that.
+  const isValidPhone = (value) => {
     const digits = value.replace(/\D/g, '');
-    if (digits.length < selectedCountry.min || digits.length > selectedCountry.max) return false;
-    if (selectedCountry.start && !matchesStartFully(selectedCountry.start, digits)) return false;
-    return true;
+    return digits.length >= selectedCountry.min;
   };
 
   const isValidEmail = (value) => {
     const trimmed = value.trim();
     if (trimmed === '') return selectedCountry.iso === 'IN';
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
-  };
-
-  const isPatientDetailsValid = () =>
-    patientDetails.name.trim() !== '' &&
-    (patientDetails.gender === 'male' || patientDetails.gender === 'female') &&
-    isValidWhatsapp(patientDetails.whatsapp) &&
-    isValidEmail(patientDetails.email) &&
-    (!isExperimentB || patientDetails.concern.trim() !== '');
-
-  const updatePatientContinueButton = () => {
-    flow.querySelectorAll('[data-kal-patient-continue]').forEach((btn) => {
-      btn.disabled = !isPatientDetailsValid();
-    });
   };
 
   // ----------------------------------------------------------------------
@@ -1447,7 +1493,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (textEl) textEl.textContent = message;
       el.hidden = false;
     });
-    if (field === 'whatsapp') {
+    if (field === 'phone') {
       flow.querySelectorAll('.kal-phone-input').forEach((el) => {
         el.classList.add('kal-phone-input--error');
       });
@@ -1462,7 +1508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll(`[data-kal-field-error="${field}"]`).forEach((el) => {
       el.hidden = true;
     });
-    if (field === 'whatsapp') {
+    if (field === 'phone') {
       flow.querySelectorAll('.kal-phone-input').forEach((el) => {
         el.classList.remove('kal-phone-input--error');
       });
@@ -1473,16 +1519,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Re-reads every [data-kal-field] in the currently visible step straight
+  // from the DOM into patientDetails, rather than trusting it's already
+  // in sync. Normally the `input` listener below keeps patientDetails
+  // current as the visitor types, but a browser's own autofill suggestion
+  // (picked from the field's dropdown, not typed) doesn't reliably fire an
+  // `input` event in every browser — the fields visibly fill in, but
+  // patientDetails silently stays empty, so Continue's own validation
+  // fails even though the form looks complete. Scoped to the visible step
+  // (not flow-wide) since Patient Details and Therapy Details share the
+  // same data-kal-field names on two different, only-one-ever-visible forms.
+  const syncPatientDetailsFromDOM = () => {
+    const activeStep = flow.querySelector('[data-kal-step]:not([hidden])');
+    if (!activeStep) return;
+    activeStep.querySelectorAll('[data-kal-field]').forEach((field) => {
+      patientDetails[field.dataset.kalField] = field.value;
+    });
+  };
+
+  // Scrolls the currently visible step's own scroll region so the first
+  // invalid field's error is actually in view, rather than just showing
+  // a red message somewhere off-screen the visitor has to go hunting
+  // for — scoped to the active step for the same reason
+  // syncPatientDetailsFromDOM() is (Patient Details/Therapy Details share
+  // field names across two different, only-one-ever-visible forms).
+  const scrollToFieldError = (fieldName) => {
+    const activeStep = flow.querySelector('[data-kal-step]:not([hidden])');
+    if (!activeStep) return;
+    const errorEl = activeStep.querySelector(`[data-kal-field-error="${fieldName}"]`);
+    const target = errorEl?.closest('.kal-form-field') || errorEl;
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   // Computes every current error and shows them all at once (matching
   // the CMS's own validate()-on-submit pattern) — returns whether
   // everything passed, so the Continue click handler knows whether to
-  // actually navigate.
+  // actually navigate. Scrolls to the first invalid field so an error
+  // below the fold (easy to miss once the form no longer blocks
+  // Continue via a disabled state) is never silently out of view.
   const validatePatientDetailsAndShowErrors = () => {
+    syncPatientDetailsFromDOM();
     let allValid = true;
+    let firstInvalidField = null;
 
     if (patientDetails.name.trim() === '') {
       showFieldError('name', 'Please enter your name.');
       allValid = false;
+      firstInvalidField = firstInvalidField || 'name';
     } else {
       clearFieldError('name');
     }
@@ -1490,21 +1573,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (patientDetails.gender !== 'male' && patientDetails.gender !== 'female') {
       showFieldError('gender', 'Please select a gender.');
       allValid = false;
+      firstInvalidField = firstInvalidField || 'gender';
     } else {
       clearFieldError('gender');
     }
 
-    if (!isValidWhatsapp(patientDetails.whatsapp)) {
-      showFieldError('whatsapp', 'Please enter a valid WhatsApp Number');
+    if (!isValidPhone(patientDetails.phone)) {
+      showFieldError('phone', 'Please enter a valid phone number');
       allValid = false;
+      firstInvalidField = firstInvalidField || 'phone';
     } else {
-      clearFieldError('whatsapp');
+      clearFieldError('phone');
     }
 
     const emailTrimmed = patientDetails.email.trim();
     if (!isValidEmail(patientDetails.email)) {
       showFieldError('email', emailTrimmed === '' ? 'Please enter your email.' : 'Please enter a valid email address.');
       allValid = false;
+      firstInvalidField = firstInvalidField || 'email';
     } else {
       clearFieldError('email');
     }
@@ -1513,10 +1599,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (patientDetails.concern.trim() === '') {
         showFieldError('concern', 'Please tell us your concern.');
         allValid = false;
+        firstInvalidField = firstInvalidField || 'concern';
       } else {
         clearFieldError('concern');
       }
     }
+
+    if (firstInvalidField) scrollToFieldError(firstInvalidField);
 
     return allValid;
   };
@@ -1538,7 +1627,102 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       clearFieldError('concern');
     }
-    updatePatientContinueButton();
+  };
+
+  // Re-numbers the header ("Step N of 5"/dots) and left-column "Your
+  // Progress" stepper for the 4 consultation-flow steps that exist in
+  // BOTH experiments (Doctor Select/Slot Picker/Patient Details/
+  // Confirmation — Concern Select itself is never reached in B, see
+  // BOOKING EXPERIMENT above). Their Liquid markup hardcodes Experiment
+  // A's own numbering (step 2 of 5, step 3 of 5, etc., "Your Progress"
+  // starting with "Health concerns"), since that's the only flow Liquid
+  // itself knows about. Experiment B skips Concern Select, so from a B
+  // visitor's perspective Doctor Select is step 1 of 4, not step 2 of 5,
+  // and "Health concerns" shouldn't appear in "Your Progress" at all
+  // (there's no concern-selection step to point to) — this shifts every
+  // later step down by one and drops the total from 5 to 4 to match.
+  const EXPERIMENT_B_RENUMBER_STEPS = [
+    { root: '.kal-step-doctor-select', stepNumberA: 2 },
+    { root: '.kal-step-slot-picker', stepNumberA: 3 },
+    { root: '.kal-step-patient-details', stepNumberA: 4 },
+    { root: '.kal-step-confirmation', stepNumberA: 5 },
+  ];
+  const PROGRESS_STEP_NAMES_A = ['Health concerns', 'Mode & doctor', 'Date & time', 'Patient Details', 'Review & payment'];
+  const PROGRESS_STEP_NAMES_B = PROGRESS_STEP_NAMES_A.slice(1);
+  const PROGRESS_TOTAL_A = PROGRESS_STEP_NAMES_A.length;
+  const PROGRESS_TOTAL_B = PROGRESS_STEP_NAMES_B.length;
+
+  // Captured once, lazily, from whichever "Your Progress" stepper is
+  // rebuilt first — every completed step's circle shows the exact same
+  // check icon markup (rendered server-side via the kal-booking-icons
+  // snippet), so one copy is reused for every rebuild afterwards instead
+  // of re-rendering it (there's no client-side equivalent of that snippet).
+  let progressCheckIconHTML = null;
+
+  const rebuildProgressStepper = (container, stepNames, currentStep) => {
+    const ol = container.querySelector('.kal-concern-select__progress .kal-concern-select__stepper');
+    if (!ol) return;
+    if (progressCheckIconHTML === null) {
+      const existingCheck = ol.querySelector('.kal-concern-select__stepper-step--completed .kal-concern-select__stepper-number');
+      progressCheckIconHTML = existingCheck ? existingCheck.innerHTML : '';
+    }
+    const nextStep = currentStep + 1;
+    ol.innerHTML = stepNames.map((stepName, i) => {
+      const stepIndex = i + 1;
+      const isLast = stepIndex === stepNames.length;
+      let stateModifier = '';
+      let stateText = '';
+      if (stepIndex < currentStep) {
+        stateModifier = ' kal-concern-select__stepper-step--completed';
+        stateText = 'Completed';
+      } else if (stepIndex === currentStep) {
+        stateModifier = ' kal-concern-select__stepper-step--current';
+        stateText = 'In progress';
+      } else if (stepIndex === nextStep) {
+        stateModifier = ' kal-concern-select__stepper-step--next';
+        stateText = 'Up next';
+      }
+      const numberContent = stepIndex < currentStep ? progressCheckIconHTML : String(stepIndex);
+      return `<li class="kal-concern-select__stepper-step${stateModifier}">`
+        + `<div class="kal-concern-select__stepper-row">`
+        + `<span class="kal-concern-select__stepper-number">${numberContent}</span>`
+        + `<span class="kal-concern-select__stepper-text">`
+        + `<span class="kal-concern-select__stepper-label">${stepName}</span>`
+        + (stateText ? `<span class="kal-concern-select__stepper-state">${stateText}</span>` : '')
+        + `</span>`
+        + `</div>`
+        + (isLast ? '' : '<span class="kal-concern-select__stepper-divider" aria-hidden="true"></span>')
+        + `</li>`;
+    }).join('');
+  };
+
+  const applyExperimentStepNumbering = () => {
+    EXPERIMENT_B_RENUMBER_STEPS.forEach(({ root, stepNumberA }) => {
+      const container = flow.querySelector(root);
+      if (!container) return;
+      const total = isExperimentB ? PROGRESS_TOTAL_B : PROGRESS_TOTAL_A;
+      const stepNumber = isExperimentB ? stepNumberA - 1 : stepNumberA;
+
+      const dotsWrap = container.querySelector('.kal-step-doctor-select__progress');
+      if (dotsWrap) {
+        dotsWrap.querySelectorAll('.kal-step-doctor-select__progress-dot').forEach((dot) => dot.remove());
+        const textEl = dotsWrap.querySelector('.kal-step-doctor-select__progress-text');
+        for (let i = 1; i <= total; i += 1) {
+          const dot = document.createElement('span');
+          dot.className = 'kal-step-doctor-select__progress-dot' + (i === stepNumber ? ' kal-step-doctor-select__progress-dot--active' : '');
+          dotsWrap.insertBefore(dot, textEl);
+        }
+        if (textEl) textEl.textContent = `${stepNumber}/${total}`;
+      }
+
+      const stepLabel = container.querySelector('.kal-step-progress-bar__step');
+      if (stepLabel) stepLabel.textContent = `Step ${stepNumber} of ${total}`;
+
+      const fill = container.querySelector('.kal-step-progress-bar__fill');
+      if (fill) fill.style.setProperty('--kal-booking-flow-step-progress', `${(stepNumber / total) * 100}%`);
+
+      rebuildProgressStepper(container, isExperimentB ? PROGRESS_STEP_NAMES_B : PROGRESS_STEP_NAMES_A, stepNumber);
+    });
   };
 
   const setGender = (gender) => {
@@ -1547,7 +1731,6 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.toggle('kal-gender-btn--active', btn.dataset.kalGender === gender);
     });
     clearFieldError('gender');
-    updatePatientContinueButton();
   };
 
   // ----------------------------------------------------------------------
@@ -1613,6 +1796,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('.kal-request-appointment-cta')) {
       isExperimentB = false;
       applyExperimentVisibility();
+      applyExperimentStepNumbering();
       openFlow();
       goToStep('entry');
     }
@@ -1622,6 +1806,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('.kal-consult-cta')) {
       isExperimentB = true;
       applyExperimentVisibility();
+      applyExperimentStepNumbering();
       openFlow();
       goToStep('doctor-select');
     }
@@ -1640,6 +1825,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       isExperimentB = false;
       applyExperimentVisibility();
+      applyExperimentStepNumbering();
       openFlow();
       goToStep('entry');
     }
@@ -1660,30 +1846,27 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const gotoTrigger = e.target.closest('[data-kal-goto]');
+    // Excludes [data-kal-patient-continue] buttons — Therapy Details'
+    // "Submit Request" carries BOTH data-kal-goto="therapy-confirmed" and
+    // data-kal-patient-continue (see that block below), and since Continue
+    // is never disabled (always clickable, errors shown on click instead —
+    // see validatePatientDetailsAndShowErrors), this generic handler would
+    // otherwise navigate unconditionally on every click, before validation
+    // ever got a say.
+    const gotoTrigger = e.target.closest('[data-kal-goto]:not([data-kal-patient-continue])');
     if (gotoTrigger) {
       goToStep(gotoTrigger.dataset.kalGoto);
     }
 
-    // Patient Details' Continue — no longer a plain data-kal-goto (that
-    // would navigate on any click, bypassing validation) and no longer
-    // disabled while invalid (a disabled button with no message doesn't
-    // tell anyone what's wrong). Validates every field, shows whatever's
+    // Patient Details' / Therapy Details' Continue — always clickable
+    // (never disabled, see above); validates every field, shows whatever's
     // wrong, and only navigates once everything passes.
     const patientContinueTrigger = e.target.closest('[data-kal-patient-continue]');
     if (patientContinueTrigger) {
       if (validatePatientDetailsAndShowErrors()) {
-        // Therapy Details' "Submit Request" button carries BOTH
-        // data-kal-goto="therapy-confirmed" (see the gotoTrigger block
-        // above, which already navigates there unconditionally) AND
-        // data-kal-patient-continue (to share this validation logic with
-        // the consultation flow's own Patient Details button, which has
-        // no data-kal-goto of its own). Hardcoding 'confirmation' here
-        // meant this block ran second and always overrode Therapy
-        // Details' navigation back to the consultation flow's
-        // Confirmation step, regardless of which button was actually
-        // clicked. Falling back to 'confirmation' only when the trigger
-        // has no data-kal-goto of its own fixes this for both.
+        // Therapy Details' button has its own data-kal-goto="therapy-confirmed";
+        // the consultation flow's Patient Details button has none, so it
+        // falls back to 'confirmation'.
         goToStep(patientContinueTrigger.dataset.kalGoto || 'confirmation');
       }
     }
@@ -1952,7 +2135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // a leading digit that can never be valid for the selected country
     // as it's typed, and cap at that country's max digit count — rather
     // than just checking the final value at submit time.
-    if (field.dataset.kalField === 'whatsapp') {
+    if (field.dataset.kalField === 'phone') {
       field.value = sanitizePhoneDigits(field.value, selectedCountry.start, selectedCountry.max);
     }
     patientDetails[field.dataset.kalField] = field.value;
@@ -1960,7 +2143,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ever gets set again by the next Continue click, not re-shown
     // eagerly while the visitor is still typing.
     clearFieldError(field.dataset.kalField);
-    updatePatientContinueButton();
   });
 
   // Blocks letters from ever appearing in the phone field — inputmode="numeric"
@@ -1969,7 +2151,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // letter only after a visible flash of it. Same extra guard the CMS's
   // own phone inputs use.
   document.addEventListener('keydown', (e) => {
-    const field = e.target.closest('[data-kal-field="whatsapp"]');
+    const field = e.target.closest('[data-kal-field="phone"]');
     if (!field) return;
     if (!e.ctrlKey && !e.metaKey && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
       e.preventDefault();
