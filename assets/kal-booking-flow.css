@@ -2701,6 +2701,18 @@ div.kal-calendar-modal__backdrop {
   padding: 0;
 }
 
+/* No border on these circular back/close icon buttons at desktop —
+   explicit instruction. Only touches the shared base rule above (the
+   32x32 circle); .kal-concern-select__footer-back's own desktop-scoped
+   border further up this file (2 classes) is unaffected, since that's a
+   separate, intentional pill-button border, not this one. */
+@media screen and (min-width: 750px) {
+  .kal-booking-flow__close,
+  .kal-step-doctor-select__back {
+    border: none;
+  }
+}
+
 .kal-step-doctor-select__back svg {
   width: 18px;
   height: 18px;
@@ -3402,7 +3414,7 @@ div.kal-calendar-modal__backdrop {
   align-items: stretch;
   gap: 12px;
   padding: 12px 24px;
-  background: linear-gradient(93.35deg, rgba(235, 242, 239, 0.5) 75%, rgba(255, 255, 255, 0.5) 100%);
+  background: linear-gradient(93.35deg, rgba(235, 242, 239, 0.5) 30.53%, rgba(255, 255, 255, 0.5) 94.03%);
 }
 
 .kal-appointment-card__photo {
@@ -5514,7 +5526,7 @@ div.kal-calendar-modal__backdrop {
 
 .kal-payment-option__price {
   font-size: var(--kal-booking-flow-font-size-heading);
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  font-weight: var(--kal-booking-flow-font-weight-regular);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -5568,7 +5580,7 @@ div.kal-calendar-modal__backdrop {
 .kal-payment-fee-card__left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 9px;
   min-width: 0;
 }
 
