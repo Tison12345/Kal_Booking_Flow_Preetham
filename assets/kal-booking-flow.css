@@ -1354,6 +1354,28 @@
     margin-top: 0;
   }
 
+  /* Desktop's own export (452x36) is a taller banner than mobile's
+     hug-height one — height:36px set explicitly rather than relying on
+     content, since the bigger 20x20 icon/14px text below would otherwise
+     make it grow past that on their own with this same 8px padding. */
+  .kal-step-concern-select .kal-concern-select__banner {
+    height: 36px;
+  }
+
+  /* 20x20, not mobile's 12x12 — per the desktop export's own "search-01"
+     icon size. Scoped so mobile's smaller icon stays untouched. */
+  .kal-step-concern-select .kal-concern-select__banner .kal-icon--search svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* 14px/100%, not mobile's 12px/150% (--font-size-caption) — per the
+     desktop export's own "Body S" spec for this line. */
+  .kal-step-concern-select .kal-concern-select__banner-text {
+    font-size: var(--kal-booking-flow-font-size-small);
+    line-height: 100%;
+  }
+
   /* margin-top:8px grows the shared panel gap (16px, between every
      child) up to 24px specifically between the banner and the scroll
      region below it. Scrollbar hidden too — overflow-y:auto (base rule)
