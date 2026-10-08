@@ -1041,15 +1041,13 @@
 }
 
 @media screen and (min-width: 750px) {
-  /* border-right restored (was explicitly none) — this is the two-panel
-     layout's own vertical divider between the left info column and the
-     right content panel. It needs to visually continue all the way down
-     through the footer row below (not just stop at this row's own
-     bottom edge), which is why .kal-concern-select__footer-actions
-     further down also carries its own border-left at the same column
-     boundary, instead of this divider being the only one. */
+  /* No divider between the left info column and the right content panel
+     here — explicit instruction. .kal-step-entry__info's shared base
+     rule (further up this file) adds a border-right by default (used by
+     other steps' own two-column layouts), so it's zeroed again here. */
   .kal-step-shell--progress-panel .kal-step-shell__info {
     background: rgba(246, 241, 232, 0.11);
+    border-right: none;
     padding: 32px 24px 0;
     box-sizing: border-box;
     /* Explicit height, matching .kal-step-shell__panel's own height:100%
