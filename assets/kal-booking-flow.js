@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const openFlow = () => {
     applyStoredFacility();
-    flow.showModal();
+    flow.show();
     document.body.style.overflow = 'hidden';
   };
 

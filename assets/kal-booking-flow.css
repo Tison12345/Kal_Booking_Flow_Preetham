@@ -1600,7 +1600,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 12px 24px;
+    padding: 12px 32px 12px 24px;
     background: var(--kal-booking-flow-color-white);
     border-top: 1px solid var(--kal-booking-flow-color-border);
   }
