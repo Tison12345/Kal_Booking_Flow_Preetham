@@ -5580,7 +5580,7 @@ div.kal-calendar-modal__backdrop {
 .kal-payment-fee-card__left {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   min-width: 0;
 }
 
