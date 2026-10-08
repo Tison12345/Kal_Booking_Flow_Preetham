@@ -3525,7 +3525,7 @@ div.kal-calendar-modal__backdrop {
 .kal-slot-section__label {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 21px;
-  font-weight: var(--kal-booking-flow-font-weight-black);
+  font-weight: var(--kal-booking-flow-font-weight-bold);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-text-muted);
@@ -5056,7 +5056,7 @@ div.kal-calendar-modal__backdrop {
 .kal-before-visit__label {
   margin: 0;
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-heavy);
+  font-weight: var(--kal-booking-flow-font-weight-bold);
   line-height: 150%;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -5139,7 +5139,7 @@ div.kal-calendar-modal__backdrop {
 .kal-payment-section__label {
   font-size: 14px;
   line-height: 150%;
-  font-weight: var(--kal-booking-flow-font-weight-heavy);
+  font-weight: var(--kal-booking-flow-font-weight-bold);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
