@@ -127,7 +127,7 @@
     "cart_drawer_collection": "",
     "cart_color_scheme": "scheme-1",
     "customer_account_menu": "customer-account-main-menu",
-    "kal_booking_api_base_url": "http://localhost:3000",
+    "kal_booking_api_base_url": "http://localhost:3001",
     "sections": {
       "main-password-header": {
         "type": "main-password-header",
