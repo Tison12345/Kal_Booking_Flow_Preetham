@@ -1673,20 +1673,6 @@
     line-height: 150%;
   }
 
-  /* This button's own fixed height:44px/padding:12px above leaves only
-     an 18px-tall content box (44 - 12*2 padding - 1*2 border) — plenty
-     for a single line of text, not enough for the Video Consult "Proceed
-     and pay" variant's 26px icon circles (kal-confirm-pay-cta, see
-     Confirmation's own liquid comment on this button). Rather than
-     shrinking those circles to match the mobile ones, this grows the
-     button to fit them instead — :has() scopes it to only the desktop
-     instance of this button that's actually showing that variant right
-     now (data-kal-mode-online-only, unhidden only for Video Consult), so
-     the plain-text In-Clinic button keeps its normal 44px height. */
-  .kal-step-shell--progress-panel .kal-step-doctor-select__continue:has(.kal-confirm-pay-cta:not([hidden])) {
-    height: auto;
-    padding: 10px 20px;
-  }
 }
 
 /* Mobile: no Back button in this footer row at all — it stays on the
@@ -3171,55 +3157,6 @@ div.kal-calendar-modal__backdrop {
 
 .kal-confirm-pay-cta__label {
   white-space: nowrap;
-}
-
-/* Each icon circle overlaps the previous by ~8px (26px circle, -8px
-   margin on every circle but the first) per the reference design. */
-.kal-confirm-pay-cta__icons {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.kal-confirm-pay-cta__icon-circle {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  /* Light grey, not white — still reads as a neutral backing for every
-     mark's own colors, but a flat white circle against the dark-green
-     button kept reading as a stark white ring/border around each icon
-     even with the logos filling most of it (see comment below). */
-  background: var(--kal-booking-flow-color-border-faint);
-  overflow: hidden;
-}
-
-.kal-confirm-pay-cta__icon-circle:not(:first-child) {
-  margin-left: -8px;
-}
-
-/* Logo fills nearly the whole circle (2px breathing room per side) — a
-   small 14px mark centered in a 26px circle left too much bare white
-   showing around each logo, which read as a white ring/border on every
-   icon and made the whole CTA look washed out against the dark-green
-   button. Filling the circle edge-to-edge (minus a hair of padding) is
-   what the reference's own overlapping app-icon badges do. */
-.kal-confirm-pay-cta__icon-circle svg {
-  width: 22px;
-  height: 22px;
-}
-
-/* UPI's own mark is a wide ~2.83:1 wordmark, not a square glyph like the
-   other three (see kal-booking-icons.liquid's own comment on
-   'payment-upi') — sized by width with height following its own aspect
-   ratio instead of the fixed 22x22 the square marks use, so it isn't
-   stretched to fill the circle. */
-.kal-confirm-pay-cta__icon-circle svg[viewBox="0 0 99.073357 35.012314"] {
-  width: 24px;
-  height: auto;
 }
 
 .kal-confirm-pay-cta__amount {
@@ -6288,6 +6225,7 @@ div.kal-calendar-modal__backdrop {
    liquid comment. */
 .kal-therapy-select {
   display: flex;
+  height: 42px;
   align-items: center;
   justify-content: space-between;
   width: 100%;

@@ -53,21 +53,16 @@
   the list (explicit instruction), which is far simpler as a re-render
   than as DOM node reordering.
 
-  Confirm is hidden until at least one therapy is selected — EITHER a
+  Continue is hidden until at least one therapy is selected — EITHER a
   specific one from this dropdown OR a category checkbox below (explicit
-  instruction: "minimum 1 concern should be selected to show the confirm
+  instruction: "minimum 1 concern should be selected to show the continue
   cta", same rule Concern Select already uses, just now checking two
   selection sets instead of one — see updateTherapyConcernContinueButton()
-  in kal-booking-flow.js).
+  in kal-booking-flow.js). Clicking it navigates straight to Step 2 of 2
+  (Therapy Details) — no intermediate Confirm step.
 
-  Not yet wired into the main flow's navigation — there's no preceding
-  "which facility" step and no defined Step 2 of 2 ("Personal details")
-  yet. data-kal-back defaults to "entry" as a reasonable placeholder
-  until the actual preceding screen is defined, same as before. The
-  Confirm button has no data-kal-goto yet for the same reason — it just
-  enables/shows once something is picked, with nowhere to navigate to
-  until Step 2 of 2 exists. Button text is "Confirm" (not "Continue"),
-  matching this node's own footer.
+  data-kal-back defaults to "entry" as a reasonable placeholder until the
+  actual preceding "which facility" screen is defined.
 {% endcomment %}
 
 <div class="kal-step-therapy-slot kal-step-shell kal-step-shell--progress-panel" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
@@ -248,10 +243,9 @@
       generically toggles EVERY element with data-kal-therapy-concern-footer/
       data-kal-therapy-concern-continue/data-kal-therapy-concern-summary,
       so this mobile instance and the desktop one below stay in sync with
-      zero JS changes. Confirm/Continue's click behavior is handled
-      explicitly in kal-booking-flow.js (not a plain data-kal-goto — see
-      that file's own comment on why), so both instances share that same
-      hook too.
+      zero JS changes. Continue's click behavior is handled explicitly in
+      kal-booking-flow.js (not a plain data-kal-goto — see that file's
+      own comment on why), so both instances share that same hook too.
 
       The summary line above the button is conditional, not just a plain
       "N selected" — explicit instruction: it only appears once at least
@@ -266,7 +260,7 @@
     <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile" data-kal-therapy-concern-footer hidden>
       <p class="kal-therapy-concern-summary" data-kal-therapy-concern-summary hidden></p>
       <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-concern-continue>
-        Confirm
+        Continue
       </button>
     </div>
 
@@ -292,7 +286,7 @@
         <span>Back</span>
       </button>
       {%- comment -%}
-        Desktop's own summary + Confirm stack — mobile has this same
+        Desktop's own summary + Continue stack — mobile has this same
         summary line in its own footer above (see that instance's own
         comment); this is a second instance of the SAME element
         (data-kal-therapy-concern-summary), kept in sync by the generic
@@ -302,7 +296,7 @@
       <div class="kal-therapy-concern-desktop-continue">
         <p class="kal-therapy-concern-summary" data-kal-therapy-concern-summary hidden></p>
         <button type="button" class="kal-step-doctor-select__continue" data-kal-therapy-concern-continue>
-          Confirm
+          Continue
         </button>
       </div>
     </div>

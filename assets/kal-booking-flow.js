@@ -632,25 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
     'therapeutic-massage': 'Therapeutic Massage',
   };
 
-  // Confirm is a step that belongs to the DROPDOWN specifically, not to
-  // category checkboxes — explicit instruction:
-  // - category only, ever: button is always "Continue", no confirm step.
-  // - dropdown only, ever: button starts as "Confirm"; clicking it flips
-  //   to "Continue" (which is what actually moves on).
-  // - both: whichever mechanism the visitor touched FIRST (starting from
-  //   zero total selections) decides — category-first skips confirm
-  //   entirely ("Continue"), dropdown-first still needs it.
-  // firstSource is (re)determined on the transition from 0 selections to
-  // 1 (in toggleTherapyConcern/toggleTherapyDropdownOption below) and
-  // reset back to null once everything is deselected, so the next fresh
-  // pick decides again.
-  const therapyFlowState = {
-    firstSource: null, // 'category' | 'dropdown' | null
-    confirmed: false,
-  };
-
-  const totalTherapySelectionCount = () => therapyConcernSelect.selected.size + therapyDropdownSelect.selected.size;
-
   // Gated on EITHER selection mechanism — a category checkbox above, or a
   // specific therapy from the dropdown below (therapyDropdownSelect, added
   // further down with the dropdown itself) — per explicit instruction that
@@ -672,11 +653,9 @@ document.addEventListener('DOMContentLoaded', () => {
       footer.hidden = !hasSelection;
     });
 
-    const needsConfirm = hasSelection && therapyFlowState.firstSource === 'dropdown' && !therapyFlowState.confirmed;
     flow.querySelectorAll('[data-kal-therapy-concern-continue]').forEach((btn) => {
       btn.disabled = !hasSelection;
-      btn.textContent = needsConfirm ? 'Confirm' : 'Continue';
-      btn.dataset.kalTherapyConcernMode = needsConfirm ? 'confirm' : 'continue';
+      btn.textContent = 'Continue';
     });
 
     const showSummary = categoryCount > 0 || therapyCount > 0;
@@ -707,19 +686,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const toggleTherapyConcern = (concern) => {
-    const wasEmpty = totalTherapySelectionCount() === 0;
     const isAdding = !therapyConcernSelect.selected.has(concern);
     if (isAdding) {
       therapyConcernSelect.selected.add(concern);
     } else {
       therapyConcernSelect.selected.delete(concern);
-    }
-    if (wasEmpty && isAdding) {
-      therapyFlowState.firstSource = 'category';
-      therapyFlowState.confirmed = false;
-    } else if (totalTherapySelectionCount() === 0) {
-      therapyFlowState.firstSource = null;
-      therapyFlowState.confirmed = false;
     }
     flow.querySelectorAll('[data-kal-therapy-concern]').forEach((row) => {
       const isSelected = therapyConcernSelect.selected.has(row.dataset.kalTherapyConcern);
@@ -734,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // THERAPY DROPDOWN — "Select the therapy" multi-select (node 623:7334,
   // the open-panel state of the dropdown above). Real selection, not
   // decorative: picking a specific therapy here also satisfies the "at
-  // least one selection" rule that gates the Confirm button, same as a
+  // least one selection" rule that gates the Continue button, same as a
   // category checkbox does (see updateTherapyConcernContinueButton above).
   //
   // The list is rendered client-side (not hardcoded in the liquid) because
@@ -848,19 +819,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const toggleTherapyDropdownOption = (key) => {
-    const wasEmpty = totalTherapySelectionCount() === 0;
     const isAdding = !therapyDropdownSelect.selected.has(key);
     if (isAdding) {
       therapyDropdownSelect.selected.add(key);
     } else {
       therapyDropdownSelect.selected.delete(key);
-    }
-    if (wasEmpty && isAdding) {
-      therapyFlowState.firstSource = 'dropdown';
-      therapyFlowState.confirmed = false;
-    } else if (totalTherapySelectionCount() === 0) {
-      therapyFlowState.firstSource = null;
-      therapyFlowState.confirmed = false;
     }
     renderTherapyDropdownList();
     renderTherapySelectedChips();
@@ -871,10 +834,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const clearTherapyDropdownSelection = () => {
     therapyDropdownSelect.selected.clear();
-    if (totalTherapySelectionCount() === 0) {
-      therapyFlowState.firstSource = null;
-      therapyFlowState.confirmed = false;
-    }
     renderTherapyDropdownList();
     renderTherapySelectedChips();
     updateTherapyDropdownSummary();
@@ -884,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Caps the (still absolutely positioned, right below the trigger — not
   // floating/fixed) panel's height to whatever room is actually left
-  // between it and whichever Confirm footer is currently on screen below
+  // between it and whichever Continue footer is currently on screen below
   // it (therapy-slot renders both a --mobile and a --desktop
   // [data-kal-therapy-concern-footer] instance; only one is ever actually
   // rendered at a time — offsetParent is null for the other), so the
@@ -895,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const constrainTherapyDropdownHeight = (wrapper) => {
     const panel = wrapper.querySelector('[data-kal-therapy-dropdown-panel]');
     const stepPanel = wrapper.closest('.kal-step-shell__panel');
-    // The desktop Confirm footer is a full-width bar OUTSIDE
+    // The desktop Continue footer is a full-width bar OUTSIDE
     // .kal-step-shell__panel (sibling of it in the step's own grid, same
     // as every other progress-panel step's desktop footer) — only the
     // mobile instance lives inside it — so footers are searched for from
@@ -1987,21 +1946,13 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleTherapyConcern(therapyConcernTrigger.dataset.kalTherapyConcern);
     }
 
-    // Confirm only exists for the dropdown-first path (see
-    // therapyFlowState above) — clicking it while in that mode just flips
-    // to "Continue" without navigating. Clicking in "continue" mode
-    // navigates to Step 2 of 2 (Therapy Details) — done here explicitly
-    // rather than via a plain data-kal-goto on the button, since that
-    // attribute would fire the generic gotoTrigger handler below on
-    // EVERY click regardless of mode, skipping the confirm step entirely.
+    // Navigates straight to Step 2 of 2 (Therapy Details) — done here
+    // explicitly rather than via a plain data-kal-goto on the button,
+    // since that attribute would fire the generic gotoTrigger handler
+    // below too, double-navigating.
     const therapyConcernContinueTrigger = e.target.closest('[data-kal-therapy-concern-continue]');
     if (therapyConcernContinueTrigger) {
-      if (therapyConcernContinueTrigger.dataset.kalTherapyConcernMode === 'confirm') {
-        therapyFlowState.confirmed = true;
-        updateTherapyConcernContinueButton();
-      } else {
-        goToStep('therapy-details');
-      }
+      goToStep('therapy-details');
     }
 
     const therapyDropdownToggle = e.target.closest('[data-kal-therapy-dropdown-toggle]');
