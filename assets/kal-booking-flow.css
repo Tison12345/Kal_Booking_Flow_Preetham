@@ -1553,7 +1553,7 @@
        where it fits on one line — at the cost of an 8px misalignment
        from "Consultation Booking" above it. */
     padding: 12px 16px;
-    background: var(--kal-booking-flow-color-white);
+    background: #f6f1e81c;
     justify-content: flex-start;
     border-top: 1px solid var(--kal-booking-flow-color-border);
   }
@@ -1581,17 +1581,6 @@
     padding: 12px 24px;
     background: var(--kal-booking-flow-color-white);
     border-top: 1px solid var(--kal-booking-flow-color-border);
-  }
-
-  /* Keep the actions group occupying its box even while "hidden" —
-     overrides the shared [hidden]{display:none} default (higher
-     specificity here wins) so the bar's width/justify-content layout
-     doesn't reflow the help text sideways each time a concern gets
-     picked or unpicked. Scoped to .kal-concern-select__footer-actions
-     now (not the whole bar, which is always visible — see above). */
-  .kal-step-shell--progress-panel .kal-concern-select__footer-actions[hidden] {
-    display: flex;
-    visibility: hidden;
   }
 
   /* Matches this footer's own Figma dev-mode export exactly (node
