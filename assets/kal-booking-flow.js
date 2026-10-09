@@ -1537,8 +1537,9 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFieldError('gender');
     }
 
+    const phoneDigitsTrimmed = patientDetails.phone.replace(/\D/g, '');
     if (!isValidPhone(patientDetails.phone)) {
-      showFieldError('phone', 'Please enter a valid phone number');
+      showFieldError('phone', phoneDigitsTrimmed === '' ? 'Enter phone number' : 'Enter a valid phone number');
       allValid = false;
       firstInvalidField = firstInvalidField || 'phone';
     } else {

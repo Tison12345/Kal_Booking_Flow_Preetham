@@ -3119,7 +3119,7 @@ div.kal-calendar-modal__backdrop {
   font-family: inherit;
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 22px;
-  font-weight: var(--kal-booking-flow-font-weight-black);
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   /* Booking Confirmed's "Back to Homepage" reuses this class on an <a>
      rather than a <button> (a real navigation, not a JS-hooked action)
      — text-decoration:none undoes the browser's default anchor
@@ -3909,7 +3909,7 @@ div.kal-calendar-modal__backdrop {
 .kal-slot-tabs__bar {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 0px;
   /* All three tabs stay the same height whether active or not (see
      .kal-slot-tab--active below) — per explicit instruction, selecting a
      tab should only change its background/font-weight, not its size or
@@ -4217,14 +4217,26 @@ div.kal-calendar-modal__backdrop {
   border-radius: 12px;
 }
 
+/* 4px, not .kal-form-field's own shared 12px gap (which also governs
+   label-to-input spacing, and should stay untouched) — negative
+   margin-top pulls this in from 12 to 4, same "field + its own error
+   message reads as one tight group" treatment this flow uses elsewhere
+   for label/helper-text pairs. */
 .kal-form-error {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0;
-  font-size: 13px;
+  margin: -8px 0 0;
+  font-size: 12px;
   font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-error);
+}
+
+/* 13px at desktop — mobile's own size is 12px, set above. */
+@media screen and (min-width: 750px) {
+  .kal-form-error {
+    font-size: 13px;
+  }
 }
 
 .kal-form-error[hidden] {
@@ -5197,7 +5209,7 @@ div.kal-calendar-modal__backdrop {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 8px;
+  gap: 16px;
   padding: 24px 16px 16px;
   border: 1px solid var(--kal-booking-flow-color-border);
   border-radius: 12px;
@@ -5252,11 +5264,13 @@ div.kal-calendar-modal__backdrop {
 
 .kal-payment-option__icon {
   flex-shrink: 0;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
+  padding: 8px;
   border-radius: 8px;
   background: var(--kal-booking-flow-color-white);
 }
@@ -5300,11 +5314,11 @@ div.kal-calendar-modal__backdrop {
 .kal-payment-option__divider {
   width: 100%;
   height: 0;
-  /* .kal-payment-option's own gap:8px already puts 8px above this — the
-     extra 8px here brings it to the Figma spec's 16px between the
-     icon/title group and the divider. Reset to 0 in the desktop media
-     query below, where this element is hidden anyway. */
-  margin-top: 8px;
+  /* .kal-payment-option's own gap:16px above this is right for
+     divider-to-price-group below, but __left-to-divider should be 8px,
+     not 16 — pulled in here rather than touching the shared card gap
+     (which the price-group spacing still relies on). */
+  margin-top: -8px;
   border-top: 1px dashed var(--kal-booking-flow-color-accent-tan);
 }
 
@@ -5314,11 +5328,9 @@ div.kal-calendar-modal__backdrop {
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  /* .kal-payment-option's own gap:8px already puts 8px above this — the
-     negative margin here brings it down to the Figma spec's 4px between
-     the divider and the price. Reset to 0 in the desktop media query
-     below, where this sits in a row layout instead. */
-  margin-top: -4px;
+  /* .kal-payment-option's own gap:16px now already puts the full Figma
+     spacing above this on its own — no extra margin needed. */
+  margin-top: 0;
 }
 
 /* Desktop-only: the export's full-width horizontal row (node/export
@@ -5435,7 +5447,7 @@ div.kal-calendar-modal__backdrop {
      toggles. */
   .kal-payment-option__price {
     font-size: var(--kal-booking-flow-font-size-name);
-    font-weight: var(--kal-booking-flow-font-weight-regular);
+    font-weight: var(--kal-booking-flow-font-weight-medium);
     line-height: 130%;
     text-align: right;
     color: #191919;
@@ -5463,7 +5475,7 @@ div.kal-calendar-modal__backdrop {
 
 .kal-payment-option__price {
   font-size: var(--kal-booking-flow-font-size-heading);
-  font-weight: var(--kal-booking-flow-font-weight-regular);
+  font-weight: var(--kal-booking-flow-font-weight-medium);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -5923,6 +5935,27 @@ div.kal-calendar-modal__backdrop {
      (price banners, availability badges) that should keep its own
      value. */
   background: #d7e6dc;
+  animation: kal-confirmation-success-icon-pop 500ms ease-out;
+}
+
+/* Scale+fade only (transform/opacity, GPU-cheap) — kept to one shared
+   keyframe since .kal-confirmation-success-icon is the single reused
+   element across Booking Confirmed and Therapy Confirmed. */
+@keyframes kal-confirmation-success-icon-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kal-confirmation-success-icon {
+    animation: none;
+  }
 }
 
 .kal-confirmation-success-icon__inner {
@@ -6259,6 +6292,17 @@ div.kal-calendar-modal__backdrop {
    flow uses for a filled-in value vs. a placeholder. */
 .kal-therapy-select__placeholder--filled {
   color: var(--kal-booking-flow-color-heading);
+}
+
+/* display:flex/align-items:center on the wrapping span — without it, the
+   inline SVG's own baseline-aligned line-box leaves a few px of
+   descender space below it, making the icon sit slightly above center
+   within the flex row instead of truly centered. Same fix as
+   .kal-step-header__location-chevron elsewhere in this file. */
+.kal-therapy-select__chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .kal-therapy-select__chevron svg {
@@ -6730,6 +6774,9 @@ div.kal-calendar-modal__backdrop {
   height: 20px;
   border-radius: 999px;
   background: var(--kal-booking-flow-color-white);
+  /* #1E4B3C, not the grey this inherits from .kal-therapy-appointment-card__meta
+     above — just the icon, not the meta text next to it. */
+  color: var(--kal-booking-flow-color-primary-dark);
 }
 
 .kal-therapy-appointment-card__meta-icon svg {
