@@ -122,21 +122,63 @@
     "kal_doctor_cards_test": {
       "type": "kal-doctor-cards",
       "blocks": {
-        "doctor-1": {
+        "doctor_profile_fDPPcW": {
           "type": "doctor_profile",
           "settings": {
-            "doctor_id": "00000000-0000-0000-0000-0000000000d1",
-            "name": "Dr. Neethu Jayachandran",
+            "doctor_id": "2fbf346f-34de-4d83-a491-e5a6dcb6550b",
+            "name": "test doctor",
             "degree": "BAMS",
-            "languages": "English &middot; Hindi &middot; Malayalam",
+            "languages": "English · Hindi · Malayalam",
             "experience": "12 yrs experience",
             "tags": "Anxiety,Stress Management,Diabetes Care,Preventive Health",
             "next_slot": "Today, 10:30 AM",
-            "price": "&#8377;500"
+            "price": "₹500"
+          }
+        },
+        "doctor_profile_iJbgCB": {
+          "type": "doctor_profile",
+          "settings": {
+            "doctor_id": "02d32aed-7853-4f47-9bcd-c6f0ce3f9536",
+            "name": "Anita Sharma",
+            "degree": "BAMS",
+            "languages": "English · Hindi · Malayalam",
+            "experience": "12 yrs experience",
+            "tags": "Anxiety,Stress Management,Diabetes Care,Preventive Health",
+            "next_slot": "Today, 10:30 AM",
+            "price": "₹500"
+          }
+        },
+        "doctor_profile_F3DNdG": {
+          "type": "doctor_profile",
+          "settings": {
+            "doctor_id": "5ff9fb46-71b4-4b82-95f9-6357af8646a6",
+            "name": "Dr. Neha Sharma",
+            "degree": "BAMS",
+            "languages": "English · Hindi · Malayalam",
+            "experience": "12 yrs experience",
+            "tags": "Anxiety,Stress Management,Diabetes Care,Preventive Health",
+            "next_slot": "Today, 10:30 AM",
+            "price": "₹500"
+          }
+        },
+        "doctor-1": {
+          "type": "doctor_profile",
+          "settings": {
+            "doctor_id": "241e8b5d-3979-4cbd-8f8c-492b86d5ba39",
+            "name": "Shubham Sinha",
+            "degree": "BAMS",
+            "languages": "English · Hindi · Malayalam",
+            "experience": "12 yrs experience",
+            "tags": "Anxiety,Stress Management,Diabetes Care,Preventive Health",
+            "next_slot": "Today, 10:30 AM",
+            "price": "₹500"
           }
         }
       },
       "block_order": [
+        "doctor_profile_fDPPcW",
+        "doctor_profile_iJbgCB",
+        "doctor_profile_F3DNdG",
         "doctor-1"
       ],
       "settings": {}
