@@ -21,30 +21,29 @@
     to "Patient" to match the export; "Fee" is gone from this list
     entirely — replaced by the new Payment Method section below (two
     cards: "Pay now" at a 10%-off price, "Pay at clinic" at full price).
-    Both are static mock prices (₹450 / ₹495), same category as the
-    doctor's photo/fee being placeholders elsewhere in this flow.
+    Both prices come from the real selected doctor's price
+    (applyRealConsultationPricing() in kal-booking-flow.js), not a
+    hardcoded figure — see that function's own comment.
   - Payment Method cards are click-to-select (data-kal-payment-method,
     handled by setPaymentMethod() in kal-booking-flow.js) purely for
-    visual state — no amount is actually charged differently, this is a
-    mockup. "Pay now" starts selected, matching the export.
+    visual state — no amount is actually charged differently yet (Razorpay
+    isn't integrated, see RAZORPAY_PAYMENT_REQUIREMENTS.md), but the
+    prices shown are real. "Pay now" starts selected, matching the export.
   - The old "pay at the clinic" notice banner is gone — payment method is
     now an explicit choice via the cards above, not a fixed notice.
   - Button text changed from "Confirm Booking" to "Confirm payment" to
-    match the export; still carries data-kal-confirm-booking and
-    data-kal-goto="booking-confirmed" exactly as before — see below for
-    why those remain a to-do, not wired to the backend.
+    match the export; carries data-kal-confirm-booking (no data-kal-goto —
+    see below for why).
 
-  "Confirm payment" is NOT wired to the backend (explicit instruction
-  throughout this build — "dont integrate it"). data-kal-confirm-booking is
-  a hook with no click handler yet; when backend integration happens, this
-  is where the two-call sequence documented in
-  kal-booking-flow-step-patient-details.liquid (create hold, then POST
-  /api/public/appointments) should fire. It also carries
-  data-kal-goto="booking-confirmed" so the button navigates to the
-  post-booking success screen for demo purposes in the meantime — once a
-  real click handler is added for the API calls, that handler should only
-  call goToStep('booking-confirmed') after a successful booking, not
-  unconditionally like the plain data-kal-goto does today.
+  "Confirm payment" IS wired to the backend: submitBooking() in
+  kal-booking-flow.js (triggered by data-kal-confirm-booking, its own
+  dedicated click case) places a real hold then creates the real
+  appointment via the partner API, and only calls
+  goToStep('booking-confirmed') once both succeed — staying on this
+  screen with an error banner (data-kal-booking-error below) if either
+  call fails. A plain data-kal-goto would navigate unconditionally on
+  click, before either API call ever ran, so this button deliberately
+  doesn't carry one.
 
   Single shared markup, not a __mobile + __desktop split — this step was
   already fully consolidated into the shared step shell before this pass
@@ -174,9 +173,11 @@
         replacing this pass's earlier design of a floating "Save 10%"
         badge + centered icon/title/divider/price stack. Click-to-select
         is purely visual (setPaymentMethod() in kal-booking-flow.js just
-        toggles kal-payment-option--selected) — both prices are static
-        mockup values, nothing is actually charged differently. "Pay now"
-        starts selected, matching the export.
+        toggles kal-payment-option--selected) — nothing is actually
+        charged differently yet, but both prices shown are the real
+        selected doctor's price (see applyRealConsultationPricing() in
+        kal-booking-flow.js). "Pay now" starts selected, matching the
+        export.
 
         In-Clinic only (data-kal-mode-offline-only) — Video Consult gets
         its own single non-selectable "Consultation Fee" card below
@@ -216,9 +217,18 @@
               </span>
             </span>
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
+            {%- comment -%}
+              Prices filled in by applyRealConsultationPricing() in
+              kal-booking-flow.js from the selected doctor's real price
+              (data-kal-doctor-price-display, same source Confirmation's
+              own appointment card uses) — 10% off for Pay now, computed
+              from that same number, not a separate hardcoded figure.
+              Starts "—" like every other not-yet-filled value in this
+              file (see data-kal-confirm-name etc. above).
+            {%- endcomment -%}
             <span class="kal-payment-option__price-group">
-              <span class="kal-payment-option__price">&#8377;450</span>
-              <span class="kal-payment-option__price-strike">&#8377;495</span>
+              <span class="kal-payment-option__price" data-kal-payment-price-now>&mdash;</span>
+              <span class="kal-payment-option__price-strike" data-kal-payment-price-now-strike>&mdash;</span>
             </span>
           </button>
           <button type="button" class="kal-payment-option" data-kal-payment-method="pay-at-clinic">
@@ -233,7 +243,7 @@
             </span>
             <span class="kal-payment-option__divider" aria-hidden="true"></span>
             <span class="kal-payment-option__price-group">
-              <span class="kal-payment-option__price">&#8377;495</span>
+              <span class="kal-payment-option__price" data-kal-payment-price-clinic>&mdash;</span>
             </span>
           </button>
         </div>
@@ -257,12 +267,24 @@
             </span>
             <span class="kal-payment-fee-card__title">Consultation Fee</span>
           </div>
-          <span class="kal-payment-fee-card__price">&#8377;450</span>
+          <span class="kal-payment-fee-card__price" data-kal-payment-fee-video>&mdash;</span>
         </div>
       </div>
     </div>
 
     <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
+      {%- comment -%}
+        Real booking failure (hold/appointment API error) — shown by
+        submitBooking() in kal-booking-flow.js, same .kal-form-error
+        pattern Patient Details' own field errors use. Not a per-field
+        error (nothing here is a single field), so it isn't gated by
+        data-kal-field-error/clearFieldError — submitBooking() shows/
+        clears it directly.
+      {%- endcomment -%}
+      <p class="kal-form-error" data-kal-booking-error hidden>
+        <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+        <span data-kal-booking-error-text></span>
+      </p>
       {%- comment -%}
         "Pay ₹X" when Pay now is selected, "Continue" when Pay at clinic
         is — no amount is actually collected for Pay at clinic, so
@@ -283,7 +305,7 @@
         height grows to fit the 24px icon circles at 750px+ instead of
         shrinking them, see kal-booking-flow.css's own comment on that.
       {%- endcomment -%}
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking>
         <span data-kal-mode-offline-only data-kal-confirm-payment-label>Proceed to Payment</span>
         <span class="kal-confirm-pay-cta" data-kal-mode-online-only hidden>
           <span class="kal-confirm-pay-cta__label">Proceed and pay</span>
@@ -300,9 +322,19 @@
     Desktop-only full-width footer bar, same pattern as the previous
     four steps — help text + Back (to Patient Details)/Continue split
     across the shared 300px/1fr grid columns. Continue keeps the exact
-    same data-kal-confirm-booking/data-kal-goto hooks and mode-toggled
-    copy as the mobile instance (see the button's own comment above).
+    same data-kal-confirm-booking hook and mode-toggled copy as the
+    mobile instance (see the button's own comment above).
   {%- endcomment -%}
+  {%- comment -%}
+    Desktop's own instance of the real-booking-failure banner — see the
+    mobile footer's identical element above for what populates it.
+    Placed above the footer bar itself (not inside the help/actions flex
+    row) so it spans full width.
+  {%- endcomment -%}
+  <p class="kal-form-error" data-kal-booking-error hidden>
+    <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+    <span data-kal-booking-error-text></span>
+  </p>
   <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
     <div class="kal-concern-select__footer-help kal-step-entry__help">
       <span class="kal-icon kal-icon--help">
@@ -320,7 +352,7 @@
         button above (see that one's own comment for the full rationale) —
         data-kal-mode-offline-only/-online-only, no JS changes needed.
       {%- endcomment -%}
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking data-kal-goto="booking-confirmed">
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking>
         <span data-kal-mode-offline-only data-kal-confirm-payment-label>Proceed to Payment</span>
         <span class="kal-confirm-pay-cta" data-kal-mode-online-only hidden>
           <span class="kal-confirm-pay-cta__label">Proceed and pay</span>

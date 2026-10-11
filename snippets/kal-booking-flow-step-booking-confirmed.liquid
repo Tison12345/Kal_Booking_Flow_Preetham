@@ -22,42 +22,21 @@
     full-bleed tinted band (edge-to-edge, top/bottom border only, no
     corner radius) to match the export.
 
-  CARD REDESIGN, later Figma pass (node 656:5433) — replaces the
-  appointment-card + Consultation Details list above with one bordered
-  "confirmed card" (.kal-confirmed-card) combining a date badge, the
-  time/mode/relative-eta line, a dashed divider with the export's
-  cutout-circle notches, a doctor row, and a Patient/Payment two-cell
-  grid. Originally In-Clinic only (data-kal-mode-offline-only), with
-  Video Consult keeping the older appointment-card + Consultation
-  Details layout (no online-mode spec had been given for that pass) —
-  per explicit instruction, this card is now shown for BOTH modes and
-  that older layout is gone entirely. Mode/Patient reuse the exact same
-  data-kal-confirm-mode/-name hooks renderConfirmationSummary() in
-  kal-booking-flow.js already populates per mode, so no JS changes were
-  needed; Payment stays the same static "₹450 Paid" mockup regardless of
-  mode, same as this card already showed for In-Clinic.
-  - "Booking ID AYR-20486" chip, new — added under the intro subtext, same
-    generic addition regardless of mode.
-  - Date badge (FRI/06/AUG), the "10:30 AM" time, and the "in 3 days"
-    relative-eta chip are static mockup values straight from the export —
-    same category as the doctor's photo/fee placeholders elsewhere in
-    this flow, no hook exists (or is worth adding) to derive a day-badge
-    + relative-day string from slotPicker's state for a screen this
-    build isn't wiring to the backend anyway.
-  - Mode/duration text reuses the existing data-kal-confirm-mode hook
-    as-is (renderConfirmationSummary() in kal-booking-flow.js already
-    populates it as "In Clinic - 30 mins") rather than introduce a
-    second, differently-formatted mode hook just to match the export's
-    exact "In-clinic, 30 mins" punctuation.
-  - Patient cell reuses data-kal-confirm-name, same hook Confirmation's
-    own details list already uses.
-  - Payment cell is a static "₹450 Paid" per the export, NOT the old
-    data-kal-confirm-payment text hook (which produced a plain "Online
-    payment"/"Pay at clinic" string, not a price + paid badge) — now
-    that the old per-mode appointment-card + Consultation Details layout
-    is gone entirely, that hook has no matching element anywhere in this
-    file; setPaymentMethod()'s querySelectorAll() over it no-ops
-    harmlessly.
+  CARD REDESIGN, later Figma pass (node 656:5433) — a bordered "confirmed
+  card" (.kal-confirmed-card) with a date badge, dashed-divider notches,
+  etc. briefly replaced the appointment-card + Consultation Details list
+  above; that ticket-style card (and the static "₹450 Paid"/"Booking ID
+  AYR-20486"/date-badge/relative-eta content it showed) was itself later
+  removed per explicit instruction — see the markup below, which is back
+  to the same .kal-confirmation-appointment-card the Confirmation step's
+  own review card uses, with every field (photo, name, mode, date & time,
+  patient, payment) driven by the same real data-kal-confirm-*/
+  data-kal-doctor-* hooks renderConfirmationSummary()/
+  applySelectedDoctorToCards()/setPaymentMethod() in kal-booking-flow.js
+  already populate elsewhere in this flow, zero JS changes needed here.
+  Payment specifically reads "Paid online" or "Pay at clinic" per mode AND
+  per whichever Payment Method card was actually selected on Confirmation
+  — not a flat string, see that row's own comment below.
   - "Before your visit" band recolored from the mint tint to the export's
     sand/tan treatment (background, label, and icon-tint colors) and its
     check icons moved into their own white rounded-8 boxes; copy trimmed
@@ -66,8 +45,8 @@
     per the new card above.
   - "Back to Homepage" button, new — a footer this step never had before,
     using the same shared .kal-step-doctor-select__continue treatment as
-    every other step's primary CTA. Static mockup like the rest of this
-    build — points at the shop's root URL, no click handler needed.
+    every other step's primary CTA. Points at the shop's root URL, no
+    click handler needed (this is just a link).
 
   Patient Name, Mode, and Date & Time reuse the EXACT SAME data-kal-confirm-*
   hooks as the Confirmation (review) step — renderConfirmationSummary() in
@@ -83,11 +62,11 @@
   documented elsewhere, not part of this screen's build), so nothing else
   depended on it.
 
-  The Confirmation step's "Confirm payment" button now also carries
-  data-kal-goto="booking-confirmed" (alongside its existing
-  data-kal-confirm-booking hook) so the full flow is clickable through to
-  this screen for demo purposes, even though nothing is actually booked
-  yet on the backend.
+  This screen is only ever reached after submitBooking() in
+  kal-booking-flow.js successfully places a real hold and creates a real
+  appointment via the partner API — see the Confirmation step's own
+  comment on its "Confirm payment" button for why it no longer carries a
+  plain data-kal-goto.
 
   Single shared markup, not a __mobile + __desktop split — consolidated
   into the shared step shell (see "SHARED STEP SHELL" in

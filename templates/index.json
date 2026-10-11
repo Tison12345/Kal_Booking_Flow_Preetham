@@ -84,7 +84,7 @@
           "settings": {
             "location_name": "Kerala Ayurveda, Indiranagar",
             "clinic_address": "<p>100 Feet Road, Indiranagar, Bengaluru, Karnataka</p>",
-            "facility_id": "185b85d7-fad2-405d-b8ea-13dc683fbde8",
+            "facility_id": "cfe4e29a-7697-4b1d-970c-dc8c11628b10",
             "location_url_clnk": "",
             "link_clinic_url": ""
           }
@@ -125,19 +125,116 @@
         "doctor-1": {
           "type": "doctor_profile",
           "settings": {
-            "doctor_id": "00000000-0000-0000-0000-0000000000d1",
-            "name": "Dr. Neethu Jayachandran",
+            "doctor_id": "02d32aed-7853-4f47-9bcd-c6f0ce3f9536",
+            "name": "Anita Sharma",
+            "degree": "BAMS",
+            "languages": "English &middot; Hindi &middot; Kannada",
+            "experience": "10 yrs experience",
+            "tags": "General Wellness,Gut Health,Sleep & Lifestyle",
+            "next_slot": "Today, 11:00 AM",
+            "price": "&#8377;500"
+          }
+        },
+        "doctor-2": {
+          "type": "doctor_profile",
+          "settings": {
+            "doctor_id": "5ff9fb46-71b4-4b82-95f9-6357af8646a6",
+            "name": "Dr. Neha Sharma",
+            "degree": "BAMS, MD (Ayurveda)",
+            "languages": "English &middot; Hindi",
+            "experience": "14 yrs experience",
+            "tags": "PCOS & PCOD,Reproductive Health,Skin & Hair",
+            "next_slot": "Today, 2:30 PM",
+            "price": "&#8377;600"
+          }
+        },
+        "doctor-3": {
+          "type": "doctor_profile",
+          "settings": {
+            "doctor_id": "241e8b5d-3979-4cbd-8f8c-492b86d5ba39",
+            "name": "Shubham Sinha",
             "degree": "BAMS",
             "languages": "English &middot; Hindi &middot; Malayalam",
-            "experience": "12 yrs experience",
-            "tags": "Anxiety,Stress Management,Diabetes Care,Preventive Health",
-            "next_slot": "Today, 10:30 AM",
+            "experience": "8 yrs experience",
+            "tags": "Bone & Joint Pain,Diabetes,Preventive Health",
+            "next_slot": "Tomorrow, 9:30 AM",
             "price": "&#8377;500"
+          }
+        },
+        "doctor-4": {
+          "type": "doctor_profile",
+          "settings": {
+            "doctor_id": "2fbf346f-34de-4d83-a491-e5a6dcb6550b",
+            "name": "test doctor",
+            "degree": "BAMS",
+            "languages": "English",
+            "experience": "5 yrs experience",
+            "tags": "General Wellness",
+            "next_slot": "Today, 4:00 PM",
+            "price": "&#8377;450"
           }
         }
       },
       "block_order": [
-        "doctor-1"
+        "doctor-1",
+        "doctor-2",
+        "doctor-3",
+        "doctor-4"
+      ],
+      "settings": {}
+    },
+    "kal_concern_options_test": {
+      "type": "kal-concern-options",
+      "blocks": {
+        "concern-1": { "type": "concern_option", "settings": { "concern_key": "general-wellness", "name": "General Wellness", "icon": "concern-general-wellness" } },
+        "concern-2": { "type": "concern_option", "settings": { "concern_key": "bone-joint-muscle-pain", "name": "Bone, Joint, Muscle Pain", "icon": "concern-bone-joint-muscle" } },
+        "concern-3": { "type": "concern_option", "settings": { "concern_key": "gut-health", "name": "Gut Health", "icon": "concern-gut-health" } },
+        "concern-4": { "type": "concern_option", "settings": { "concern_key": "pcos-pcod-menopause", "name": "PCOS, PCOD, Menopause", "icon": "concern-pcos-pcod-menopause" } },
+        "concern-5": { "type": "concern_option", "settings": { "concern_key": "skin-hair", "name": "Skin, Hair", "icon": "concern-skin-hair" } },
+        "concern-6": { "type": "concern_option", "settings": { "concern_key": "diabetes-thyroid-bp", "name": "Diabetes, Thyroid, BP", "icon": "concern-diabetes-thyroid-bp" } },
+        "concern-7": { "type": "concern_option", "settings": { "concern_key": "reproductive-health-infertility", "name": "Reproductive Health, Infertility", "icon": "concern-reproductive-health" } },
+        "concern-8": { "type": "concern_option", "settings": { "concern_key": "liver-kidney-health", "name": "Liver, Kidney Health", "icon": "concern-liver-kidney" } },
+        "concern-9": { "type": "concern_option", "settings": { "concern_key": "sleep-general-lifestyle", "name": "Sleep, General Lifestyle", "icon": "concern-sleep-lifestyle" } },
+        "concern-10": { "type": "concern_option", "settings": { "concern_key": "respiratory-general-immunity", "name": "Respiratory, General Immunity", "icon": "concern-respiratory-immunity" } },
+        "concern-11": { "type": "concern_option", "settings": { "concern_key": "other", "name": "Other", "icon": "concern-other" } }
+      },
+      "block_order": [
+        "concern-1", "concern-2", "concern-3", "concern-4", "concern-5",
+        "concern-6", "concern-7", "concern-8", "concern-9", "concern-10", "concern-11"
+      ],
+      "settings": {}
+    },
+    "kal_therapy_options_test": {
+      "type": "kal-therapy-options",
+      "blocks": {
+        "category-1": { "type": "therapy_category", "settings": { "concern_key": "relaxation-stress-relief", "name": "Relaxation & Stress Relief" } },
+        "category-2": { "type": "therapy_category", "settings": { "concern_key": "pain-management", "name": "Pain Management" } },
+        "category-3": { "type": "therapy_category", "settings": { "concern_key": "beauty-skin-care", "name": "Beauty & Skin Care" } },
+        "category-4": { "type": "therapy_category", "settings": { "concern_key": "physiotherapy-rehab", "name": "Physiotherapy & Rehab" } },
+        "category-5": { "type": "therapy_category", "settings": { "concern_key": "therapeutic-massage", "name": "Therapeutic Massage" } },
+        "item-1": { "type": "therapy_item", "settings": { "key": "abhyanga", "name": "Abhyanga", "tag": "Most Booked" } },
+        "item-2": { "type": "therapy_item", "settings": { "key": "janu-vasti", "name": "Janu Vasti", "tag": "" } },
+        "item-3": { "type": "therapy_item", "settings": { "key": "kayaseka", "name": "Kayaseka", "tag": "" } },
+        "item-4": { "type": "therapy_item", "settings": { "key": "panchakarma", "name": "Panchakarma", "tag": "Featured" } },
+        "item-5": { "type": "therapy_item", "settings": { "key": "shirodhara", "name": "Shirodhara", "tag": "Most Booked" } },
+        "item-6": { "type": "therapy_item", "settings": { "key": "choorna-pinda-sweda", "name": "Choorna Pinda Sweda", "tag": "" } },
+        "item-7": { "type": "therapy_item", "settings": { "key": "greeva-vasti", "name": "Greeva Vasti", "tag": "" } },
+        "item-8": { "type": "therapy_item", "settings": { "key": "kati-vasti", "name": "Kati Vasti", "tag": "" } },
+        "item-9": { "type": "therapy_item", "settings": { "key": "nasya", "name": "Nasya", "tag": "" } },
+        "item-10": { "type": "therapy_item", "settings": { "key": "netra-tarpana", "name": "Netra Tarpana", "tag": "" } },
+        "item-11": { "type": "therapy_item", "settings": { "key": "njavarakizhi", "name": "Njavarakizhi", "tag": "" } },
+        "item-12": { "type": "therapy_item", "settings": { "key": "patra-potali-sweda", "name": "Patra Potali Sweda", "tag": "" } },
+        "item-13": { "type": "therapy_item", "settings": { "key": "pizhichil", "name": "Pizhichil", "tag": "" } },
+        "item-14": { "type": "therapy_item", "settings": { "key": "shirovasti", "name": "Shirovasti", "tag": "" } },
+        "item-15": { "type": "therapy_item", "settings": { "key": "swedana", "name": "Swedana", "tag": "" } },
+        "item-16": { "type": "therapy_item", "settings": { "key": "thakradhara", "name": "Thakradhara", "tag": "" } },
+        "item-17": { "type": "therapy_item", "settings": { "key": "udwartana", "name": "Udwartana", "tag": "" } }
+      },
+      "block_order": [
+        "category-1", "category-2", "category-3", "category-4", "category-5",
+        "item-1", "item-2", "item-3", "item-4", "item-5", "item-6", "item-7",
+        "item-8", "item-9", "item-10", "item-11", "item-12", "item-13",
+        "item-14", "item-15", "item-16", "item-17"
       ],
       "settings": {}
     },
@@ -157,6 +254,8 @@
     "featured_collection",
     "kal_clinic_list_test",
     "kal_doctor_cards_test",
+    "kal_concern_options_test",
+    "kal_therapy_options_test",
     "custom_liquid_tUmp8k"
   ]
 }

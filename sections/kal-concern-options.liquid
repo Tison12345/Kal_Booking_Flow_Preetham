@@ -1,0 +1,97 @@
+{% comment %}
+  Health concern list content source for the booking flow's Concern Select
+  step (Step 1 of 5, consultation path).
+
+  Same pattern as sections/kal-doctor-cards.liquid: this section is a
+  hidden data source, not a page feature to browse. Whoever edits the
+  theme adds/removes/reorders "Concern" blocks here; kal-booking-flow.js
+  reads them from the DOM at startup (loadConcernOptions()) and builds the
+  Concern Select step's visible list from them, in block order. Unlike
+  doctors, there's no backend ID to match against — a concern is just a
+  label stored as plain text on the enquiry/appointment, so whatever
+  blocks exist here is exactly what shows, no filtering.
+
+  Each block renders through the EXISTING kal-booking-flow-concern-row
+  snippet (same component the step already used when this list was
+  hardcoded) so what's configured here is exactly what appears in the
+  popup — no separate markup to keep in sync.
+{% endcomment %}
+
+<div class="kal-concern-option-source-list" hidden>
+  {%- for block in section.blocks -%}
+    {%- if block.type == 'concern_option' -%}
+      <div class="kal-concern-option-source" {{ block.shopify_attributes }}>
+        {%- render 'kal-booking-flow-concern-row',
+          icon_name: block.settings.icon,
+          name: block.settings.name,
+          concern_key: block.settings.concern_key,
+          selected: false
+        -%}
+      </div>
+    {%- endif -%}
+  {%- endfor -%}
+</div>
+
+{% schema %}
+{
+  "name": "Concern options (Kal)",
+  "tag": "section",
+  "class": "section",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "concern_option",
+      "name": "Concern",
+      "settings": [
+        {
+          "type": "text",
+          "id": "concern_key",
+          "label": "Key (lowercase, hyphenated — e.g. \"general-wellness\")",
+          "info": "Internal value stored on the enquiry/appointment. Changing this on an existing block changes what gets recorded going forward; past bookings keep whatever key they were created with."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Name shown to visitors",
+          "default": "General Wellness"
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "concern-general-wellness", "label": "General Wellness" },
+            { "value": "concern-bone-joint-muscle", "label": "Bone / Joint / Muscle" },
+            { "value": "concern-gut-health", "label": "Gut Health" },
+            { "value": "concern-pcos-pcod-menopause", "label": "PCOS / PCOD / Menopause" },
+            { "value": "concern-skin-hair", "label": "Skin / Hair" },
+            { "value": "concern-diabetes-thyroid-bp", "label": "Diabetes / Thyroid / BP" },
+            { "value": "concern-reproductive-health", "label": "Reproductive Health" },
+            { "value": "concern-liver-kidney", "label": "Liver / Kidney" },
+            { "value": "concern-sleep-lifestyle", "label": "Sleep / Lifestyle" },
+            { "value": "concern-respiratory-immunity", "label": "Respiratory / Immunity" },
+            { "value": "concern-therapy", "label": "Therapy (generic)" },
+            { "value": "concern-other", "label": "Other" },
+            { "value": "concern-general-medicine", "label": "General Medicine (legacy)" },
+            { "value": "concern-orthopedics", "label": "Orthopedics (legacy)" },
+            { "value": "concern-gastroenterology", "label": "Gastroenterology (legacy)" },
+            { "value": "concern-gynecology", "label": "Gynecology (legacy)" },
+            { "value": "concern-cardiology", "label": "Cardiology (legacy)" },
+            { "value": "concern-pediatrics", "label": "Pediatrics (legacy)" },
+            { "value": "concern-neurology", "label": "Neurology (legacy)" }
+          ],
+          "default": "concern-general-wellness"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Concern options (Kal)",
+      "blocks": [
+        { "type": "concern_option" }
+      ]
+    }
+  ]
+}
+{% endschema %}
