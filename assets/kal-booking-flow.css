@@ -3465,11 +3465,11 @@ div.kal-calendar-modal__backdrop {
    .kal-slot-section, a column flex container) default min-width:auto.
    Only .kal-day-strip__track has overflow-x:auto now, so without this,
    the browser falls back to sizing THIS element by its content's
-   min-content width — the day-strip's 5 fixed-width chips laid out in
-   one row (~328px), wider than .kal-slot-section itself — forcing this
-   element, and the section around it, wider and overflowing to the
-   right instead of staying put and letting the track scroll
-   internally. */
+   min-content width — now one real fixed-width chip per bookable day
+   (today..+90, far wider than .kal-slot-section itself) laid out in one
+   row — forcing this element, and the section around it, wider and
+   overflowing to the right instead of staying put and letting the track
+   scroll internally. */
 .kal-day-strip {
   width: 100%;
   min-width: 0;
@@ -3506,9 +3506,10 @@ div.kal-calendar-modal__backdrop {
   margin-top: -16px;
   margin-bottom: -16px;
   margin-left: -16px;
-  /* Still horizontally scrollable (5 day chips overflow a narrow phone
-     width), just without the native scrollbar track rendering underneath
-     it — this strip isn't meant to visibly look like a scroll container. */
+  /* Still horizontally scrollable (one chip per bookable day, today..+90,
+     far overflows any screen width), just without the native scrollbar
+     track rendering underneath it — this strip isn't meant to visibly
+     look like a scroll container. */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -3728,6 +3729,15 @@ div.kal-calendar-modal__backdrop {
    5-slot days shown in different colors, not a strict count-based
    rule). Scoped here since only this step's static mockup uses it. */
 .kal-step-slot-picker .kal-day-chip__badge--busy {
+  background: var(--kal-booking-flow-color-warning-bg);
+  color: var(--kal-booking-flow-color-warning);
+}
+
+/* A chunk whose day-summaries fetch failed shows "Retry" here instead of
+   the "…" loading state staying up forever — clicking the chip re-selects
+   that date, which re-triggers loading for its chunk (see
+   kal-booking-flow.js's paintDayChipBadge/dayAvailabilityFetchFailedDates). */
+.kal-step-slot-picker .kal-day-chip__badge--error {
   background: var(--kal-booking-flow-color-warning-bg);
   color: var(--kal-booking-flow-color-warning);
 }

@@ -23,16 +23,27 @@ document.addEventListener('DOMContentLoaded', () => {
   //      e.g. the homepage hero's "Book Your Consultation" button) — opens
   //      at Entry, same as always.
   //   B: a doctor card's own "Consult" CTA (.kal-consult-cta — on the real
-  //      theme this is custom-clinic-doctors.liquid's consult-link,
-  //      currently just a same-page anchor jump to a legacy form; wire it
-  //      to this class instead of that anchor) — skips Entry and Concern
-  //      Select, opens straight to Doctor Select.
-  // Everything else — Concern Select (when reached via A)/Doctor Select/
-  // Slot Picker/Patient Details/Confirmation/Booking Confirmed — is
-  // identical between the two, with ONE exception: Patient Details' open-
-  // text Concern field (see that step's own liquid comment) only shows for
-  // B, set via isExperimentB below — A visitors already picked a concern
-  // on Concern Select, so asking again there would be redundant.
+  //      theme this is custom-clinic-doctors.liquid's "Meet our Experts"
+  //      card's Consult button, currently just a same-page anchor jump to
+  //      a legacy form; wire it to this class instead of that anchor).
+  //      That doctor is already known from the card itself, so B skips
+  //      Entry, Concern Select, AND Doctor Select entirely — straight to
+  //      Slot Picker (step 1 of 3, not 1 of 5) with that doctor pre-
+  //      selected (see selectDoctorById() below). Explicit instruction:
+  //      B never shows a separate doctor-selection page, since the whole
+  //      point of entering from a specific doctor's own card is that the
+  //      choice is already made. The CTA element itself must carry
+  //      data-doctor-id (or wrap one) — the homepage test card in
+  //      templates/index.json's custom_liquid_tUmp8k section does this
+  //      directly in its own static markup.
+  // Everything else — Slot Picker/Patient Details/Confirmation/Booking
+  // Confirmed — is identical between the two, with ONE exception: Patient
+  // Details' open-text Concern field (see that step's own liquid comment)
+  // only shows for B, set via isExperimentB below — A visitors already
+  // picked a concern on Concern Select, so asking again there would be
+  // redundant. Mode (In-Clinic/Video) is never toggled for B either — a
+  // specific doctor's own card is always an in-clinic consult, so
+  // slotPicker.mode just stays at its 'in-clinic' default.
   // ----------------------------------------------------------------------
 
   // Set/cleared by the two CTA click handlers below, read by Patient
@@ -277,6 +288,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectedDoctorId !== previousDoctorId) clearDayAvailabilityCache();
     updateDoctorSelectContinueButton();
     applySelectedDoctorToCards();
+  };
+
+  // Pre-selects a specific doctor directly, without going through Doctor
+  // Select's own list/click flow at all — Experiment B's direct-entry
+  // "Consult" CTA already knows exactly which doctor opened it (see
+  // BOOKING EXPERIMENT above), so there's no list to click a card in.
+  // Clones that doctor's real card from sections/kal-doctor-cards.liquid's
+  // hidden source (same lookup loadDoctorsForFacility() uses) into Doctor
+  // Select's own (unseen, for B) list and marks it selected, so
+  // getSelectedDoctorName/PhotoUrl/Price() — which all just read whatever
+  // .kal-doctor-card--selected exists inside the flow — and everything
+  // downstream that depends on them (applySelectedDoctorToCards(),
+  // booking submission's selectedDoctorId) work completely unchanged.
+  // Returns false (and does nothing) if this doctor has no card configured
+  // yet — same "never silently disappear" principle as the real list.
+  const selectDoctorById = (doctorId) => {
+    const list = flow.querySelector('[data-kal-doctor-list]');
+    const source = document.querySelector(
+      `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctorId)}"] .kal-doctor-card`,
+    );
+    if (!list || !source) return false;
+    const card = source.cloneNode(true);
+    card.dataset.doctorId = doctorId;
+    card.classList.add('kal-doctor-card--selected');
+    list.innerHTML = '';
+    list.appendChild(card);
+    if (selectedDoctorId !== doctorId) clearDayAvailabilityCache();
+    selectedDoctorId = doctorId;
+    applySelectedDoctorToCards();
+    return true;
   };
 
   const buildFallbackDoctorCard = (doctor) => {
@@ -984,14 +1025,44 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${y}-${m}-${day}`;
   };
 
+  // toIsoDate's inverse — parses as local midnight (not UTC), same as every
+  // other date in this file, so it round-trips through toIsoDate exactly.
+  const fromIsoDate = (iso) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  // Dates whose most recent day-summaries fetch failed — cleared the
+  // instant that date's summary actually lands in dayAvailabilityCache
+  // (see fetchDaySummaries below). Lets the day-strip show an explicit
+  // "retry" state instead of leaving a failed date stuck on the loading
+  // "…" forever (see paintDayChipBadge).
+  const dayAvailabilityFetchFailedDates = new Set();
+
+  // Observed live against the real dev API: a day-summaries request can
+  // hang with no response and no error at all for minutes (a backend/DB
+  // connection issue, not anything this file controls) rather than
+  // failing cleanly. Without a client-side cap, that single hung request
+  // sits in loadMoreChunk's inFlightPromise forever, permanently blocking
+  // every later chunk load for that visit to this step — worse than an
+  // ordinary failure, since even scrolling back and forth or re-picking a
+  // date can't un-stick it. AbortSignal.timeout turns that silent hang
+  // into an actual thrown error after DAY_SUMMARIES_FETCH_TIMEOUT_MS, so
+  // it flows through the same success=false / Retry-badge / automatic-
+  // retry-on-next-trigger path as any other failure.
+  const DAY_SUMMARIES_FETCH_TIMEOUT_MS = 45000;
+
   // Fetches day-summaries for [startDate, endDate] (inclusive) for the
   // currently selected doctor/facility and merges the results into
-  // dayAvailabilityCache. Silently no-ops on error/missing doctor — the
-  // day-strip/calendar just show their cells as not-yet-disabled, same
-  // as "haven't fetched this range yet".
+  // dayAvailabilityCache. Returns whether it succeeded — callers (see
+  // refreshDayStrip's loadMoreChunk) use this to decide whether the
+  // requested range is actually done, or needs retrying on the next
+  // scroll/selection trigger. No separate retry/backoff loop here: the
+  // chunk-level caller already retries automatically next time it's
+  // asked to load the same still-missing offsets.
   const fetchDaySummaries = async (startDate, endDate) => {
     const facility = getCurrentFacility();
-    if (!apiBaseUrl || !facility?.id || !selectedDoctorId) return;
+    if (!apiBaseUrl || !facility?.id || !selectedDoctorId) return false;
     try {
       const response = await fetch(
         `${apiBaseUrl}/api/shopify/public/availability/day-summaries` +
@@ -1001,17 +1072,38 @@ document.addEventListener('DOMContentLoaded', () => {
           `&endDate=${encodeURIComponent(toIsoDate(endDate))}` +
           `&durationMinutes=${CONSULT_DURATION_MINUTES}` +
           `&mode=${slotPicker.mode === 'video' ? 'online' : 'offline'}`,
+        { signal: AbortSignal.timeout(DAY_SUMMARIES_FETCH_TIMEOUT_MS) },
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       const summaries = Array.isArray(data?.data?.summaries) ? data.data.summaries : [];
       summaries.forEach((entry) => {
-        if (entry?.date) dayAvailabilityCache.set(entry.date, entry.summary);
+        if (entry?.date) {
+          dayAvailabilityCache.set(entry.date, entry.summary);
+          dayAvailabilityFetchFailedDates.delete(entry.date);
+        }
       });
+      return true;
     } catch (err) {
       console.error('[kal-booking-flow] Failed to load day summaries:', err);
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        dayAvailabilityFetchFailedDates.add(toIsoDate(d));
+      }
+      return false;
     }
   };
+
+  // The day-summaries endpoint rejects a range over this many days
+  // (shopifyDaySummaryQuerySchema's SHOPIFY_DAY_SUMMARY_MAX_DAYS in
+  // packages/validation/src/shopify.schema.ts, currently 62) with a 400 —
+  // ensureMonthAvailabilityLoaded() below never hit this (one calendar
+  // month is always well under it), but the day-strip now spans the full
+  // CALENDAR_MAX_FUTURE_DAYS+1 range, which does exceed it, and loads it
+  // in chunks sized under this (see refreshDayStrip's loadMoreChunk, SLOT
+  // PICKER above). Mirrored here (not imported — separate repo) rather than
+  // hardcoded inline at each call site, so it reads as "the known server
+  // limit" if that number ever changes.
+  const DAY_SUMMARY_FETCH_MAX_DAYS = 60;
 
   // Fetches the real slot grid for one date. Returns null on error/missing
   // doctor so callers can show an explicit "unable to load" state rather
@@ -1160,29 +1252,37 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSlotPanels(slots);
   };
 
-  // Updates the 5 existing day-strip chips (today..today+4, matching the
-  // static markup's own 5-day window) in place with real labels/dates/
-  // badges, rather than re-creating them — simplest way to keep every
-  // other day-chip behavior (the click handler, --active toggling)
-  // working unchanged.
-  const DAY_STRIP_LENGTH = 5;
+  // The strip now spans every bookable day (today through +90, the same
+  // cap the calendar modal enforces — CALENDAR_MAX_FUTURE_DAYS, moved up
+  // here since the day-strip is now its first/main consumer), scrollable
+  // all the way through rather than a fixed 5-day window — explicit
+  // instruction: every date must be reachable by scrolling, not just
+  // whichever 5 happen to be shown. .kal-day-strip__track's own CSS
+  // already handles the horizontal scroll (overflow-x:auto, flex-shrink:0
+  // chips, scrollbar hidden) — built for exactly this.
+  const CALENDAR_MAX_FUTURE_DAYS = 90;
 
   // Paints one day-chip's badge from whatever's currently in
-  // dayAvailabilityCache for that date — "…" (loading) if nothing's
-  // cached yet, the real count otherwise. Split out so refreshDayStrip
-  // can call it twice: once synchronously (loading state, see below) and
-  // once after the fetch resolves (real counts).
+  // dayAvailabilityCache for that date — "…" (loading, never yet
+  // attempted or still in flight), "Retry" (its chunk's last fetch
+  // failed — see dayAvailabilityFetchFailedDates; clicking the chip
+  // re-selects that date, which re-triggers loading for its chunk) if
+  // nothing's cached yet, the real count otherwise. Split out so
+  // refreshDayStrip can call it twice: once synchronously (loading
+  // state, see below) and once after the fetch resolves (real counts).
   const paintDayChipBadge = (chip, date) => {
     const badgeEl = chip.querySelector('.kal-day-chip__badge');
-    const summary = dayAvailabilityCache.get(toIsoDate(date));
+    const isoDate = toIsoDate(date);
+    const summary = dayAvailabilityCache.get(isoDate);
     const availableSlots = summary ? summary.availableSlots : null;
     const noSlots = availableSlots === 0;
     chip.disabled = noSlots;
     chip.classList.toggle('kal-day-chip--disabled', noSlots);
     if (!badgeEl) return;
     if (availableSlots === null) {
-      badgeEl.textContent = '…';
-      badgeEl.className = 'kal-day-chip__badge';
+      const failed = dayAvailabilityFetchFailedDates.has(isoDate);
+      badgeEl.textContent = failed ? 'Retry' : '…';
+      badgeEl.className = 'kal-day-chip__badge' + (failed ? ' kal-day-chip__badge--error' : '');
     } else {
       badgeEl.textContent = `${availableSlots} slot${availableSlots === 1 ? '' : 's'}`;
       badgeEl.className =
@@ -1191,35 +1291,234 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Builds one real .kal-day-chip — same markup/classes the old static
+  // liquid chips used, so every existing CSS rule (.kal-step-slot-picker
+  // .kal-day-chip, --active, :disabled, the badge color variants) applies
+  // unchanged. The real date lives on data-kal-chip-date so the click
+  // handler can read it back directly, not inferred from DOM position.
+  const buildDayChip = (date, today) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'kal-day-chip';
+    chip.dataset.kalChipDate = toIsoDate(date);
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'kal-day-chip__label';
+    labelEl.textContent = isSameDate(date, today) ? 'Today' : FULL_DAY_LABELS[date.getDay()].slice(0, 3);
+    chip.appendChild(labelEl);
+
+    const dateEl = document.createElement('span');
+    dateEl.className = 'kal-day-chip__date';
+    dateEl.textContent = String(date.getDate());
+    chip.appendChild(dateEl);
+
+    const badgeEl = document.createElement('span');
+    badgeEl.className = 'kal-day-chip__badge';
+    badgeEl.textContent = '…';
+    chip.appendChild(badgeEl);
+
+    return chip;
+  };
+
+  // Scrolls the currently-selected chip into view within the strip —
+  // explicit instruction: selecting a date (via the strip itself or the
+  // calendar modal) must never leave its own card scrolled out of sight.
+  // 'nearest' rather than 'center' so an already-visible chip (the common
+  // case — clicking a chip you can already see) doesn't needlessly
+  // re-center the whole strip under your finger.
+  const scrollSelectedDayChipIntoView = () => {
+    const active = flow.querySelector('.kal-day-strip__track .kal-day-chip--active');
+    if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+  };
+
+  // Eagerly fetching the whole CALENDAR_MAX_FUTURE_DAYS range (or even
+  // DAY_SUMMARY_FETCH_MAX_DAYS) up front turned out to be impractically
+  // slow against the real day-summaries endpoint — a 60-day request
+  // measured at 73.8s live (server logs: 9 sequential batches of
+  // DAY_SUMMARY_CONCURRENCY=7 dates each, every date individually paying
+  // a near-constant ~3.9s tax that server-side timing logs attribute to
+  // Redis lock/cache acquisition retrying against the account's exhausted
+  // Upstash quota — a pre-existing infra issue, not something this chunk
+  // size can fix). An earlier 1-day-vs-7-day timing test looked flat and
+  // suggested a fixed per-request floor, which is what the previous
+  // (wrong) "front-load the max" choice here was based on — that
+  // assumption breaks down once the range spans more than one backend
+  // batch. So the chunk size is kept at exactly one batch
+  // (DAY_SUMMARY_CONCURRENCY) to bound each request to the backend's own
+  // one-batch latency rather than multiplying it by however many batches
+  // a larger chunk would need. Still slow under the current Redis
+  // exhaustion, but bounded instead of taking 70s+ or longer. This
+  // doesn't block or slow down actually picking a time either way:
+  // today's own slot grid loads through the separate, already-existing
+  // refreshSlotsForSelectedDate() call regardless of how much of the
+  // day-strip's badges have finished loading.
+  const DAY_STRIP_CHUNK_DAYS = 7;
+  const DAY_STRIP_INITIAL_FETCH_DAYS = DAY_STRIP_CHUNK_DAYS;
+
+  // refreshDayStrip() can legitimately run more than once concurrently —
+  // e.g. the visitor goes Back to Doctor Select and straight to Slot
+  // Picker again before the first run's chunk fetch has resolved. Each
+  // run used to share one set of progress-tracking variables
+  // (loaded-through offset, in-flight flag), so two overlapping runs
+  // stomped on each other: one run's track.innerHTML rebuild wiped the
+  // other's already-painted badges back to "…", and their offset
+  // bookkeeping corrupted each other, leaving badges stuck. Fixed by
+  // giving every refreshDayStrip() call its own sequence number and its
+  // own loaded-through-offset state, bundled into a "session" object
+  // (not shared module `let`s) — a superseded call's chunk loader checks
+  // the sequence and bails out instead of touching anything once a newer
+  // refreshDayStrip() has started. currentDayStripSession always points
+  // at the *latest* call's session, since only the latest call's view of
+  // the strip is still in the DOM; the scroll handler and the calendar/
+  // chip-click selection handler (loadDayStripThroughOffset below) both
+  // go through that indirection rather than a fixed function, so they
+  // always operate on whichever run is actually current.
+  let dayStripRefreshSequence = 0;
+  let currentDayStripSession = null; // { loadMoreChunk, getLoadedThroughOffset }
+
+  // Loads chunks (via the current session's loadMoreChunk) until the
+  // strip has data through targetOffset, or the whole range is exhausted.
+  // Shared by refreshDayStrip's own initial catch-up (the already-
+  // selected date can start beyond the first chunk) and by picking a date
+  // — from the calendar modal or by clicking a chip directly — that falls
+  // outside whatever's loaded so far (see applyCalendarDateSelection).
+  // loadMoreChunk no-ops/dedupes its own overlap (see below), so calling
+  // this from two places around the same time is safe.
+  const loadDayStripThroughOffset = async (targetOffset) => {
+    while (
+      currentDayStripSession &&
+      currentDayStripSession.getLoadedThroughOffset() < targetOffset &&
+      currentDayStripSession.getLoadedThroughOffset() < CALENDAR_MAX_FUTURE_DAYS
+    ) {
+      await currentDayStripSession.loadMoreChunk(DAY_STRIP_CHUNK_DAYS);
+    }
+  };
+
+  // Loads more of the strip once the visitor scrolls near the edge of
+  // what's actually been loaded — NOT near the end of the whole 91-chip
+  // scrollWidth, which is fixed from the moment refreshDayStrip builds
+  // every chip up front. Using scrollWidth as the trigger (the original
+  // version of this) meant the fetch never fired until the visitor had
+  // scrolled almost all the way to day 90, since the DOM already "looks"
+  // full-width from day one — days 8-14 etc. never got requested. Instead
+  // this finds the actual first not-yet-loaded chip (by its DOM position,
+  // via the session's own loaded-through offset) and triggers once the
+  // viewport's trailing edge is within DAY_STRIP_SCROLL_LOOKAHEAD_PX of
+  // it — same lead-time idea as before, just measured against the real
+  // boundary instead of the track's total width.
+  const DAY_STRIP_SCROLL_LOOKAHEAD_PX = 400;
+
+  const handleDayStripScroll = () => {
+    const track = flow.querySelector('[data-kal-day-strip-track]');
+    if (!track || !currentDayStripSession) return;
+    const loadedThroughOffset = currentDayStripSession.getLoadedThroughOffset();
+    if (loadedThroughOffset >= CALENDAR_MAX_FUTURE_DAYS) return; // fully loaded already
+    const boundaryChip = track.children[loadedThroughOffset + 1]; // first not-yet-loaded chip
+    if (!boundaryChip) return;
+    // .kal-day-strip__track has no `position`, so boundaryChip.offsetLeft
+    // isn't actually relative to it (offsetParent would walk up to
+    // whatever positioned ancestor exists higher up the tree, if any) —
+    // measuring both rects against the viewport and taking the delta
+    // works regardless of what positioning context exists above this.
+    const boundaryOffsetInTrack =
+      boundaryChip.getBoundingClientRect().left - track.getBoundingClientRect().left + track.scrollLeft;
+    const nearBoundary =
+      track.scrollLeft + track.clientWidth + DAY_STRIP_SCROLL_LOOKAHEAD_PX >= boundaryOffsetInTrack;
+    if (nearBoundary) void currentDayStripSession.loadMoreChunk(DAY_STRIP_CHUNK_DAYS);
+  };
+
+  // Bound once, here — the track element itself is static liquid markup
+  // present from page load (only its chip children are built dynamically,
+  // in refreshDayStrip()), so this never needs re-binding on later step
+  // visits the way a dynamically-recreated element would.
+  flow.querySelector('[data-kal-day-strip-track]')?.addEventListener('scroll', handleDayStripScroll);
+
   const refreshDayStrip = async () => {
-    const start = todayStart();
-    const end = addDays(start, DAY_STRIP_LENGTH - 1);
+    const track = flow.querySelector('[data-kal-day-strip-track]');
+    if (!track) return;
 
-    // Labels/dates need no fetch (pure local date math) and the badge can
-    // show its "…" loading state immediately — done BEFORE the await so
-    // the strip never shows the old static mock chips (hardcoded "Today/6
-    // · 5 slots", "Mon/7 · 4 slots", etc. from this step's liquid) while
-    // the real fetch is still in flight, only ever real-or-loading data.
-    for (let offset = 0; offset < DAY_STRIP_LENGTH; offset += 1) {
-      const date = addDays(start, offset);
-      const chip = flow.querySelector(`.kal-day-chip[data-kal-slot-day-offset="${offset}"]`);
-      if (!chip) continue;
-      const labelEl = chip.querySelector('.kal-day-chip__label');
-      const dateEl = chip.querySelector('.kal-day-chip__date');
-      if (labelEl) labelEl.textContent = offset === 0 ? 'Today' : FULL_DAY_LABELS[date.getDay()].slice(0, 3);
-      if (dateEl) dateEl.textContent = String(date.getDate());
-      chip.disabled = false;
-      chip.classList.remove('kal-day-chip--disabled');
+    const mySequence = (dayStripRefreshSequence += 1);
+    const today = todayStart();
+
+    // Builds every chip with its real label/date, painting each badge from
+    // whatever's already cached (or "…" if not) — the strip never shows
+    // stale data from a previous render while a real fetch is in flight,
+    // only ever real-or-loading. Full rebuild (not update-in-place) since
+    // the chip count is fixed at CALENDAR_MAX_FUTURE_DAYS+1 for the
+    // lifetime of this step — only selectedDate (the --active one)
+    // actually changes between calls.
+    track.innerHTML = '';
+    for (let offset = 0; offset <= CALENDAR_MAX_FUTURE_DAYS; offset += 1) {
+      const date = addDays(today, offset);
+      const chip = buildDayChip(date, today);
+      chip.classList.toggle('kal-day-chip--active', isSameDate(date, slotPicker.selectedDate));
       paintDayChipBadge(chip, date);
+      track.appendChild(chip);
     }
+    scrollSelectedDayChipIntoView();
 
-    await fetchDaySummaries(start, end);
+    // This call's own progress — not shared module state a stale,
+    // still-in-flight earlier call could corrupt. See the comment above
+    // dayStripRefreshSequence. inFlightPromise (rather than a plain
+    // boolean) lets concurrent callers — the scroll handler firing while
+    // loadDayStripThroughOffset is also mid-chunk, say — await the same
+    // in-progress fetch instead of no-op'ing and having their own while
+    // loop spin hot until it resolves.
+    let loadedThroughOffset = -1;
+    let inFlightPromise = null;
 
-    for (let offset = 0; offset < DAY_STRIP_LENGTH; offset += 1) {
-      const date = addDays(start, offset);
-      const chip = flow.querySelector(`.kal-day-chip[data-kal-slot-day-offset="${offset}"]`);
-      if (chip) paintDayChipBadge(chip, date);
-    }
+    const loadMoreChunk = (chunkDays) => {
+      if (mySequence !== dayStripRefreshSequence) return Promise.resolve(); // superseded
+      if (inFlightPromise) return inFlightPromise; // dedupe — join the already-running fetch
+      if (loadedThroughOffset >= CALENDAR_MAX_FUTURE_DAYS) return Promise.resolve();
+
+      const chunkStartOffset = loadedThroughOffset + 1;
+      const chunkEndOffset = Math.min(chunkStartOffset + chunkDays - 1, CALENDAR_MAX_FUTURE_DAYS);
+
+      const run = async () => {
+        let needsFetch = false;
+        for (let offset = chunkStartOffset; offset <= chunkEndOffset; offset += 1) {
+          if (!dayAvailabilityCache.has(toIsoDate(addDays(today, offset)))) {
+            needsFetch = true;
+            break;
+          }
+        }
+
+        // Only a successful fetch (or nothing needed fetching at all)
+        // advances the loaded-through marker. A failed fetch leaves it
+        // where it was, so the very next call — next scroll tick, next
+        // date pick — naturally retries this same chunk instead of it
+        // being marked "done" with no data in it.
+        const succeeded = needsFetch
+          ? await fetchDaySummaries(addDays(today, chunkStartOffset), addDays(today, chunkEndOffset))
+          : true;
+        if (mySequence !== dayStripRefreshSequence) return; // superseded while the fetch was in flight
+        if (succeeded) loadedThroughOffset = chunkEndOffset;
+        track.querySelectorAll('.kal-day-chip').forEach((chip) => {
+          paintDayChipBadge(chip, fromIsoDate(chip.dataset.kalChipDate));
+        });
+      };
+
+      inFlightPromise = run().finally(() => {
+        inFlightPromise = null;
+      });
+      return inFlightPromise;
+    };
+
+    currentDayStripSession = {
+      loadMoreChunk,
+      getLoadedThroughOffset: () => loadedThroughOffset,
+    };
+
+    await loadMoreChunk(DAY_STRIP_INITIAL_FETCH_DAYS);
+
+    // If the already-selected date (e.g. picked via the calendar, further
+    // out than the initial chunk — see CALENDAR above) falls past what's
+    // loaded so far, keep loading straight through to it, so its own
+    // badge isn't left stuck on "…" just because it's beyond the first
+    // lazy chunk.
+    const selectedOffset = Math.round((startOfDay(slotPicker.selectedDate) - today) / 86400000);
+    await loadDayStripThroughOffset(selectedOffset);
   };
 
   const startOfDay = (date) => {
@@ -1291,8 +1590,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // ensureMonthAvailabilityLoaded() below fetches the whole visible month
   // before the grid is shown, so in practice every selectable cell has
   // real data by the time a visitor sees it.
+  // CALENDAR_MAX_FUTURE_DAYS is defined earlier, alongside the day-strip
+  // builder (SLOT PICKER above) — shared between both now that the strip
+  // itself spans the full bookable range, not just a fixed 5-day window.
   // ----------------------------------------------------------------------
-  const CALENDAR_MAX_FUTURE_DAYS = 90;
 
   const dayOffsetFrom = (date) => Math.round((startOfDay(date) - todayStart()) / 86400000);
 
@@ -1477,27 +1778,42 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Syncs the day-strip and the "Choose a Slot" label with whatever date
-  // was picked in the calendar. Picking a date within the static
-  // day-strip's 5-day window (offsets 0-4) just activates that chip;
-  // there's no chip to activate for anything further out (the strip has
-  // no real per-day data beyond those 5 — see this step's own liquid
-  // comment), so the label reflects the picked date instead.
+  // was picked in the calendar. The strip has a real chip for every
+  // bookable day already (see CALENDAR_MAX_FUTURE_DAYS above), so a date
+  // picked further out (e.g. next week) just marks that existing chip
+  // active and scrolls it into view — explicit instruction: picking such a
+  // date must show it as a real, selected, visible chip, not just change
+  // a text label with nothing visibly selected behind it.
   const applyCalendarDateSelection = (date) => {
     slotPicker.selectedDate = date;
 
-    const offset = dayOffsetFrom(date);
-    const matchingChip = flow.querySelector(`.kal-day-chip[data-kal-slot-day-offset="${offset}"]`);
-
-    flow.querySelectorAll('.kal-day-chip[data-kal-slot-day-offset]').forEach((chip) => {
-      chip.classList.toggle('kal-day-chip--active', chip === matchingChip);
+    // Every date already has a real chip in the strip (see
+    // CALENDAR_MAX_FUTURE_DAYS above) — no rebuild needed, just move which
+    // one is marked --active and bring it into view.
+    const isoDate = toIsoDate(date);
+    flow.querySelectorAll('.kal-day-strip__track .kal-day-chip').forEach((chip) => {
+      chip.classList.toggle('kal-day-chip--active', chip.dataset.kalChipDate === isoDate);
     });
+    scrollSelectedDayChipIntoView();
 
     const label = flow.querySelector('.kal-slot-section__label');
-    if (label) {
-      label.textContent = matchingChip ? 'Choose a Slot' : `Choose a Slot — ${formatConfirmationDate(date)}`;
-    }
+    if (label) label.textContent = 'Choose a Slot';
 
     refreshSlotsForSelectedDate();
+
+    // The picked date (and the rest of its DAY_STRIP_CHUNK_DAYS chunk)
+    // may fall beyond whatever the strip has loaded so far — e.g. a
+    // calendar pick three weeks out, or clicking a far chip the visitor
+    // never actually scrolled to. Previously this only moved the active
+    // highlight and left that chunk's badges on "…" forever, since
+    // nothing ever asked for its data. loadDayStripThroughOffset reuses
+    // the exact same chunk loader the strip's own scroll-triggered
+    // loading uses (see SLOT PICKER above) — no separate fetch path —
+    // and is a no-op if the date's chunk is already loaded. Re-scrolls
+    // once done in case the badge text changes the chip's rendered
+    // width enough to shift its position.
+    const targetOffset = Math.round((startOfDay(date) - todayStart()) / 86400000);
+    void loadDayStripThroughOffset(targetOffset).then(scrollSelectedDayChipIntoView);
   };
 
   // ----------------------------------------------------------------------
@@ -1508,8 +1824,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // there today — add them if/when the backend is extended to accept them).
   // `concern` is an open text field (not the Concern Select checkbox list)
   // — added so Experiment B visitors (kal-consult-cta, skips Entry/Concern
-  // Select straight to Doctor Select) have somewhere to say what they're
-  // coming in for, since that path never reaches Concern Select at all.
+  // Select/Doctor Select straight to Slot Picker) have somewhere to say
+  // what they're coming in for, since that path never reaches Concern
+  // Select at all.
   // ----------------------------------------------------------------------
 
   const patientDetails = {
@@ -1820,17 +2137,20 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Re-numbers the header ("Step N of 5"/dots) and left-column "Your
-  // Progress" stepper for the 4 consultation-flow steps that exist in
-  // BOTH experiments (Doctor Select/Slot Picker/Patient Details/
-  // Confirmation — Concern Select itself is never reached in B, see
-  // BOOKING EXPERIMENT above). Their Liquid markup hardcodes Experiment
-  // A's own numbering (step 2 of 5, step 3 of 5, etc., "Your Progress"
-  // starting with "Health concerns"), since that's the only flow Liquid
-  // itself knows about. Experiment B skips Concern Select, so from a B
-  // visitor's perspective Doctor Select is step 1 of 4, not step 2 of 5,
-  // and "Health concerns" shouldn't appear in "Your Progress" at all
-  // (there's no concern-selection step to point to) — this shifts every
-  // later step down by one and drops the total from 5 to 4 to match.
+  // Progress" stepper for the steps that exist in BOTH experiments (Doctor
+  // Select/Slot Picker/Patient Details/Confirmation — Concern Select itself
+  // is never reached in B, see BOOKING EXPERIMENT above). Their Liquid
+  // markup hardcodes Experiment A's own numbering (step 2 of 5, step 3 of
+  // 5, etc., "Your Progress" starting with "Health concerns"), since
+  // that's the only flow Liquid itself knows about. Experiment B skips
+  // BOTH Concern Select and Doctor Select (the doctor's already known from
+  // the card that opened it — see BOOKING EXPERIMENT above), so from a B
+  // visitor's perspective Slot Picker is step 1 of 3, not step 3 of 5 —
+  // this shifts every later step down by two and drops the total from 5
+  // to 3 to match. Doctor Select's own entry below still computes a number
+  // for B (0) but it's never actually seen, since that page itself is
+  // skipped for B — kept only so Experiment A's numbering (which does use
+  // this same list) stays simple to read as one shared table.
   const EXPERIMENT_B_RENUMBER_STEPS = [
     { root: '.kal-step-doctor-select', stepNumberA: 2 },
     { root: '.kal-step-slot-picker', stepNumberA: 3 },
@@ -1838,7 +2158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     { root: '.kal-step-confirmation', stepNumberA: 5 },
   ];
   const PROGRESS_STEP_NAMES_A = ['Health concerns', 'Mode & doctor', 'Date & time', 'Patient Details', 'Review & payment'];
-  const PROGRESS_STEP_NAMES_B = PROGRESS_STEP_NAMES_A.slice(1);
+  const PROGRESS_STEP_NAMES_B = PROGRESS_STEP_NAMES_A.slice(2);
   const PROGRESS_TOTAL_A = PROGRESS_STEP_NAMES_A.length;
   const PROGRESS_TOTAL_B = PROGRESS_STEP_NAMES_B.length;
 
@@ -1891,7 +2211,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const container = flow.querySelector(root);
       if (!container) return;
       const total = isExperimentB ? PROGRESS_TOTAL_B : PROGRESS_TOTAL_A;
-      const stepNumber = isExperimentB ? stepNumberA - 1 : stepNumberA;
+      const stepNumber = isExperimentB ? stepNumberA - 2 : stepNumberA;
 
       const dotsWrap = container.querySelector('.kal-step-doctor-select__progress');
       if (dotsWrap) {
@@ -2330,13 +2650,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Experiment B — a doctor card's own "Consult" CTA, skipping straight
-    // to Doctor Select. See BOOKING EXPERIMENT above.
-    if (e.target.closest('.kal-consult-cta')) {
+    // to Slot Picker with that doctor pre-selected. See BOOKING EXPERIMENT
+    // above. The doctor comes from data-doctor-id on the clicked trigger
+    // itself, or its closest ancestor carrying one — the homepage test
+    // card puts it directly on the Consult button.
+    const consultCtaTrigger = e.target.closest('.kal-consult-cta');
+    if (consultCtaTrigger) {
+      const doctorId = consultCtaTrigger.dataset.doctorId
+        || consultCtaTrigger.closest('[data-doctor-id]')?.dataset.doctorId
+        || null;
       isExperimentB = true;
       applyExperimentVisibility();
       applyExperimentStepNumbering();
       openFlow();
-      goToStep('doctor-select');
+      if (doctorId) selectDoctorById(doctorId);
+      goToStep('slot-picker');
     }
 
     // Facility selection, from the separate "Find a Clinic" page — see
@@ -2447,11 +2775,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reuses applyCalendarDateSelection (see CALENDAR above) so picking a
     // day here and picking the same day via the calendar modal leave the
     // flow in an identical state — including re-fetching the real slot
-    // grid for the newly picked date.
-    const slotDayTrigger = e.target.closest('.kal-day-chip[data-kal-slot-day-offset]:not(:disabled)');
-    if (slotDayTrigger) {
-      const offset = parseInt(slotDayTrigger.dataset.kalSlotDayOffset, 10);
-      applyCalendarDateSelection(addDays(todayStart(), offset));
+    // grid for the newly picked date. Reads the chip's own stashed real
+    // date (data-kal-chip-date, set by buildDayChip()) rather than any
+    // positional index — the strip now has one real chip per bookable day
+    // (today..+90), not a fixed-length window.
+    const slotDayTrigger = e.target.closest('.kal-day-strip__track .kal-day-chip:not(:disabled)');
+    if (slotDayTrigger && slotDayTrigger.dataset.kalChipDate) {
+      applyCalendarDateSelection(fromIsoDate(slotDayTrigger.dataset.kalChipDate));
     }
 
     const calendarOpenTrigger = e.target.closest('[data-kal-open-calendar]');

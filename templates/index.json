@@ -242,7 +242,7 @@
       "type": "custom-liquid",
       "name": "t:sections.custom-liquid.presets.name",
       "settings": {
-        "custom_liquid": "<button class=\"kal-request-appointment-cta\" style=\"padding:12px 24px;\">Test Request Appointment</button> <button class=\"kal-consult-cta\" style=\"padding:12px 24px;\">Test Consult (Experiment B)</button>",
+        "custom_liquid": "<div style=\"max-width:420px;margin:0 auto 20px;border:1px solid #d8d8d0;border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start;font-family:sans-serif;\"><div style=\"width:72px;height:72px;border-radius:50%;background:#2f4f3f;flex-shrink:0;\"></div><div><div style=\"font-size:18px;font-weight:600;color:#1a1a1a;\">Anita Sharma</div><div style=\"color:#666;font-size:14px;margin-top:4px;\">BAMS</div><div style=\"color:#2f4f3f;font-size:14px;margin-top:4px;\">General Wellness, Gut Health, Sleep &amp; Lifestyle</div><div style=\"color:#666;font-size:13px;margin-top:4px;\">10+ years of experience</div><div style=\"margin-top:12px;display:flex;gap:8px;\"><button type=\"button\" style=\"padding:8px 16px;border:1px solid #ccc;background:#f5f5f0;border-radius:6px;\">View Profile</button><button type=\"button\" class=\"kal-consult-cta\" data-doctor-id=\"02d32aed-7853-4f47-9bcd-c6f0ce3f9536\" style=\"padding:8px 16px;border:none;background:#2f4f3f;color:#fff;border-radius:6px;cursor:pointer;\">Consult</button></div></div></div> <button class=\"kal-request-appointment-cta\" style=\"padding:12px 24px;\">Test Request Appointment</button> <button class=\"kal-consult-cta\" style=\"padding:12px 24px;\">Test Consult (Experiment B)</button>",
         "color_scheme": "",
         "padding_top": 40,
         "padding_bottom": 52
