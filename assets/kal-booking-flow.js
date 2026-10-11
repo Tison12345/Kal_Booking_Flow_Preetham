@@ -312,12 +312,110 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = source.cloneNode(true);
     card.dataset.doctorId = doctorId;
     card.classList.add('kal-doctor-card--selected');
+    applyDoctorCardConcernBadges(card);
     list.innerHTML = '';
     list.appendChild(card);
     if (selectedDoctorId !== doctorId) clearDayAvailabilityCache();
     selectedDoctorId = doctorId;
     applySelectedDoctorToCards();
     return true;
+  };
+
+  // Fisher-Yates — used below to randomize which position a doctor's
+  // concern-matched tag lands in, so it doesn't always render in the same
+  // spot (wherever it happens to sit in the theme editor's comma-
+  // separated list).
+  const shuffleArray = (arr) => {
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  // Every doctor card shows at least this many specialty badges —
+  // sections/kal-doctor-cards.liquid's schema asks editors to author at
+  // least this many tags per doctor so there's always enough to pad with
+  // below.
+  const MIN_DOCTOR_CARD_TAGS = 4;
+
+  // Explicit instruction: every concern the visitor picked on Concern
+  // Select becomes its own highlighted badge on EVERY doctor card — not
+  // just a doctor whose own authored tags happen to already mention it
+  // ("if a user clicks gut health then all the cards should have the gut
+  // health badge"). The doctor's own tags (sections/kal-doctor-cards.liquid)
+  // are only used as filler, padding the card up to MIN_DOCTOR_CARD_TAGS
+  // total when fewer than that many concerns are selected. All badges —
+  // concern ones and filler ones alike — are then shuffled together so
+  // the highlighted concern badge(s) don't always land first ("i dont
+  // want all to be in the first so we will shuffle it"). If 4+ concerns
+  // are selected, they alone already satisfy the minimum and no filler is
+  // added ("if 4 concerns are selected all the cards will have the 4
+  // concern and the concern as badge but shuffled"). No-op for a card
+  // with no .kal-doctor-card__tags at all (the minimal fallback card for
+  // a doctor with no configured profile block — nothing to pad from, and
+  // out of scope for this feature). When nothing's selected (Experiment B
+  // skips Concern Select entirely), this just reduces to "show the
+  // doctor's own tags, shuffled" with nothing highlighted.
+  // Keyed by `${doctorId}|${sorted selected concern labels}` -> the
+  // shuffled badge text order last used for that doctor + selection.
+  // Doctor Select gets fully rebuilt from scratch every time it's
+  // (re-)reached (mode toggle, Back/Continue, "Change Clinic" — see
+  // goToStep's own comment), which otherwise meant every revisit
+  // reshuffled every card's badges even when nothing about the selection
+  // had changed — looked like the badges were randomly changing every
+  // time you looked at the same doctor. The point of shuffling is "don't
+  // always put the matched concern(s) first," not "look different every
+  // time," so the order is cached and reused for as long as the doctor
+  // and the selected concerns stay the same; a genuinely different
+  // concern selection gets its own fresh shuffle.
+  const doctorCardBadgeOrderCache = new Map();
+
+  const applyDoctorCardConcernBadges = (card) => {
+    const tagsContainer = card.querySelector('.kal-doctor-card__tags');
+    if (!tagsContainer) return;
+
+    const ownTagTexts = Array.from(tagsContainer.children).map((el) => el.textContent.trim());
+    const selectedLabels = collectSelectedConcernLabels();
+
+    const seenLower = new Set();
+    const badges = []; // { text, selected }
+
+    selectedLabels.forEach((label) => {
+      const key = label.toLowerCase();
+      if (seenLower.has(key)) return; // collectSelectedConcernLabels() shouldn't duplicate, but don't rely on that
+      seenLower.add(key);
+      badges.push({ text: label, selected: true });
+    });
+
+    ownTagTexts.forEach((text) => {
+      if (badges.length >= MIN_DOCTOR_CARD_TAGS) return;
+      const key = text.toLowerCase();
+      if (seenLower.has(key)) return; // already shown as a selected-concern badge above
+      seenLower.add(key);
+      badges.push({ text, selected: false });
+    });
+
+    const cacheKey = `${card.dataset.doctorId || ''}|${[...seenLower].sort().join(',')}`;
+    const cachedOrder = doctorCardBadgeOrderCache.get(cacheKey);
+    if (cachedOrder) {
+      badges.sort((a, b) => cachedOrder.indexOf(a.text.toLowerCase()) - cachedOrder.indexOf(b.text.toLowerCase()));
+    } else {
+      shuffleArray(badges);
+      doctorCardBadgeOrderCache.set(cacheKey, badges.map((b) => b.text.toLowerCase()));
+    }
+
+    // Explicit instruction: no visual distinction between a concern badge
+    // and a filler one — every badge renders with the plain
+    // .kal-doctor-card__tag look, "selected" above is only used to decide
+    // what goes on the card and dedupe against, not how it's styled.
+    tagsContainer.innerHTML = '';
+    badges.forEach(({ text }) => {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'kal-doctor-card__tag';
+      tagEl.textContent = text;
+      tagsContainer.appendChild(tagEl);
+    });
   };
 
   const buildFallbackDoctorCard = (doctor) => {
@@ -408,6 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const card = source ? source.cloneNode(true) : buildFallbackDoctorCard(doctor);
       card.dataset.doctorId = doctor.id;
       card.classList.toggle('kal-doctor-card--selected', doctor.id === autoSelectId);
+      applyDoctorCardConcernBadges(card);
       list.appendChild(card);
     });
 
