@@ -2759,6 +2759,12 @@ document.addEventListener('DOMContentLoaded', () => {
         || consultCtaTrigger.closest('[data-doctor-id]')?.dataset.doctorId
         || null;
       isExperimentB = true;
+      // B skips Concern Select entirely, but a prior Experiment A pass in
+      // the same session can leave concernSelect.selected populated —
+      // without this, submitBooking() would still send that stale
+      // selection as `concerns`, getting prefixed onto this booking's own
+      // typed Concern field server-side ("Concerns: ...\n<typed text>").
+      concernSelect.selected.clear();
       applyExperimentVisibility();
       applyExperimentStepNumbering();
       openFlow();
@@ -3014,12 +3020,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   });
 
-  // Click on the backdrop (outside the dialog box itself) closes it
-  flow.addEventListener('click', (e) => {
-    if (e.target === flow) {
-      closeFlow();
-    }
-  });
+  // Per explicit instruction, clicking the backdrop (outside
+  // .kal-booking-flow__content) no longer closes the flow — only the
+  // explicit close button (data-kal-close) does now.
 
   // `scroll` doesn't bubble, so the scroll-hint's own visibility (computed
   // by updateScrollHintVisibility/updateAllScrollHints, defined up near
