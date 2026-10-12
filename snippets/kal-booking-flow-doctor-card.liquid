@@ -1,11 +1,12 @@
 {% comment %}
   The doctor card in Doctor Select (Step 2 of 5), matching the Figma spec
-  exactly (node 544:3781) — rebuilt as a fully static mockup per explicit
-  instruction, replacing the earlier real-backend-data version (name +
-  generic "Ayurveda Physician" subtitle only, since /api/public/doctors
-  only returns { id, name }). This card intentionally shows content
-  (degree, languages, experience, specialty tags, next slot, price) the
-  real API doesn't provide yet — it's a mockup, not live data.
+  exactly (node 544:3781). Real data now: the partner API only returns
+  { id, name, designation } per doctor, but every other field here
+  (degree, languages, experience, specialty tags, next slot, price) comes
+  from sections/kal-doctor-cards.liquid's doctor_profile blocks, joined by
+  doctor_id — see that section's own comment. A doctor with no matching
+  block falls back to a minimal name-only card (buildFallbackDoctorCard()
+  in kal-booking-flow.js) rather than this richer markup.
 
   DEFAULT (unselected) appearance updated to match node 690:6562 —
   120px photo (was 76px), degree+experience grouped on one line with
@@ -26,8 +27,8 @@
   - price: {String} e.g. "&#8377;500" — pre-formatted, not a bare number
   - selected: {Boolean} true for the tan-border/gradient/shadow highlighted
     treatment (same visual language as Concern Select's selected row)
-  - photo_url: {String} doctor photo URL — DUMMY/placeholder, no real
-    doctor photos exist yet
+  - photo_url: {String} doctor photo URL — from the doctor_profile block's
+    photo field; blank falls back to the plain placeholder box below
 
   Usage:
   {% render 'kal-booking-flow-doctor-card',

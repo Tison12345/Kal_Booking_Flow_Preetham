@@ -20,13 +20,15 @@
   here: "for now maintain only male and female").
 
   The appointment card here is NOT the shared kal-booking-flow-appointment-
-  card.liquid — that one shows a mode+price row, but this node's card
-  shows degree/experience badges (reusing Doctor Select's doctor-education/
-  doctor-experience icons) and a description line about the therapy
-  starting with a short doctor consultation. Different enough content
-  shape that duplicating the shared card's photo+name structure inline
-  here (as .kal-therapy-appointment-card) was simpler than adding
-  optional/conditional slots to the shared one for a single caller.
+  card.liquid — that one shows a doctor photo/name/mode+price row, which
+  doesn't apply here: a therapy request never has an assigned doctor (see
+  partner-therapy-request.use-case.ts's own comment — staff decide the
+  actual therapist later). This originally also had a photo/name/degree/
+  experience sub-row hardcoded to a specific fake doctor ("Dr. Neethu
+  Jayachandran, BAMS, 12 yrs experience") shown regardless of who the
+  visitor actually is or which clinic they picked — removed outright
+  rather than wired to real data, since there's no real doctor here to
+  wire it to. Just the description line remains.
 
   Footer button is "Submit Request", not "Continue" — matches this node's
   own export. It navigates to the new "therapy-confirmed" step (node
@@ -74,33 +76,11 @@
     </div>
 
     {%- comment -%}
-      Photo removed per explicit instruction (flow-wide) — plain
-      placeholder box instead of the doctor's photo for now.
+      No doctor photo/name/degree/experience row — a therapy request has
+      no assigned doctor at this point (see this file's own top comment).
+      Just the description line.
     {%- endcomment -%}
     <div class="kal-therapy-appointment-card">
-      <div class="kal-therapy-appointment-card__top">
-        <span class="kal-therapy-appointment-card__photo">
-          <span class="kal-doctor-photo-placeholder"></span>
-        </span>
-        <span class="kal-therapy-appointment-card__body">
-          <span class="kal-therapy-appointment-card__name">Dr. Neethu Jayachandran</span>
-          <span class="kal-therapy-appointment-card__meta">
-            <span class="kal-therapy-appointment-card__meta-item">
-              <span class="kal-therapy-appointment-card__meta-icon">
-                {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
-              </span>
-              BAMS
-            </span>
-            <span class="kal-therapy-appointment-card__divider" aria-hidden="true"></span>
-            <span class="kal-therapy-appointment-card__meta-item">
-              <span class="kal-therapy-appointment-card__meta-icon">
-                {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
-              </span>
-              12 yrs experience
-            </span>
-          </span>
-        </span>
-      </div>
       <span class="kal-therapy-appointment-card__desc">
         Your therapy starts with a short <strong>doctor consultation</strong> and is performed by an expert therapist.
       </span>
@@ -262,7 +242,11 @@
     </div>
 
     <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue>
+      <p class="kal-form-error" data-kal-booking-error hidden>
+        <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+        <span data-kal-booking-error-text></span>
+      </p>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-submit-therapy data-kal-patient-continue>
         Submit Request
       </button>
     </div>
@@ -273,12 +257,12 @@
     Desktop-only full-width footer bar, same pattern as the consultation
     flow's progress-panel steps — help text + Back (to Therapy Slot)/
     Submit Request split across the shared 300px/1fr grid columns.
-    data-kal-goto="therapy-confirmed" + data-kal-patient-continue on this
-    button work the exact same way as the mobile instance (see
-    kal-booking-flow.js's patientContinueTrigger handler, which now
-    reads a button's own data-kal-goto instead of always hardcoding
-    'confirmation' — fixed specifically so this shared hook works
-    correctly for both flows).
+    data-kal-submit-therapy + data-kal-patient-continue on this button:
+    patientContinueTrigger (kal-booking-flow.js) still runs the same
+    validatePatientDetailsAndShowErrors() check, but routes to
+    submitTherapyRequest() instead of a plain goToStep() when this
+    attribute is present — see that function for why (real POST to
+    /therapy-requests, not just a client-side navigation).
   {%- endcomment -%}
   <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
     <div class="kal-concern-select__footer-help kal-step-entry__help">
@@ -287,12 +271,16 @@
       </span>
       <span class="kal-step-entry__help-text">Need assistance? Call us at +91 804012 3456</span>
     </div>
+    <p class="kal-form-error" data-kal-booking-error hidden>
+      <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+      <span data-kal-booking-error-text></span>
+    </p>
     <div class="kal-concern-select__footer-actions">
       <button type="button" class="kal-step-doctor-select__back kal-concern-select__footer-back" data-kal-back="therapy-slot" aria-label="Back">
         {%- render 'kal-booking-icons', icon_name: 'chevron-left' -%}
         <span>Back</span>
       </button>
-      <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="therapy-confirmed" data-kal-patient-continue>
+      <button type="button" class="kal-step-doctor-select__continue" data-kal-submit-therapy data-kal-patient-continue>
         Submit Request
       </button>
     </div>

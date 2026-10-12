@@ -169,19 +169,13 @@
     </div>
 
     <div class="kal-step-shell__scroll">
-      <div class="kal-concern-select__list">
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-general-wellness', name: 'General Wellness', concern_key: 'general-wellness', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-bone-joint-muscle', name: 'Bone, Joint, Muscle Pain', concern_key: 'bone-joint-muscle-pain', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-gut-health', name: 'Gut Health', concern_key: 'gut-health', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-pcos-pcod-menopause', name: 'PCOS, PCOD, Menopause', concern_key: 'pcos-pcod-menopause', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-skin-hair', name: 'Skin, Hair', concern_key: 'skin-hair', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-diabetes-thyroid-bp', name: 'Diabetes, Thyroid, BP', concern_key: 'diabetes-thyroid-bp', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-reproductive-health', name: 'Reproductive Health, Infertility', concern_key: 'reproductive-health-infertility', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-liver-kidney', name: 'Liver, Kidney Health', concern_key: 'liver-kidney-health', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-sleep-lifestyle', name: 'Sleep, General Lifestyle', concern_key: 'sleep-general-lifestyle', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-respiratory-immunity', name: 'Respiratory, General Immunity', concern_key: 'respiratory-general-immunity', selected: false -%}
-        {%- render 'kal-booking-flow-concern-row', icon_name: 'concern-other', name: 'Other', concern_key: 'other', selected: false -%}
-      </div>
+      {%- comment -%}
+        Populated client-side from sections/kal-concern-options.liquid's
+        hidden blocks — see loadConcernOptions() in kal-booking-flow.js.
+        Used to be 11 hardcoded {% render %} calls here; moved out so the
+        list can be edited from the theme editor without a code deploy.
+      {%- endcomment -%}
+      <div class="kal-concern-select__list" data-kal-concern-list></div>
     </div>
 
     {%- comment -%}

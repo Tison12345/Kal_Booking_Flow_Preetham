@@ -38,13 +38,15 @@
   screen (the list it styled is gone), but stays defined for Booking
   Confirmed's own Video Consult-era usage elsewhere.
 
-  "Request sent"/timestamp and the second/third timeline steps' copy are
-  static mockup values, same "visual match, not wired" treatment used
-  elsewhere in this flow — no backend call actually schedules a callback
-  or produces a real timestamp. Patient Name previously reused
-  data-kal-confirm-name on the old details list; that hook has no
-  matching element on this screen anymore (harmless no-op, same pattern
-  as other now-unused data-kal-confirm-* hooks elsewhere in this flow).
+  The second/third timeline steps' copy ("Within 24 hours", "Details on
+  WhatsApp") are fixed, not tied to any real backend state — there's no
+  actual callback scheduling or WhatsApp send behind them, they're just
+  what happens next per the design. The first step's timestamp IS real
+  (data-kal-therapy-confirm-timestamp, set by renderTherapyConfirmedSummary()
+  in kal-booking-flow.js to the actual moment this screen is shown, which
+  is also the moment the request was actually submitted). The "Visit
+  details card" below reuses data-kal-confirm-name for Patient, same hook
+  the rest of this flow already populates.
 
   "Shop Products"/"Get directions" have no click handlers — decorative
   per this build's scope, same as several other action-shaped buttons
@@ -157,7 +159,7 @@
               </span>
               <span class="kal-therapy-next-steps__text">
                 <span class="kal-therapy-next-steps__item-label">Request sent</span>
-                <span class="kal-therapy-next-steps__state">Today, 4:12 PM</span>
+                <span class="kal-therapy-next-steps__state" data-kal-therapy-confirm-timestamp>Today</span>
               </span>
               <span class="kal-therapy-next-steps__divider-one" aria-hidden="true"></span>
             </li>
@@ -193,11 +195,16 @@
           "Your Consultation"; rows are Patient/Location/Payment instead
           of Mode/Date & Time/Patient. Patient reuses the exact same
           data-kal-confirm-name hook the rest of this flow already
-          populates; the doctor photo/name and Location/Payment are
-          static mockup values, same "visual match, not wired" treatment
-          as elsewhere in this build (no doctor is actually assigned to a
-          therapy request, and there's no facility-switcher/payment-method
-          step in the therapy flow to reflect a real choice from).
+          populates. The header's "name" slot shows the real requested
+          therapies instead (data-kal-therapy-confirm-summary — this used
+          to hardcode "Dr. Neethu Jayachandran" here, which made no sense:
+          no doctor is actually assigned to a therapy request, see
+          partner-therapy-request.use-case.ts). Location reuses the same
+          real-facility hook (.kal-step-entry__location-text) every other
+          step already populates via applyStoredFacility(). Payment stays
+          "At the clinic" — genuinely true, not a placeholder: there's no
+          payment-method step in the therapy flow, and a therapy session
+          is always paid for in person.
         {%- endcomment -%}
         {%- comment -%}
           Photo removed per explicit instruction (flow-wide) — same
@@ -209,7 +216,7 @@
             <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder"></span>
             <span class="kal-appointment-card__body">
               <span class="kal-appointment-card__eyebrow">Therapy Details</span>
-              <span class="kal-appointment-card__name">Dr. Neethu Jayachandran</span>
+              <span class="kal-appointment-card__name" data-kal-therapy-confirm-summary>&mdash;</span>
             </span>
           </div>
           <div class="kal-confirmation-appointment-card__rows">
@@ -225,7 +232,7 @@
                 {%- render 'kal-booking-icons', icon_name: 'location-pin' -%}
                 Location
               </span>
-              <span class="kal-confirmation-details__value">Indiranagar, Bengaluru</span>
+              <span class="kal-confirmation-details__value kal-step-header__location-text">Indiranagar</span>
             </div>
             <div class="kal-confirmation-details__row">
               <span class="kal-confirmation-appointment-card__key">

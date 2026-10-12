@@ -65,7 +65,7 @@
   actual preceding "which facility" screen is defined.
 {% endcomment %}
 
-<div class="kal-step-therapy-slot kal-step-shell kal-step-shell--progress-panel" data-kal-doctor-id="0f425bd1-9a69-4adc-a0a3-6f2b8ba87191" data-kal-facility-id="185b85d7-fad2-405d-b8ea-13dc683fbde8">
+<div class="kal-step-therapy-slot kal-step-shell kal-step-shell--progress-panel">
 
   {%- comment -%}
     Desktop left column — same 300px "Selected Clinic" + "Your Progress"
@@ -178,63 +178,14 @@
         <p class="kal-therapy-category-label kal-therapy-category-label--concern">By concern<span class="kal-therapy-category-count" data-kal-therapy-concern-count aria-hidden="true" hidden>0</span></p>
       </div>
 
-      <div class="kal-concern-select__list">
-        <button type="button" class="kal-concern-row" data-kal-therapy-concern="relaxation-stress-relief" aria-pressed="false">
-          <span class="kal-concern-row__left">
-            <span class="kal-concern-row__icon">
-              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
-            </span>
-            <span class="kal-concern-row__name">Relaxation &amp; Stress Relief</span>
-          </span>
-          <span class="kal-concern-row__checkbox" aria-hidden="true">
-            {%- render 'kal-booking-icons', icon_name: 'check' -%}
-          </span>
-        </button>
-        <button type="button" class="kal-concern-row" data-kal-therapy-concern="pain-management" aria-pressed="false">
-          <span class="kal-concern-row__left">
-            <span class="kal-concern-row__icon">
-              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
-            </span>
-            <span class="kal-concern-row__name">Pain Management</span>
-          </span>
-          <span class="kal-concern-row__checkbox" aria-hidden="true">
-            {%- render 'kal-booking-icons', icon_name: 'check' -%}
-          </span>
-        </button>
-        <button type="button" class="kal-concern-row" data-kal-therapy-concern="beauty-skin-care" aria-pressed="false">
-          <span class="kal-concern-row__left">
-            <span class="kal-concern-row__icon">
-              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
-            </span>
-            <span class="kal-concern-row__name">Beauty &amp; Skin Care</span>
-          </span>
-          <span class="kal-concern-row__checkbox" aria-hidden="true">
-            {%- render 'kal-booking-icons', icon_name: 'check' -%}
-          </span>
-        </button>
-        <button type="button" class="kal-concern-row" data-kal-therapy-concern="physiotherapy-rehab" aria-pressed="false">
-          <span class="kal-concern-row__left">
-            <span class="kal-concern-row__icon">
-              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
-            </span>
-            <span class="kal-concern-row__name">Physiotherapy &amp; Rehab</span>
-          </span>
-          <span class="kal-concern-row__checkbox" aria-hidden="true">
-            {%- render 'kal-booking-icons', icon_name: 'check' -%}
-          </span>
-        </button>
-        <button type="button" class="kal-concern-row" data-kal-therapy-concern="therapeutic-massage" aria-pressed="false">
-          <span class="kal-concern-row__left">
-            <span class="kal-concern-row__icon">
-              {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
-            </span>
-            <span class="kal-concern-row__name">Therapeutic Massage</span>
-          </span>
-          <span class="kal-concern-row__checkbox" aria-hidden="true">
-            {%- render 'kal-booking-icons', icon_name: 'check' -%}
-          </span>
-        </button>
-      </div>
+      {%- comment -%}
+        Populated client-side from sections/kal-therapy-options.liquid's
+        hidden therapy_category blocks — see loadTherapyCategoryOptions()
+        in kal-booking-flow.js. Used to be 5 hardcoded category rows here;
+        moved out so the list can be edited from the theme editor without
+        a code deploy, same as kal-concern-select__list above.
+      {%- endcomment -%}
+      <div class="kal-concern-select__list" data-kal-therapy-concern-list></div>
     </div>
 
     {%- comment -%}

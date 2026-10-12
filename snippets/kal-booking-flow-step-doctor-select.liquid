@@ -3,22 +3,15 @@
   new Concern Select step, not directly from Entry — see that step's own
   comment for why.
 
-  BACKEND INTEGRATION BUILT, CURRENTLY DISCONNECTED: kal-booking-flow.js
-  has a working loadDoctorsForFacility() that calls
-  GET /api/public/doctors?facility_id= and matches results against
-  sections/kal-doctor-cards.liquid's blocks by doctor_id (see that
-  function's own comment for the full design — the doctor_id-join
-  approach that lets rich card content stay Shopify-editable without new
-  CMS schema work). It's just not being called right now — the backend
-  branch (`preetham` in the CMS repo) exists but isn't deployed anywhere
-  yet, so there's nothing for it to fetch from. The call site is
-  commented out in goToStep() in kal-booking-flow.js; search for
-  "loadDoctorsForFacility()" there to re-enable once that's deployed.
-
-  Until then, this list is back to the static mockup card it had before
-  that integration work (Dr. Neethu Jayachandran, hardcoded values) —
-  see kal-booking-flow-doctor-card.liquid's own comment for why a mockup
-  intentionally shows content no version of the real API provides.
+  Real backend data: kal-booking-flow.js's loadDoctorsForFacility() calls
+  GET /api/shopify/public/doctors?facilityId= (the BFF proxy for the
+  partner API) on arrival at this step and on every facility/mode change,
+  and matches results against sections/kal-doctor-cards.liquid's blocks
+  by doctor_id (the doctor_id-join approach that lets rich card content
+  stay Shopify-editable without new CMS schema work — see that section's
+  own comment). The list below starts empty on purpose (just the
+  empty-state paragraph) — it's populated entirely by that JS, so there's
+  no static placeholder content to flash before the real fetch resolves.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
@@ -103,55 +96,19 @@
 
     <div class="kal-step-shell__scroll">
       {%- comment -%}
-        In-Clinic mode shows only the doctor(s) whose mock home facility
-        (kal-booking-flow.js's MOCK_DOCTOR_HOME_FACILITY — the same map
-        the facility-switch warning uses) matches the currently selected
-        facility, pre-selecting the one match; Video Consult shows all
-        three with none pre-selected. renderMockDoctorsForCurrentState()
-        drives this by hiding/showing and (de)selecting these same static
-        cards — it doesn't fetch or clone anything. This empty state
-        covers facilities with no assigned mock doctor (HSR layout,
-        Jayanagar, Sarjapur).
+        Populated entirely by loadDoctorsForFacility() in kal-booking-flow.js
+        — real per-facility doctors from the partner API, each card either
+        cloned from sections/kal-doctor-cards.liquid's matching doctor_id
+        block or a minimal fallback if no block's been configured for that
+        doctor yet. The empty-state paragraph below is the only thing
+        rendered server-side; everything else is added client-side so
+        there's never static placeholder content on screen before the
+        real fetch resolves.
       {%- endcomment -%}
-      {%- comment -%}
-        Real Shopify data now, via the "Doctor" metaobject (Settings >
-        Custom data > Metaobject definitions) instead of the 3 hardcoded
-        mock cards this used to render — see that definition's fields
-        (name/qualification/languages/experience/specialties/photo/
-        next_slot/price) for what each entry needs. languages/specialties
-        are List fields, joined here into the same pre-formatted strings
-        kal-booking-flow-doctor-card.liquid already expected from the old
-        hardcoded calls. First entry pre-selected (forloop.first), same
-        default-selection behavior the old first hardcoded card had — no
-        real facility-matching logic here yet (see this file's own
-        BACKEND INTEGRATION comment above), so every entry currently shows
-        regardless of the selected clinic/mode.
-      {%- endcomment -%}
-      {%- assign placeholder_photo_url = 'kal-doctor-photo-placeholder.jpg' | asset_url -%}
       <div class="kal-step-doctor-select__list" data-kal-doctor-list>
         <p class="kal-step-doctor-select__list-empty" data-kal-doctor-list-empty hidden>
           No in-clinic doctors available at this clinic yet — try Video Consult, or switch clinics.
         </p>
-        {%- for doctor in shop.metaobjects.doctor.values -%}
-          {%- assign languages_joined = doctor.languages.value | join: ' &middot; ' -%}
-          {%- assign tags_joined = doctor.specialties.value | join: ',' -%}
-          {%- if doctor.photo.value != blank -%}
-            {%- assign doctor_photo_url = doctor.photo.value | image_url: width: 200 -%}
-          {%- else -%}
-            {%- assign doctor_photo_url = placeholder_photo_url -%}
-          {%- endif -%}
-          {%- render 'kal-booking-flow-doctor-card',
-            name: doctor.name.value,
-            degree: doctor.qualification.value,
-            languages: languages_joined,
-            experience: doctor.experience.value,
-            tags: tags_joined,
-            next_slot: doctor.next_slot.value,
-            price: doctor.price.value,
-            selected: forloop.first,
-            photo_url: doctor_photo_url
-          -%}
-        {%- endfor -%}
       </div>
     </div>
 

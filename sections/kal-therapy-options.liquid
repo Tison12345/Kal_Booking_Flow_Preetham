@@ -1,0 +1,116 @@
+{% comment %}
+  Therapy list content source for the booking flow's Therapy Request flow
+  (Step 1 of 2, "Choose your therapy" — kal-booking-flow-step-therapy-slot.liquid).
+
+  Same hidden-data-source pattern as sections/kal-doctor-cards.liquid and
+  sections/kal-concern-options.liquid. Two separate block types feed two
+  separate selections on that step:
+
+  - therapy_category: the 5 "By concern" checkbox rows (broad categories —
+    Relaxation & Stress Relief, Pain Management, etc). Rendered here with
+    the same markup the step used to hardcode, read by
+    loadTherapyCategoryOptions() in kal-booking-flow.js.
+  - therapy_item: the ~17 named therapies in the "By therapy" dropdown
+    (Abhyanga, Shirodhara, etc), optionally tagged "Most Booked"/"Featured".
+    That dropdown is rendered entirely client-side (it re-sorts selected
+    items to the top on every toggle), so these blocks are pure data —
+    loadTherapyOptions() reads each block's settings into THERAPY_OPTIONS
+    rather than cloning any rendered markup.
+
+  Neither list has a backend ID to match against (both end up as plain
+  text in the enquiry's current_complaint field) — whatever blocks exist
+  here, in block order, is exactly what shows.
+{% endcomment %}
+
+<div class="kal-therapy-option-source-list" hidden>
+  {%- for block in section.blocks -%}
+    {%- if block.type == 'therapy_category' -%}
+      <button
+        type="button"
+        class="kal-concern-row kal-therapy-category-source"
+        data-kal-therapy-concern="{{ block.settings.concern_key }}"
+        aria-pressed="false"
+        {{ block.shopify_attributes }}
+      >
+        <span class="kal-concern-row__left">
+          <span class="kal-concern-row__icon">
+            {%- render 'kal-booking-icons', icon_name: 'concern-therapy' -%}
+          </span>
+          <span class="kal-concern-row__name">{{ block.settings.name }}</span>
+        </span>
+        <span class="kal-concern-row__checkbox" aria-hidden="true">
+          {%- render 'kal-booking-icons', icon_name: 'check' -%}
+        </span>
+      </button>
+    {%- elsif block.type == 'therapy_item' -%}
+      <div
+        class="kal-therapy-item-source"
+        data-key="{{ block.settings.key }}"
+        data-name="{{ block.settings.name }}"
+        data-tag="{{ block.settings.tag }}"
+        {{ block.shopify_attributes }}
+      ></div>
+    {%- endif -%}
+  {%- endfor -%}
+</div>
+
+{% schema %}
+{
+  "name": "Therapy options (Kal)",
+  "tag": "section",
+  "class": "section",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "therapy_category",
+      "name": "Therapy category",
+      "settings": [
+        {
+          "type": "text",
+          "id": "concern_key",
+          "label": "Key (lowercase, hyphenated — e.g. \"pain-management\")",
+          "info": "Internal value. Changing this on an existing block changes what gets recorded going forward."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Name shown to visitors",
+          "default": "Pain Management"
+        }
+      ]
+    },
+    {
+      "type": "therapy_item",
+      "name": "Specific therapy",
+      "settings": [
+        {
+          "type": "text",
+          "id": "key",
+          "label": "Key (lowercase, hyphenated — e.g. \"abhyanga\")",
+          "info": "Internal value. Changing this on an existing block changes what gets recorded going forward."
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Name shown to visitors",
+          "default": "Abhyanga"
+        },
+        {
+          "type": "text",
+          "id": "tag",
+          "label": "Tag (optional — e.g. \"Most Booked\", \"Featured\")"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Therapy options (Kal)",
+      "blocks": [
+        { "type": "therapy_category" },
+        { "type": "therapy_item" }
+      ]
+    }
+  ]
+}
+{% endschema %}
