@@ -2853,6 +2853,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         updateSlotContinueButton();
         void releaseSlotHoldViaPartnerApi(failedHoldId);
+        // The hold is gone either way by this point, so a second "Proceed to
+        // Payment" click from here would only hit the missing-selection guard
+        // at the top of this function. Send the visitor back to Slot Picker
+        // now instead of leaving them stuck on Confirmation with no selection
+        // and no obvious next step — goToStep('slot-picker') re-fetches that
+        // day's slots and shows this same error there (slot-picker has its
+        // own [data-kal-booking-error] banner), so the message isn't lost.
+        goToStep('slot-picker');
       }
     } finally {
       setBookingButtonsBusy(false);
@@ -3246,7 +3254,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', (e) => {
     const field = e.target.closest('[data-kal-field="phone"]');
     if (!field) return;
-    if (!e.ctrlKey && !e.metaKey && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+    if (!e.ctrlKey && !e.metaKey && e.key && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
       e.preventDefault();
     }
   });

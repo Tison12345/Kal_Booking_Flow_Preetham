@@ -1546,6 +1546,20 @@
     margin-top: 0;
   }
 
+  /* The desktop real-booking-failure banner is a direct sibling of this
+     grid container, not nested inside either column's own wrapper — so
+     without an explicit column it fell into plain grid auto-placement,
+     and even once given a column, its flex content still starts flush
+     against the grid's own left edge (column 1's left edge == the
+     container's left edge) regardless of span width. Explicit
+     grid-column: 2 instead places the whole box — and therefore its
+     left-aligned flex content — in the right/content column, next to
+     the Payment Method section it's actually about, rather than
+     reading as part of the left progress sidebar. */
+  .kal-step-shell--progress-panel > [data-kal-booking-error] {
+    grid-column: 2;
+  }
+
   /* The help line (icon + phone number) reuses .kal-step-entry__help for
      its icon/text/gap styling, but that shared class was built to be its
      OWN standalone centered bar (border-top + 24px/16px padding,
