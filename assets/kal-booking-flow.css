@@ -1311,6 +1311,17 @@
   display: none;
 }
 
+/* Same reasoning as .kal-concern-select__footer--desktop just above: this
+   is the desktop-only booking-error banner (see the 750px+ rule below that
+   gives it grid-column: 2), a bare sibling of the grid container rather
+   than nested inside either footer. Without this, once JS fills in error
+   text and clears its `hidden` attribute, it shows up a second time on
+   mobile alongside the mobile footer's own [data-kal-booking-error]
+   instance — same message rendered twice on screen. */
+.kal-step-shell--progress-panel > [data-kal-booking-error] {
+  display: none;
+}
+
 @media screen and (min-width: 750px) {
   /* No back/close/badge row in this design, and the "Step X of Y / Next:
      ..." text bar stays hidden (the shared rule's own 750px+ default) —
@@ -1544,6 +1555,16 @@
        (extra space above, none below). */
     padding: 0;
     margin-top: 0;
+    /* Matches .footer-actions' own rendered height (44px Continue button
+       + 12px/12px padding + 1px border-top = 69px) so this row's height
+       stays constant whether or not a concern is picked yet. Without
+       this, align-items:stretch had nothing to stretch .footer-help to
+       once .footer-actions[hidden] correctly collapsed to display:none
+       (see that rule below) — before that fix, .footer-actions stayed
+       visible at all times, which accidentally forced this same height;
+       fixing the hidden bug exposed this one, since .footer-help alone
+       is shorter than 69px. */
+    min-height: 69px;
   }
 
   /* The desktop real-booking-failure banner is a direct sibling of this
@@ -1557,6 +1578,7 @@
      the Payment Method section it's actually about, rather than
      reading as part of the left progress sidebar. */
   .kal-step-shell--progress-panel > [data-kal-booking-error] {
+    display: flex;
     grid-column: 2;
   }
 
@@ -1616,6 +1638,17 @@
     padding: 12px 32px 12px 24px;
     background: var(--kal-booking-flow-color-white);
     border-top: 1px solid var(--kal-booking-flow-color-border);
+  }
+
+  /* Same reason as .kal-step-shell__footer[hidden] above: the display:flex
+     rule just above is an author rule, which beats the browser's own
+     [hidden] { display: none } default at equal specificity regardless of
+     the hidden attribute — so without this override, desktop's Back/
+     Continue row stayed visible (and Continue enabled, since its disabled
+     state is only ever set from updateConcernContinueButton(), which only
+     runs on toggle, not on page load) even before any concern was picked. */
+  .kal-concern-select__footer-actions[hidden] {
+    display: none;
   }
 
   /* Matches this footer's own Figma dev-mode export exactly (node
