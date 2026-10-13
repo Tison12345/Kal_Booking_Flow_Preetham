@@ -38,6 +38,7 @@
      literal — genuinely one-off, same policy as the color tokens. */
   --kal-booking-flow-font-weight-regular: 400;
   --kal-booking-flow-font-weight-medium: 500;
+  --kal-booking-flow-font-weight-semibold: 600;
   --kal-booking-flow-font-weight-bold: 700;
   --kal-booking-flow-font-weight-heavy: 800;
   --kal-booking-flow-font-weight-black: 900;
@@ -462,7 +463,7 @@
 .kal-step-entry__heading {
   font-size: var(--kal-booking-flow-font-size-heading);
   line-height: var(--kal-booking-flow-line-height-heading);
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   color: var(--kal-booking-flow-color-heading);
   margin: 0 0 12px;
 }
@@ -1926,7 +1927,7 @@
   min-width: 0;
 }
 
-.kal-step-header__location-badge {
+button.kal-step-header__location-badge {
   font: inherit;
   cursor: pointer;
   -webkit-appearance: none;
@@ -1939,11 +1940,11 @@
    No opacity fade here — this should read as a normal, fully-solid badge
    (icon + "Online Consultation" text) exactly like the in-clinic one,
    just without the dropdown affordance, not as a dimmed/deferred state. */
-.kal-step-header__location-badge:disabled {
+button.kal-step-header__location-badge:disabled {
   cursor: default;
 }
 
-.kal-step-header__location-badge:disabled .kal-step-header__location-chevron {
+button.kal-step-header__location-badge:disabled .kal-step-header__location-chevron {
   display: none;
 }
 
@@ -2034,7 +2035,7 @@ div.kal-calendar-modal__backdrop {
 
 .kal-calendar-modal__month {
   font-size: var(--kal-booking-flow-font-size-body);
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   color: var(--kal-booking-flow-color-heading);
 }
 
@@ -2076,7 +2077,7 @@ div.kal-calendar-modal__backdrop {
 }
 
 .kal-calendar-modal__cell--today {
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   color: var(--kal-booking-flow-color-primary);
 }
 
@@ -2170,7 +2171,7 @@ div.kal-calendar-modal__backdrop {
    prefix it sits next to — wrapped in its own span in the liquid so this
    can target it alone. */
 .kal-step-progress-bar__next-label {
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
 }
 
 .kal-step-progress-bar__track {
@@ -2651,7 +2652,7 @@ div.kal-calendar-modal__backdrop {
 
 .kal-step-doctor-select__eyebrow {
   font-size: var(--kal-booking-flow-font-size-caption);
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-label);
@@ -3615,8 +3616,8 @@ div.kal-calendar-modal__backdrop {
   padding: 8px 4px;
   gap: 4px;
 
-  background: var(--kal-booking-flow-color-white);
-  border: 1px solid var(--kal-booking-flow-color-border);
+  background: #FFFFFF;
+  border: 1px solid #E5E1D9;
   border-radius: 12px;
 
   box-shadow: none;
@@ -3640,7 +3641,7 @@ div.kal-calendar-modal__backdrop {
   justify-content: center;
   text-align: center;
 
-  color: var(--kal-booking-flow-color-location-text);
+  color: #4B4B4B;
 }
 .kal-step-slot-picker .kal-day-chip__date {
   width: 8px;
@@ -3657,7 +3658,7 @@ div.kal-calendar-modal__backdrop {
   justify-content: center;
   text-align: center;
 
-  color: var(--kal-booking-flow-color-location-text);
+  color: #4B4B4B;
 }
 
 /* Only the properties that actually differ from the base .kal-day-chip
@@ -3666,8 +3667,8 @@ div.kal-calendar-modal__backdrop {
    specificity base rule, since active chips match both selectors at
    once. */
 .kal-step-slot-picker .kal-day-chip--active {
-  background: linear-gradient(360deg, var(--kal-booking-flow-color-surface-cream) 27.05%, var(--kal-booking-flow-color-surface-cream-deep) 71.94%);
-  border-color: var(--kal-booking-flow-color-accent-tan);
+  background: linear-gradient(360deg, #FBF9F4 27.05%, #F6F1E8 71.94%);
+  border-color: #D9CDBA;
   box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.15);
 }
 
@@ -3702,7 +3703,7 @@ div.kal-calendar-modal__backdrop {
 
   padding: 4px 8px;
 
-  background: var(--kal-booking-flow-color-primary-tint);
+  background: #E4F2EB;
   border: none;
   border-radius: 12px;
 
@@ -3712,7 +3713,7 @@ div.kal-calendar-modal__backdrop {
   font-size: 12px;
   line-height: 100%;
 
-  color: var(--kal-booking-flow-color-primary-dark);
+  color: #1E4B3C;
 }
 
 /* Only the properties that differ from the base __badge rule above. */
@@ -4100,7 +4101,7 @@ div.kal-calendar-modal__backdrop {
 .kal-form-input:focus {
   outline: none;
   box-shadow: none;
-  border: 1px solid var(--kal-booking-flow-color-accent-tan);
+  border: 1px solid #D9CDBA;
 }
 
 
@@ -4190,7 +4191,7 @@ div.kal-calendar-modal__backdrop {
    focused, same tan accent other "selected"/"active" states in this file
    use. No box-shadow glow (that version of this rule was removed). */
 .kal-phone-input:focus-within {
-  border-color: var(--kal-booking-flow-color-accent-tan);
+  border-color: #D9CDBA;
   outline: none;
   box-shadow: none;
 }
@@ -4363,7 +4364,7 @@ div.kal-calendar-modal__backdrop {
 }
 
 .kal-gender-btn--active {
-  border: 1px solid var(--kal-booking-flow-color-accent-tan);
+  border: 1px solid #D9CDBA;
   background: linear-gradient(271.23deg, var(--kal-booking-flow-color-surface-cream-deep) 11.88%, var(--kal-booking-flow-color-surface-cream) 43.44%);
   color: #0b0b0c;
 }
@@ -4610,7 +4611,7 @@ div.kal-calendar-modal__backdrop {
 
 .kal-confirmation-details__label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-medium);
+  font-weight: var(--kal-booking-flow-font-weight-semibold);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--kal-booking-flow-color-location-text);
@@ -5366,7 +5367,7 @@ div.kal-calendar-modal__backdrop {
     font-weight: var(--kal-booking-flow-font-weight-medium);
     line-height: 130%;
     text-align: right;
-    color: var(--kal-booking-flow-color-heading);
+    color: #191919;
   }
 
   /* Only the icon/text alignment and the card's own top/bottom padding
@@ -6311,8 +6312,8 @@ div.kal-calendar-modal__backdrop {
 }
 
 /* color is #1e4b3c per this card's own desktop export, not the shared
-   --kal-booking-flow-color-primary (#00503a) — matches
-   --kal-booking-flow-color-primary-dark exactly, so use that token. */
+   --kal-booking-flow-color-primary (#00503a) — close, but a genuine
+   one-off here, same treatment as other components in this file. */
 .kal-therapy-dropdown__summary {
   display: flex;
   align-items: center;
@@ -6320,7 +6321,7 @@ div.kal-calendar-modal__backdrop {
   font-size: var(--kal-booking-flow-font-size-base);
   font-weight: var(--kal-booking-flow-font-weight-medium);
   line-height: 140%;
-  color: var(--kal-booking-flow-color-primary-dark);
+  color: #1e4b3c;
   white-space: nowrap;
 }
 
@@ -6423,16 +6424,15 @@ div.kal-calendar-modal__backdrop {
   color: var(--kal-booking-flow-color-heading);
 }
 
-/* letter-spacing 0.025em is per this card's own desktop export, not the
-   shared 0 default it fell back to — a genuine one-off. The color
-   matches --kal-booking-flow-color-primary-dark exactly, so use that
-   token instead of the shared --kal-booking-flow-color-primary (#00503a). */
+/* color #1e4b3c and letter-spacing 0.025em are both per this card's own
+   desktop export, not the shared --kal-booking-flow-color-primary
+   (#00503a) / 0 defaults this fell back to — genuine one-offs here. */
 .kal-therapy-option__tag {
   flex-shrink: 0;
   padding: 4px 8px;
   border-radius: 4px;
   background: var(--kal-booking-flow-color-primary-tint);
-  color: var(--kal-booking-flow-color-primary-dark);
+  color: #1e4b3c;
   font-size: var(--kal-booking-flow-font-size-caption);
   font-weight: var(--kal-booking-flow-font-weight-medium);
   line-height: 100%;
@@ -6494,12 +6494,12 @@ div.kal-calendar-modal__backdrop {
     box-sizing: border-box;
     width: 24px;
     height: 24px;
-    border: 1px solid var(--kal-booking-flow-color-accent-tan);
+    border: 1px solid #d9cdba;
     border-radius: 99px;
     background: rgba(217, 205, 186, 0.1);
     font-size: 14px;
     font-weight: var(--kal-booking-flow-font-weight-regular);
-    color: var(--kal-booking-flow-color-heading);
+    color: #191919;
   }
 
   /* Needs its own [hidden] override — same class of bug as this file's
@@ -6606,123 +6606,18 @@ div.kal-calendar-modal__backdrop {
 }
 
 /* Therapy Details' own appointment card (node 543:1462) — NOT the shared
-   .kal-appointment-card* (that one shows a mode+price row, which doesn't
-   apply here). The photo/name/degree/experience row below shows the
-   real in-clinic doctor for the visitor's own facility — see this
-   step's own liquid comment and loadTherapyDoctorCard() in
-   kal-booking-flow.js. */
+   .kal-appointment-card* (that one shows a doctor photo/name/mode+price
+   row, which doesn't apply here: a therapy request has no assigned
+   doctor). Just a tinted description line now — see this step's own
+   liquid comment for why the photo/name/degree/experience sub-row that
+   used to sit above it was removed outright rather than wired to real
+   data. */
 .kal-therapy-appointment-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 12px 24px;
   background: linear-gradient(103deg, rgba(235, 242, 239, 0.5) 30.526%, rgba(255, 255, 255, 0.5) 94.033%);
-}
-
-/* align-items:center — .kal-therapy-appointment-card__body below is left
-   at its own natural (Hug) content height (per Figma, 54px — shorter
-   than the 60px photo) and centered within this row by the row itself,
-   rather than being stretched to 60px and re-centering its own content
-   internally: stretching it first and centering second produced an
-   uneven result (clipping/leading made the top gap visible but not the
-   bottom one). Centering the whole, unstretched body box is what
-   actually gives the even ~3px gap above and below it, matching Figma. */
-.kal-therapy-appointment-card__top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-/* This row starts `hidden` in the liquid (see that file's comment) and
-   is un-hidden by loadTherapyDoctorCard() once real data loads — without
-   this, the explicit display:flex above would outrank the browser's own
-   [hidden]{display:none} default (same specificity, author rule wins),
-   so it'd render even while hidden. Same bug class as every other
-   plain-hidden-attribute toggle in this file. */
-.kal-therapy-appointment-card__top[hidden] {
-  display: none;
-}
-
-/* Hidden by JS (loadTherapyDoctorCard()) when the doctor behind this
-   card has no experience string available — same [hidden] override
-   reasoning as __top above, needed because .kal-therapy-appointment-
-   card__meta-item sets its own explicit display:flex too. */
-.kal-therapy-appointment-card__meta-item[hidden],
-.kal-therapy-appointment-card__divider[hidden] {
-  display: none;
-}
-
-.kal-therapy-appointment-card__photo {
-  flex-shrink: 0;
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.kal-therapy-appointment-card__photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 30% 20%;
-}
-
-.kal-therapy-appointment-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* line-height:1.3 — same explicit override as .kal-appointment-card__name.
-   Without it this inherits a 180% line-height (36px for this 20px font,
-   confirmed live: name alone rendered 36px tall for one line), which on
-   top of the meta row below made .kal-therapy-appointment-card__body's
-   total content ~66px — taller than the 60px photo next to it, so
-   centering the row left the photo (the shorter element) with the
-   visible gap instead of the body, backwards from what was wanted. */
-.kal-therapy-appointment-card__name {
-  font-size: var(--kal-booking-flow-font-size-name);
-  line-height: 1.3;
-  color: var(--kal-booking-flow-color-heading);
-}
-
-.kal-therapy-appointment-card__meta {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: var(--kal-booking-flow-font-size-caption);
-  color: var(--kal-booking-flow-color-location-text);
-}
-
-.kal-therapy-appointment-card__meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.kal-therapy-appointment-card__meta-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--kal-booking-flow-color-white);
-  /* #1E4B3C, not the grey this inherits from .kal-therapy-appointment-card__meta
-     above — just the icon, not the meta text next to it. */
-  color: var(--kal-booking-flow-color-primary-dark);
-}
-
-.kal-therapy-appointment-card__meta-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-.kal-therapy-appointment-card__divider {
-  width: 1px;
-  height: 15px;
-  background: var(--kal-booking-flow-color-border);
 }
 
 .kal-therapy-appointment-card__desc {
@@ -7137,7 +7032,7 @@ div.kal-calendar-modal__backdrop {
 
 .kal-therapy-next-steps__label {
   font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-bold);
+  font-weight: var(--kal-booking-flow-font-weight-black);
   /* 150%, per this card's own export (21px for the 14px font) — without
      it this inherits the theme's looser default line-height instead. */
   line-height: 150%;
@@ -7222,7 +7117,7 @@ div.kal-calendar-modal__backdrop {
    sidebar stepper's green ring/mint halo. */
 .kal-therapy-next-steps__item--current .kal-therapy-next-steps__circle {
   border-color: #c8b08c;
-  background: var(--kal-booking-flow-color-highlight-tint);
+  background: #f6f0e7;
   color: #b5935e;
   box-shadow: 0 0 0 4px #fbf6ee;
 }
@@ -7281,7 +7176,7 @@ div.kal-calendar-modal__backdrop {
 /* "Within 24 hours" — amber (#955609 per this card's own export), same
    family as the current step's own tan/cream circle above. */
 .kal-therapy-next-steps__item--current .kal-therapy-next-steps__state {
-  color: var(--kal-booking-flow-color-warning);
+  color: #955609;
 }
 
 /* Mobile vs desktop text split for this card (per the two exports): the
@@ -7370,7 +7265,7 @@ div.kal-calendar-modal__backdrop {
   transform: translateX(-50%);
   width: 30px;
   height: 1.5px;
-  background: var(--kal-booking-flow-color-border-faint);
+  background: #e5e5e5;
   z-index: 0;
 }
 

@@ -20,19 +20,15 @@
   here: "for now maintain only male and female").
 
   The appointment card here is NOT the shared kal-booking-flow-appointment-
-  card.liquid — that one shows a mode+price row, which doesn't apply here.
-  Instead it shows the real in-clinic doctor for the visitor's own
-  facility (loadTherapyDoctorCard() in kal-booking-flow.js, same
-  /doctors endpoint + facility lookup as Doctor Select) — the point of
-  this card is to make the "your therapy starts with a short doctor
-  consultation" line concrete: here's who that doctor actually is. This
-  used to be hardcoded to a fake doctor ("Dr. Neethu Jayachandran, BAMS,
-  12 yrs experience") shown regardless of facility, then removed outright
-  for not being wired to real data — now wired properly instead. The
-  photo/name/degree/experience row starts `hidden` and is only revealed
-  once real data loads; if the facility has no doctors configured, it
-  stays hidden and the card quietly falls back to just the description
-  line, same as before this was restored.
+  card.liquid — that one shows a doctor photo/name/mode+price row, which
+  doesn't apply here: a therapy request never has an assigned doctor (see
+  partner-therapy-request.use-case.ts's own comment — staff decide the
+  actual therapist later). This originally also had a photo/name/degree/
+  experience sub-row hardcoded to a specific fake doctor ("Dr. Neethu
+  Jayachandran, BAMS, 12 yrs experience") shown regardless of who the
+  visitor actually is or which clinic they picked — removed outright
+  rather than wired to real data, since there's no real doctor here to
+  wire it to. Just the description line remains.
 
   Footer button is "Submit Request", not "Continue" — matches this node's
   own export. It navigates to the new "therapy-confirmed" step (node
@@ -80,36 +76,11 @@
     </div>
 
     {%- comment -%}
-      Photo/name/degree/experience row for the facility's real in-clinic
-      doctor — see this file's own top comment. Starts `hidden`;
-      loadTherapyDoctorCard() (kal-booking-flow.js, called on arrival at
-      this step) fills it in from real data and un-hides it, or leaves it
-      hidden if the current facility has no doctor to show.
+      No doctor photo/name/degree/experience row — a therapy request has
+      no assigned doctor at this point (see this file's own top comment).
+      Just the description line.
     {%- endcomment -%}
     <div class="kal-therapy-appointment-card">
-      <div class="kal-therapy-appointment-card__top" hidden>
-        <span class="kal-therapy-appointment-card__photo" data-kal-therapy-doctor-photo>
-          <span class="kal-doctor-photo-placeholder"></span>
-        </span>
-        <span class="kal-therapy-appointment-card__body">
-          <span class="kal-therapy-appointment-card__name" data-kal-therapy-doctor-name></span>
-          <span class="kal-therapy-appointment-card__meta">
-            <span class="kal-therapy-appointment-card__meta-item">
-              <span class="kal-therapy-appointment-card__meta-icon">
-                {%- render 'kal-booking-icons', icon_name: 'doctor-education' -%}
-              </span>
-              <span data-kal-therapy-doctor-degree></span>
-            </span>
-            <span class="kal-therapy-appointment-card__divider" aria-hidden="true"></span>
-            <span class="kal-therapy-appointment-card__meta-item">
-              <span class="kal-therapy-appointment-card__meta-icon">
-                {%- render 'kal-booking-icons', icon_name: 'doctor-experience' -%}
-              </span>
-              <span data-kal-therapy-doctor-experience></span>
-            </span>
-          </span>
-        </span>
-      </div>
       <span class="kal-therapy-appointment-card__desc">
         Your therapy starts with a short <strong>doctor consultation</strong> and is performed by an expert therapist.
       </span>

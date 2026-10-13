@@ -195,33 +195,28 @@
           "Your Consultation"; rows are Patient/Location/Payment instead
           of Mode/Date & Time/Patient. Patient reuses the exact same
           data-kal-confirm-name hook the rest of this flow already
-          populates. Location reuses the same real-facility hook
-          (.kal-step-entry__location-text) every other step already
-          populates via applyStoredFacility(). Payment stays "At the
-          clinic" — genuinely true, not a placeholder: there's no
+          populates. The header's "name" slot shows the real requested
+          therapies instead (data-kal-therapy-confirm-summary — this used
+          to hardcode "Dr. Neethu Jayachandran" here, which made no sense:
+          no doctor is actually assigned to a therapy request, see
+          partner-therapy-request.use-case.ts). Location reuses the same
+          real-facility hook (.kal-step-entry__location-text) every other
+          step already populates via applyStoredFacility(). Payment stays
+          "At the clinic" — genuinely true, not a placeholder: there's no
           payment-method step in the therapy flow, and a therapy session
           is always paid for in person.
-
-          The header's photo/name slot shows the real in-clinic doctor
-          for this facility — data-kal-therapy-confirm-doctor-photo/-name,
-          populated by renderTherapyConfirmedSummary() in
-          kal-booking-flow.js, reusing the same cached
-          fetchTherapyDoctorData() Therapy Details' own card (step 2 of
-          2) already resolved, so there's no second network round trip.
-          This used to show the list of requested therapies here
-          instead (data-kal-therapy-confirm-summary) — per explicit
-          instruction/design reference, it's the doctor's photo+name
-          here now, matching Therapy Details' own card one screen prior.
-          Falls back to the plain placeholder box (no photo swap) if the
-          facility has no doctor to show, same graceful fallback as step
-          2's own card.
+        {%- endcomment -%}
+        {%- comment -%}
+          Photo removed per explicit instruction (flow-wide) — same
+          .kal-appointment-card__photo--placeholder treatment as the
+          Confirmation step's own copy of this card.
         {%- endcomment -%}
         <div class="kal-confirmation-appointment-card">
           <div class="kal-appointment-card kal-confirmation-appointment-card__top">
-            <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder" data-kal-therapy-confirm-doctor-photo></span>
+            <span class="kal-appointment-card__photo kal-appointment-card__photo--placeholder"></span>
             <span class="kal-appointment-card__body">
               <span class="kal-appointment-card__eyebrow">Therapy Details</span>
-              <span class="kal-appointment-card__name" data-kal-therapy-confirm-doctor-name>&mdash;</span>
+              <span class="kal-appointment-card__name" data-kal-therapy-confirm-summary>&mdash;</span>
             </span>
           </div>
           <div class="kal-confirmation-appointment-card__rows">
