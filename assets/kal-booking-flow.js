@@ -302,7 +302,22 @@ document.addEventListener('DOMContentLoaded', () => {
   //     configured yet — a real, bookable doctor should never just
   //     disappear because marketing hasn't entered their card yet
   // ----------------------------------------------------------------------
+  // selectedDoctorId is the LIVE value every other part of this file reads
+  // (fetchSlotsForDate, placeHoldForSlot, submitBooking, the Continue
+  // button, etc.) — it always reflects what's actually selected for
+  // whatever mode is on screen right now, recomputed on every render (see
+  // renderDoctorList()). lastDoctorSelection is the one true MEMORY: it's
+  // written only by an actual click (selectDoctorCard/selectDoctorById,
+  // below), never by a passive render. The same doctor cards render under
+  // both In-Clinic and Video Consult (loadDoctorsForFacility() isn't
+  // mode-filtered — see setMode()'s own comment), so without this split, a
+  // bare mode switch (no new click) would have nothing to tell "nothing
+  // picked here yet, but restore it if the visitor switches back" apart
+  // from "a new pick elsewhere just overwrote the one true selection" —
+  // picking a doctor under one mode must forget whatever was picked under
+  // the other, but merely switching tabs without picking must not.
   let selectedDoctorId = null;
+  let lastDoctorSelection = { doctorId: null, mode: null };
 
   const selectDoctorCard = (card) => {
     const list = card.closest('[data-kal-doctor-list]');
@@ -313,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const previousDoctorId = selectedDoctorId;
     selectedDoctorId = card.dataset.doctorId || null;
+    lastDoctorSelection = { doctorId: selectedDoctorId, mode: slotPicker.mode };
     // Availability is per-doctor — a stale cached day/slot from whoever
     // was selected before would otherwise leak into this doctor's grid.
     if (selectedDoctorId !== previousDoctorId) clearDayAvailabilityCache();
@@ -348,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
     list.appendChild(card);
     if (selectedDoctorId !== doctorId) clearDayAvailabilityCache();
     selectedDoctorId = doctorId;
+    lastDoctorSelection = { doctorId, mode: slotPicker.mode };
     applySelectedDoctorToCards();
     return true;
   };
@@ -472,6 +489,57 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   };
 
+  // Keyed by facility id, same pattern as therapyDoctorCache below (which
+  // hits this exact endpoint too) — revisiting Doctor Select after going
+  // forward and back (e.g. Slot Picker's own Back button) re-runs
+  // goToStep('doctor-select') -> loadDoctorsForFacility() unconditionally,
+  // so without this every such revisit refetched and fully re-rendered an
+  // identical list the visitor had already seen.
+  let doctorListCache = null; // { facilityId, doctors }
+
+  const renderDoctorList = (list, doctors) => {
+    // lastDoctorSelection only counts as "still active" if it was made
+    // under the mode currently on screen — a pick made under the other
+    // mode is deliberately forgotten the instant a new one is made (see
+    // selectDoctorCard()), but this render itself must never be the thing
+    // that forgets it: a bare mode switch with no new click in between
+    // must still restore lastDoctorSelection when the visitor switches
+    // back to the mode it belongs to. Only fall back to auto-selecting
+    // when there's exactly one doctor (the common In-Clinic case) and
+    // nothing is active for this mode.
+    const activeSelection =
+      lastDoctorSelection.mode === slotPicker.mode ? lastDoctorSelection.doctorId : null;
+    const priorSelectionStillValid =
+      activeSelection && doctors.some((doctor) => doctor.id === activeSelection);
+    const autoSelectId = doctors.length === 1 ? doctors[0].id : null;
+    const nextSelectedId = priorSelectionStillValid ? activeSelection : autoSelectId;
+
+    list.innerHTML = '';
+    doctors.forEach((doctor) => {
+      const source = document.querySelector(
+        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
+      );
+      const card = source ? source.cloneNode(true) : buildFallbackDoctorCard(doctor);
+      card.dataset.doctorId = doctor.id;
+      if (source) applyDoctorNamePrefix(card);
+      card.classList.toggle('kal-doctor-card--selected', doctor.id === nextSelectedId);
+      applyDoctorCardConcernBadges(card);
+      list.appendChild(card);
+    });
+
+    // Only the LIVE value is touched here — lastDoctorSelection (the real
+    // memory) is deliberately left alone so it survives a round trip
+    // through the other mode with no new pick made there.
+    if (selectedDoctorId !== nextSelectedId) clearDayAvailabilityCache();
+    selectedDoctorId = nextSelectedId;
+    // Keeps Continue's disabled state and the downstream name/price/photo
+    // displays in sync with whatever is now selected — selectDoctorCard()
+    // already calls these on every manual click, but this load/cache-hit
+    // path never called them itself.
+    updateDoctorSelectContinueButton();
+    applySelectedDoctorToCards();
+  };
+
   const loadDoctorsForFacility = async () => {
     const list = flow.querySelector('[data-kal-doctor-list]');
     if (!list) return;
@@ -490,7 +558,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // "Find a Clinic" — same fallback applyStoredFacility() relies on.
     const facility = getCurrentFacility();
     if (!facility || !facility.id) {
+      doctorListCache = null;
       setEmptyState('Pick a clinic first to see available doctors.');
+      return;
+    }
+
+    if (doctorListCache && doctorListCache.facilityId === facility.id) {
+      renderDoctorList(list, doctorListCache.doctors);
       return;
     }
 
@@ -517,40 +591,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (doctors.length === 0) {
+      doctorListCache = null;
       setEmptyState('No doctors available at this clinic yet.');
       return;
     }
 
-    // Only auto-select when there's exactly one doctor to show (the common
-    // In-Clinic case) — the card's own gradient styling (.kal-doctor-card__top
-    // vs __footer, see kal-booking-flow.css) deliberately swaps which edge
-    // carries the gradient based on --selected, so pre-selecting the first
-    // of several real options (Video Consult usually has more than one)
-    // made every list look like it already had a selection instead of
-    // visually prompting the visitor to actually choose one.
-    const autoSelectId = doctors.length === 1 ? doctors[0].id : null;
-
-    list.innerHTML = '';
-    doctors.forEach((doctor) => {
-      const source = document.querySelector(
-        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
-      );
-      const card = source ? source.cloneNode(true) : buildFallbackDoctorCard(doctor);
-      card.dataset.doctorId = doctor.id;
-      if (source) applyDoctorNamePrefix(card);
-      card.classList.toggle('kal-doctor-card--selected', doctor.id === autoSelectId);
-      applyDoctorCardConcernBadges(card);
-      list.appendChild(card);
-    });
-
-    if (selectedDoctorId !== autoSelectId) clearDayAvailabilityCache();
-    selectedDoctorId = autoSelectId;
-    // Keeps Continue's disabled state and the downstream name/price/photo
-    // displays in sync with whatever did (or didn't) just get auto-selected
-    // — selectDoctorCard() already calls these on every manual click, but
-    // this is the real-data load path and never called them itself.
-    updateDoctorSelectContinueButton();
-    applySelectedDoctorToCards();
+    doctorListCache = { facilityId: facility.id, doctors };
+    renderDoctorList(list, doctors);
   };
 
   // Therapy Details' appointment card — shows the real in-clinic doctor
@@ -1232,6 +1279,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Availability is mode-specific (see fetchSlotsForDate/fetchDaySummaries),
     // so a mode switch invalidates anything already cached for the old mode —
     // relevant if the visitor goes back from Date & Time and switches here.
+    // Doctor selection itself is handled by renderDoctorList() reading
+    // lastDoctorSelection below (via loadDoctorsForFacility()) — it shows
+    // and restores a pick only under the mode it was made in, and a new
+    // pick under the other mode forgets it entirely.
     if (slotPicker.mode !== mode) clearDayAvailabilityCache();
     slotPicker.mode = mode;
 
@@ -2875,22 +2926,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // is a lead, never a self-service booking (see this flow's own backend
   // comment, partner-therapy-request.use-case.ts): one POST creates a
   // treatment `enquiries` row for staff to follow up on, no hold/slot
-  // involved. Combines both selection mechanisms from Step 1 of 2 (therapy
-  // category checkboxes + the specific-therapy dropdown) into one flat
-  // list, same join renderTherapyConfirmedSummary() already does.
+  // involved. Sent as two separate selections (Step 1 of 2's specific-
+  // therapy dropdown vs. its therapy category checkboxes), not merged into
+  // one flat list, so the backend can label each on its own line in
+  // current_complaint. renderTherapyConfirmedSummary() still joins them
+  // into one display list for the visitor-facing summary.
   const submitTherapyRequest = async () => {
     clearBookingError();
 
     const facility = getCurrentFacility();
-    const therapies = [
-      ...Array.from(therapyDropdownSelect.selected, (key) => {
-        const option = THERAPY_OPTIONS.find((o) => o.key === key);
-        return option ? option.name : null;
-      }),
-      ...Array.from(therapyConcernSelect.selected, (key) => THERAPY_CATEGORY_LABELS[key] || null),
-    ].filter(Boolean);
+    const therapies = Array.from(therapyDropdownSelect.selected, (key) => {
+      const option = THERAPY_OPTIONS.find((o) => o.key === key);
+      return option ? option.name : null;
+    }).filter(Boolean);
+    const therapyCategories = Array.from(
+      therapyConcernSelect.selected,
+      (key) => THERAPY_CATEGORY_LABELS[key] || null,
+    ).filter(Boolean);
 
-    if (!apiBaseUrl || !facility?.id || therapies.length === 0) {
+    if (!apiBaseUrl || !facility?.id || (therapies.length === 0 && therapyCategories.length === 0)) {
       showBookingError('Missing clinic or therapy selection. Please go back and pick again.');
       return;
     }
@@ -2910,6 +2964,7 @@ document.addEventListener('DOMContentLoaded', () => {
           patientGender: patientDetails.gender || null,
           patientEmail: patientDetails.email.trim() || null,
           therapies,
+          therapyCategories,
           notes: patientDetails.concern.trim() || null,
         },
         generateIdempotencyKey(),
