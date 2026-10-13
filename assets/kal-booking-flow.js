@@ -111,6 +111,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const getCurrentFacility = () => getStoredFacility() || { id: 'cfe4e29a-7697-4b1d-970c-dc8c11628b10', name: 'Indiranagar' };
 
+  // Ensures every doctor name shown anywhere in the flow reads "Dr. X" —
+  // some theme-editor-authored doctor_profile blocks already type the
+  // "Dr." prefix themselves (schema default: "Dr. Neethu Jayachandran"),
+  // but the real partner API's own `name` field (used both by
+  // buildFallbackDoctorCard() for unconfigured doctors and by the
+  // therapy flow's doctor lookup) never includes it. Rather than fixing
+  // this at every individual display site, it's applied once at each
+  // place a doctor name first enters the DOM/cache (see
+  // applyDoctorNamePrefix() and fetchTherapyDoctorData() below) so every
+  // downstream read (dataset, cached fetch result) is already correct.
+  // Case-insensitive, and tolerant of "Dr"/"Dr." with or without a
+  // trailing space, so an already-correct name is never double-prefixed.
+  const formatDoctorName = (name) => {
+    if (!name) return name;
+    const trimmed = name.trim();
+    return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
+  };
+
+  // Normalizes a real doctor card cloned from sections/kal-doctor-cards.
+  // liquid's hidden source blocks — those are theme-editor-authored, so
+  // unlike buildFallbackDoctorCard() (which controls the raw API name
+  // directly), this has to fix both the dataset AND the already-rendered
+  // .kal-doctor-card__name text in case the editor typed the name
+  // without "Dr." themselves.
+  const applyDoctorNamePrefix = (card) => {
+    const formatted = formatDoctorName(card.dataset.kalDoctorName);
+    card.dataset.kalDoctorName = formatted;
+    const nameEl = card.querySelector('.kal-doctor-card__name');
+    if (nameEl) nameEl.textContent = formatted;
+  };
+
   // Doctor Select's own click handler (selectDoctorCard, above) already
   // toggles kal-doctor-card--selected on the real card — reading that
   // back is more reliable than tracking a second copy of "which doctor"
@@ -311,6 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!list || !source) return false;
     const card = source.cloneNode(true);
     card.dataset.doctorId = doctorId;
+    applyDoctorNamePrefix(card);
     card.classList.add('kal-doctor-card--selected');
     applyDoctorCardConcernBadges(card);
     list.innerHTML = '';
@@ -419,15 +451,16 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const buildFallbackDoctorCard = (doctor) => {
+    const name = formatDoctorName(doctor.name);
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'kal-doctor-card';
     card.dataset.doctorId = doctor.id;
-    card.dataset.kalDoctorName = doctor.name;
+    card.dataset.kalDoctorName = name;
 
     const nameEl = document.createElement('span');
     nameEl.className = 'kal-doctor-card__name';
-    nameEl.textContent = doctor.name;
+    nameEl.textContent = name;
     card.appendChild(nameEl);
 
     if (doctor.designation) {
@@ -505,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       const card = source ? source.cloneNode(true) : buildFallbackDoctorCard(doctor);
       card.dataset.doctorId = doctor.id;
+      if (source) applyDoctorNamePrefix(card);
       card.classList.toggle('kal-doctor-card--selected', doctor.id === autoSelectId);
       applyDoctorCardConcernBadges(card);
       list.appendChild(card);
@@ -518,6 +552,135 @@ document.addEventListener('DOMContentLoaded', () => {
     // this is the real-data load path and never called them itself.
     updateDoctorSelectContinueButton();
     applySelectedDoctorToCards();
+  };
+
+  // Therapy Details' appointment card — shows the real in-clinic doctor
+  // for the visitor's own facility, so the "your therapy starts with a
+  // short doctor consultation" line has an actual doctor behind it
+  // instead of being a vague promise. Therapy has no Doctor Select step
+  // (no choice to make — staff assign the therapist, but the doctor who
+  // does the initial consult is just whoever's in-clinic at that
+  // facility), so this just takes the facility's first returned doctor,
+  // same /doctors endpoint loadDoctorsForFacility() already uses. Degree/
+  // experience aren't part of the API response (same partner-API
+  // limitation noted in kal-booking-flow-doctor-card.liquid's own
+  // comment) — they're read back off that doctor's real card markup in
+  // sections/kal-doctor-cards.liquid's hidden source blocks, the exact
+  // same lookup loadDoctorsForFacility()/selectDoctorById() use. If the
+  // facility has no doctors (or the one doctor has no profile block
+  // configured), the photo/name/degree row just stays hidden and the
+  // card quietly falls back to its old text-only description line —
+  // never shows stale/wrong doctor info.
+  //
+  // Split into a cached fetch (fetchTherapyDoctorData, below) and a DOM-
+  // apply step (applyTherapyDoctorCard) so the network call can start as
+  // soon as Therapy Slot (step 1) is reached — prefetchTherapyDoctorCard()
+  // fires it there — instead of only starting once the visitor has
+  // already clicked through to step 2 and is staring at an empty card
+  // waiting for it. By the time they reach Therapy Details, the request
+  // has almost always already resolved (filling in slot/concern details
+  // on step 1 takes longer than the round trip), so the card renders
+  // instantly instead of visibly popping in after a delay.
+  let therapyDoctorCache = null; // { facilityId, promise }
+
+  const fetchTherapyDoctorData = () => {
+    const facility = getCurrentFacility();
+    if (!facility || !facility.id || !apiBaseUrl) return Promise.resolve(null);
+
+    if (therapyDoctorCache && therapyDoctorCache.facilityId === facility.id) {
+      return therapyDoctorCache.promise;
+    }
+
+    const promise = (async () => {
+      let doctors;
+      try {
+        const response = await fetch(
+          `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}`,
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        doctors = Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
+      } catch (err) {
+        console.error('[kal-booking-flow] Failed to load therapy doctor:', err);
+        return null;
+      }
+      if (doctors.length === 0) return null;
+
+      const doctor = doctors[0];
+      const source = document.querySelector(
+        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
+      );
+
+      const name = formatDoctorName(source ? source.dataset.kalDoctorName : doctor.name);
+      if (!name) return null;
+
+      const photoUrl = source ? source.dataset.kalDoctorPhotoUrl : '';
+      // Document order inside kal-booking-flow-doctor-card.liquid's
+      // .kal-doctor-card__info is always degree, then experience, then
+      // languages — read by position rather than a dedicated data
+      // attribute, since degree/experience only exist as rendered text
+      // in that markup, not as their own data-* hooks.
+      const metaRows = source ? source.querySelectorAll('.kal-doctor-card__meta-row') : [];
+      const degree = metaRows[0] ? metaRows[0].textContent.trim() : (doctor.designation || '');
+      const experience = metaRows[1] ? metaRows[1].textContent.trim() : '';
+
+      return { name, photoUrl, degree, experience };
+    })();
+
+    therapyDoctorCache = { facilityId: facility.id, promise };
+    return promise;
+  };
+
+  // Fire-and-forget — just warms therapyDoctorCache ahead of time. Safe
+  // to call repeatedly (every Therapy Slot visit); fetchTherapyDoctorData()
+  // itself no-ops into the existing cached promise when the facility
+  // hasn't changed.
+  const prefetchTherapyDoctorCard = () => {
+    fetchTherapyDoctorData();
+  };
+
+  const applyTherapyDoctorCard = async () => {
+    const card = flow.querySelector('.kal-therapy-appointment-card');
+    const row = card ? card.querySelector('.kal-therapy-appointment-card__top') : null;
+    if (!card || !row) return;
+
+    row.hidden = true;
+
+    const doctor = await fetchTherapyDoctorData();
+    if (!doctor) return;
+
+    const { name, photoUrl, degree, experience } = doctor;
+
+    const nameEl = row.querySelector('[data-kal-therapy-doctor-name]');
+    if (nameEl) nameEl.textContent = name;
+
+    const photoEl = row.querySelector('[data-kal-therapy-doctor-photo]');
+    if (photoEl) {
+      photoEl.innerHTML = '';
+      if (photoUrl) {
+        const img = document.createElement('img');
+        img.src = photoUrl;
+        img.alt = name;
+        img.loading = 'lazy';
+        photoEl.appendChild(img);
+      } else {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'kal-doctor-photo-placeholder';
+        photoEl.appendChild(placeholder);
+      }
+    }
+
+    const degreeEl = row.querySelector('[data-kal-therapy-doctor-degree]');
+    if (degreeEl) degreeEl.textContent = degree;
+
+    const experienceItem = row.querySelector('[data-kal-therapy-doctor-experience]')?.closest('.kal-therapy-appointment-card__meta-item');
+    const divider = row.querySelector('.kal-therapy-appointment-card__divider');
+    const experienceEl = row.querySelector('[data-kal-therapy-doctor-experience]');
+    if (experienceEl) experienceEl.textContent = experience;
+    if (experienceItem) experienceItem.hidden = !experience;
+    if (divider) divider.hidden = !experience;
+
+    row.hidden = false;
   };
 
   // Concern Select's floating scroll hint (see data-kal-scroll-hint's click
@@ -586,6 +749,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stepName === 'slot-picker') {
       refreshDayStrip();
       refreshSlotsForSelectedDate();
+    }
+
+    // Prefetch starts here (step 1), not on arrival at step 2 — see
+    // prefetchTherapyDoctorCard()'s own comment for why.
+    if (stepName === 'therapy-slot') {
+      prefetchTherapyDoctorCard();
+    }
+
+    if (stepName === 'therapy-details') {
+      applyTherapyDoctorCard();
     }
 
     if (stepName === 'therapy-confirmed') {
@@ -984,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // on Step 1 of 2 into one display string. Called by goToStep() on
   // arrival at "therapy-confirmed", same "refresh every time, not just
   // once" treatment as renderConfirmationSummary().
-  const renderTherapyConfirmedSummary = () => {
+  const renderTherapyConfirmedSummary = async () => {
     // Patient Name (data-kal-confirm-name) is the same shared hook the
     // consultation flow's Confirmation/Booking Confirmed screens use,
     // but THEY only get it populated via renderConfirmationSummary(),
@@ -996,17 +1169,29 @@ document.addEventListener('DOMContentLoaded', () => {
       el.textContent = patientDetails.name || '—';
     });
 
-    const names = [
-      ...Array.from(therapyDropdownSelect.selected, (key) => {
-        const option = THERAPY_OPTIONS.find((o) => o.key === key);
-        return option ? option.name : null;
-      }),
-      ...Array.from(therapyConcernSelect.selected, (key) => THERAPY_CATEGORY_LABELS[key] || null),
-    ].filter(Boolean);
-
-    flow.querySelectorAll('[data-kal-therapy-confirm-summary]').forEach((el) => {
-      el.textContent = names.length > 0 ? names.join(', ') : '—';
-    });
+    // Header photo+name — reuses the exact same cached fetch Therapy
+    // Details' own card (applyTherapyDoctorCard()) already resolved for
+    // this facility, so awaiting it here is a cache hit, not a second
+    // network call, by the time the visitor reaches this screen (step
+    // 2's prefetch fires back on step 1). Leaves the placeholder
+    // photo/em-dash name in place if the facility has no doctor to show
+    // — same graceful fallback as step 2's own card.
+    const doctor = await fetchTherapyDoctorData();
+    if (doctor) {
+      flow.querySelectorAll('[data-kal-therapy-confirm-doctor-name]').forEach((el) => {
+        el.textContent = doctor.name;
+      });
+      flow.querySelectorAll('[data-kal-therapy-confirm-doctor-photo]').forEach((el) => {
+        if (!doctor.photoUrl) return;
+        el.innerHTML = '';
+        el.classList.remove('kal-appointment-card__photo--placeholder');
+        const img = document.createElement('img');
+        img.src = doctor.photoUrl;
+        img.alt = doctor.name;
+        img.loading = 'lazy';
+        el.appendChild(img);
+      });
+    }
 
     // The real moment this screen is shown — which is also the moment the
     // request was actually submitted (this step is only ever reached right

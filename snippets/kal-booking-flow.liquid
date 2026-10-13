@@ -39,24 +39,6 @@
     font-display: swap;
   }
 
-  {%- comment -%}
-    600 has no dedicated Avenir file — without this, the browser has to
-    guess the nearest registered weight (300/400/500/700/800) for any
-    font-weight:600 rule, and that guess can silently resolve to a face
-    that looks identical to what was there before (e.g. "Calm care,
-    closer than you think." showing no visible change after being set to
-    600). Explicitly registering 600 against the same Avenir-Medium file
-    as 500 makes it an exact match instead, guaranteeing a real font
-    change even though it reuses that file's actual weight.
-  {%- endcomment -%}
-  @font-face {
-    font-family: 'Avenir';
-    src: url('{{ "Avenir-Medium.woff2" | asset_url }}') format('woff2');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
-  }
-
   @font-face {
     font-family: 'Avenir';
     src: url('{{ "Avenir-Heavy.woff2" | asset_url }}') format('woff2');
