@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
     applyStoredFacility();
     flow.showModal();
     document.body.style.overflow = 'hidden';
+    // Nothing was ever picked on "Find a Clinic" (e.g. flow opened
+    // directly) — kick off resolving the real default facility now
+    // (fire-and-forget) and re-apply once it lands, so the displayed name
+    // catches up to whatever facility every API call is actually using,
+    // instead of leaving the placeholder "Indiranagar" text on screen.
+    if (!getStoredFacility()) {
+      void getCurrentFacility().then(() => applyStoredFacility());
+    }
   };
 
   const closeFlow = () => {
@@ -72,6 +80,38 @@ document.addEventListener('DOMContentLoaded', () => {
   // ----------------------------------------------------------------------
   const FACILITY_STORAGE_KEY = 'kalSelectedFacility';
 
+  // Identifies this browser across requests so the backend can tell "the
+  // same visitor is switching their own hold" apart from "a different
+  // visitor is trying to exclude someone else's hold" — every Shopify
+  // visitor otherwise shares one Partner API account, so the backend has
+  // no other way to tell them apart. Server-issued and signed (see
+  // PartnerVisitorSessionService on the backend), not a bare client-
+  // generated value — this file never invents one, only stores and
+  // resends whatever the backend mints/refreshes via the
+  // X-Kal-Visitor-Session response header on availability/holds calls (see
+  // postToPartnerApi below). See SHOPIFY_HOLD_SWITCHING_PLAN.md.
+  const VISITOR_SESSION_STORAGE_KEY = 'kalVisitorSession';
+
+  const getStoredVisitorSessionToken = () => {
+    try {
+      return localStorage.getItem(VISITOR_SESSION_STORAGE_KEY);
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const storeVisitorSessionToken = (token) => {
+    try {
+      localStorage.setItem(VISITOR_SESSION_STORAGE_KEY, token);
+    } catch (err) {
+      // localStorage unavailable (private browsing, storage full, etc.) —
+      // the flow still works, just without same-visitor hold-switching
+      // (every switch request lands with no token, server mints fresh ones
+      // every time, which behaves exactly like having no prior hold to
+      // exclude).
+    }
+  };
+
   const getStoredFacility = () => {
     try {
       const raw = localStorage.getItem(FACILITY_STORAGE_KEY);
@@ -109,7 +149,116 @@ document.addEventListener('DOMContentLoaded', () => {
 
   };
 
-  const getCurrentFacility = () => getStoredFacility() || { id: 'cfe4e29a-7697-4b1d-970c-dc8c11628b10', name: 'Indiranagar' };
+  // Real facility IDs come from this account's own GET /partner/facilities
+  // (via the proxy) — never hand-typed into the theme editor. Fetched once
+  // and cached; shared by both the "Find a Clinic" page's selection lookup
+  // below and getCurrentFacility()'s own no-selection-yet fallback.
+  let facilityOptionsCache = null;
+  let facilityOptionsPromise = null;
+
+  const loadFacilityOptions = () => {
+    if (facilityOptionsCache) return Promise.resolve(facilityOptionsCache);
+    if (facilityOptionsPromise) return facilityOptionsPromise;
+    if (!apiBaseUrl) return Promise.resolve([]);
+    facilityOptionsPromise = fetch(`${apiBaseUrl}/api/shopify/public/facilities`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        facilityOptionsCache = Array.isArray(data?.data?.facilities) ? data.data.facilities : [];
+        return facilityOptionsCache;
+      })
+      .catch((err) => {
+        console.error('[kal-booking-flow] Failed to load facilities:', err);
+        return [];
+      })
+      .finally(() => {
+        facilityOptionsPromise = null;
+      });
+    return facilityOptionsPromise;
+  };
+
+  // Renders the "Find a Clinic" page's list straight from GET facilities —
+  // a no-op on any other page, since the querySelector just finds nothing.
+  // Each card's data-facility-id is the backend's own id for that facility,
+  // read directly off the fetched object — never re-derived by matching
+  // against a name afterwards. That's what lets a clinic's display name
+  // change in the CMS at any time without risk: the id travelling with a
+  // card is the same id the card was built from, not a separate lookup
+  // that could drift out of sync with it.
+  const renderClinicList = async () => {
+    const list = document.querySelector('[data-kal-clinic-list]');
+    if (!list) return;
+
+    const options = await loadFacilityOptions();
+    list.innerHTML = '';
+
+    if (options.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'kal-clinic-list__empty';
+      empty.textContent = 'No clinics available right now. Please check back shortly.';
+      list.appendChild(empty);
+      return;
+    }
+
+    options.forEach((facility) => {
+      const address = [facility.addressLine1, facility.addressLine2, facility.city, facility.state]
+        .filter(Boolean)
+        .join(', ');
+
+      const item = document.createElement('li');
+      item.className = 'kal-clinic-list__item';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'kal-clinic-list__name';
+      button.setAttribute('data-kal-select-facility', '');
+      button.dataset.facilityId = facility.id;
+      button.dataset.locationName = facility.name;
+      button.textContent = facility.name;
+      item.appendChild(button);
+
+      if (address) {
+        const addressEl = document.createElement('p');
+        addressEl.className = 'kal-clinic-list__address';
+        addressEl.textContent = address;
+        item.appendChild(addressEl);
+      }
+
+      list.appendChild(item);
+    });
+  };
+
+  void renderClinicList();
+
+  // No more hardcoded facility UUID. If the visitor reached this flow
+  // without ever picking a clinic on the "Find a Clinic" page (e.g. opened
+  // directly), this resolves to the first facility this account's Partner
+  // API key is actually scoped to — a real backend value, not a guessed
+  // one. For an account scoped to a single clinic (the common case) that's
+  // unambiguous; for a multi-facility account "first in whatever order the
+  // backend returns" isn't a deliberate clinic choice, so the clinic list
+  // page remains the real entry point for those.
+  let defaultFacilityPromise = null;
+
+  const getCurrentFacility = async () => {
+    const stored = getStoredFacility();
+    if (stored && stored.id) return stored;
+    if (!defaultFacilityPromise) {
+      // Persisted once resolved, not just returned — so applyStoredFacility()
+      // (openFlow() below) picks up the real name instead of leaving the
+      // placeholder "Indiranagar" text on screen while every actual API
+      // call is already scoped to whatever the real default turned out to
+      // be.
+      defaultFacilityPromise = loadFacilityOptions().then((options) => {
+        const fallback = options[0] || null;
+        if (fallback) storeFacility(fallback);
+        return fallback;
+      });
+    }
+    return defaultFacilityPromise;
+  };
 
   // Ensures every doctor name shown anywhere in the flow reads "Dr. X" —
   // some theme-editor-authored doctor_profile blocks already type the
@@ -556,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // getCurrentFacility() (not getStoredFacility()) so the default clinic
     // still loads real doctors when the flow is opened directly, bypassing
     // "Find a Clinic" — same fallback applyStoredFacility() relies on.
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     if (!facility || !facility.id) {
       doctorListCache = null;
       setEmptyState('Pick a clinic first to see available doctors.');
@@ -629,9 +778,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // instantly instead of visibly popping in after a delay.
   let therapyDoctorCache = null; // { facilityId, promise }
 
-  const fetchTherapyDoctorData = () => {
-    const facility = getCurrentFacility();
-    if (!facility || !facility.id || !apiBaseUrl) return Promise.resolve(null);
+  const fetchTherapyDoctorData = async () => {
+    const facility = await getCurrentFacility();
+    if (!facility || !facility.id || !apiBaseUrl) return null;
 
     if (therapyDoctorCache && therapyDoctorCache.facilityId === facility.id) {
       return therapyDoctorCache.promise;
@@ -1257,6 +1406,12 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTherapyCategoryOptions();
   loadTherapyOptions();
 
+  // Warms facilityOptionsCache ahead of time — fire-and-forget, so the
+  // "Find a Clinic" page's click handler and getCurrentFacility()'s own
+  // fallback usually find it already resolved instead of waiting on a
+  // fresh request.
+  void loadFacilityOptions();
+
   renderTherapyDropdownList();
   renderTherapySelectedChips();
 
@@ -1395,7 +1550,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // chunk-level caller already retries automatically next time it's
   // asked to load the same still-missing offsets.
   const fetchDaySummaries = async (startDate, endDate) => {
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId) return false;
     try {
       const response = await fetch(
@@ -1443,7 +1598,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // doctor so callers can show an explicit "unable to load" state rather
   // than silently rendering an empty grid.
   const fetchSlotsForDate = async (date) => {
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId) return null;
     try {
       const response = await fetch(
@@ -1484,7 +1639,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Re-checked on every render pass (resets to disabled) and every
   // slot-chip click/hold response.
   const updateSlotContinueButton = () => {
-    const hasConfirmedHold = Boolean(slotPicker.holdId);
+    // Also gated on !placingSlotHold — holdId can legitimately still point
+    // at a still-valid PREVIOUS slot while a switch to a different slot is
+    // in flight (see handleSlotSelection: holdId is deliberately left
+    // untouched until the new hold actually succeeds), which would
+    // otherwise let Continue submit a mismatched holdId/selectedSlot pair
+    // mid-switch.
+    const hasConfirmedHold = Boolean(slotPicker.holdId) && !placingSlotHold;
     flow.querySelectorAll('[data-kal-slot-continue]').forEach((btn) => {
       btn.disabled = !hasConfirmedHold;
     });
@@ -2697,11 +2858,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // this file uses. `idempotencyKey` is forwarded by the proxy as the
   // Idempotency-Key header the partner API requires on writes.
   const postToPartnerApi = async (path, body, idempotencyKey) => {
+    const headers = { 'content-type': 'application/json', 'idempotency-key': idempotencyKey };
+    const visitorSessionToken = getStoredVisitorSessionToken();
+    if (visitorSessionToken) headers['x-kal-visitor-session'] = visitorSessionToken;
     const response = await fetch(`${apiBaseUrl}/api/shopify/public/${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'idempotency-key': idempotencyKey },
+      headers,
       body: JSON.stringify(body),
     });
+    // Only availability/holds ever actually sends this back (freshly
+    // minted, or just re-confirmed) — harmless no-op read on every other
+    // endpoint, which never sets it.
+    const refreshedToken = response.headers.get('x-kal-visitor-session');
+    if (refreshedToken) storeVisitorSessionToken(refreshedToken);
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.success) {
       const message = data?.message || `HTTP ${response.status}`;
@@ -2725,8 +2894,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // on the CMS side, just a partner-authenticated route onto it.
   // ----------------------------------------------------------------------
 
-  const placeHoldForSlot = async (slot) => {
-    const facility = getCurrentFacility();
+  const placeHoldForSlot = async (slot, replacingHoldId) => {
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId) {
       throw new Error('Missing clinic or doctor selection. Please go back and pick again.');
     }
@@ -2740,6 +2909,12 @@ document.addEventListener('DOMContentLoaded', () => {
         appointmentTime: slot.start_time,
         durationMinutes: CONSULT_DURATION_MINUTES,
         mode,
+        // The hold this request is switching away from, if any — lets the
+        // backend exclude it from the conflict check when it's genuinely
+        // this same visitor's own still-active hold (proven server-side via
+        // the visitor-session header postToPartnerApi already sends, not by
+        // this field alone). See SHOPIFY_HOLD_SWITCHING_PLAN.md.
+        replacingHoldId: replacingHoldId || undefined,
       },
       generateIdempotencyKey(),
     );
@@ -2780,10 +2955,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (slotPicker.holdId && slotPicker.selectedSlot?.start_time === slot.start_time) return;
 
     const previousHoldId = slotPicker.holdId;
+    const previousSlot = slotPicker.selectedSlot;
     const requestId = ++slotHoldRequestSequence;
     clearBookingError();
     slotPicker.selectedSlot = slot;
-    slotPicker.holdId = null;
+    // slotPicker.holdId is deliberately left untouched here — only ever
+    // reassigned once the new hold below actually succeeds (mirrors the
+    // CMS staff wizard's activeHoldId.current pattern). Nulling it
+    // immediately, as this used to, meant a failed switch permanently lost
+    // the reference to a still-valid original hold: the visitor couldn't
+    // act on either slot until the orphaned hold's 5-minute TTL lapsed.
+    // updateSlotContinueButton() below separately guards against this
+    // leaving Continue clickable mid-switch (via placingSlotHold).
     flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
       chip.classList.toggle('kal-slot-chip--active', chip.dataset.kalSlotStart === slot.start_time);
     });
@@ -2791,7 +2974,7 @@ document.addEventListener('DOMContentLoaded', () => {
     placingSlotHold = true;
 
     try {
-      const holdId = await placeHoldForSlot(slot);
+      const holdId = await placeHoldForSlot(slot, previousHoldId);
       if (requestId !== slotHoldRequestSequence) {
         // A newer click already took over while this hold was in flight —
         // this one is now orphaned, release it rather than leave it.
@@ -2804,15 +2987,34 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       if (requestId === slotHoldRequestSequence) {
-        slotPicker.selectedSlot = null;
+        // The switch failed — fall back to the previous selection rather
+        // than leaving the visitor on a dead one. previousHoldId itself was
+        // never touched above, so if it's still valid, this restores a
+        // fully consistent, still-bookable state (matching chip active,
+        // holdId and selectedSlot both pointing at the same real slot)
+        // instead of just clearing everything to "nothing selected".
+        slotPicker.selectedSlot = previousSlot;
         flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
-          chip.classList.remove('kal-slot-chip--active');
+          chip.classList.toggle(
+            'kal-slot-chip--active',
+            Boolean(previousSlot) && chip.dataset.kalSlotStart === previousSlot.start_time,
+          );
         });
         showBookingError(
           err instanceof Error && err.message && !err.message.startsWith('HTTP')
             ? err.message
             : 'Unable to reserve that slot right now. Please try another.',
         );
+        // Someone else just took this slot (or another conflict happened) —
+        // the grid on screen is now stale, still showing it as pickable.
+        // Re-fetch so the visitor sees what's actually still available
+        // instead of being able to click the same dead slot again. The
+        // error banner clears once the refreshed grid actually lands —
+        // left showing until then would read as "still broken" even after
+        // the grid already reflects current availability.
+        void refreshSlotsForSelectedDate().then(() => {
+          if (requestId === slotHoldRequestSequence) clearBookingError();
+        });
       }
     } finally {
       if (requestId === slotHoldRequestSequence) {
@@ -2831,7 +3033,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBooking = async () => {
     clearBookingError();
 
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId || !slotPicker.selectedSlot || !slotPicker.holdId) {
       showBookingError('Missing clinic, doctor, or slot selection. Please go back and pick again.');
       return;
@@ -2934,7 +3136,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitTherapyRequest = async () => {
     clearBookingError();
 
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     const therapies = Array.from(therapyDropdownSelect.selected, (key) => {
       const option = THERAPY_OPTIONS.find((o) => o.key === key);
       return option ? option.name : null;
@@ -3024,12 +3226,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // dialog itself is rendered sitewide via layout/theme.liquid), so it
     // works on the clinic-list page even though that page has no other
     // connection to the booking flow's own markup.
+    //
+    // No matching step here — renderClinicList() (also in this file)
+    // builds every clinic-list card directly from GET facilities, so
+    // data-facility-id is already that same facility's real backend id.
+    // The flow is: backend returns {id, name} pairs -> cards are built one
+    // per pair, each carrying its own id -> a click reads that id straight
+    // off the card it came from. A clinic's display name can change in the
+    // CMS at any time without this ever pointing at the wrong facility,
+    // since the id was never re-derived from the name in the first place.
     const facilityTrigger = e.target.closest('[data-kal-select-facility]');
     if (facilityTrigger) {
+      const facilityId = facilityTrigger.dataset.facilityId;
+      if (!facilityId) {
+        console.error('[kal-booking-flow] Clinic card is missing its facility id.');
+        return;
+      }
       storeFacility({
-        id: facilityTrigger.dataset.facilityId,
+        id: facilityId,
         name: facilityTrigger.dataset.locationName,
-        address: facilityTrigger.dataset.clinicAddress,
+        address: facilityTrigger.dataset.clinicAddress || null,
       });
       isExperimentB = false;
       applyExperimentVisibility();
