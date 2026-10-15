@@ -162,4 +162,37 @@
     </div>
   </div>
 
+  {%- comment -%}
+    "Leave booking?" confirmation — shown instead of closing immediately
+    when data-kal-close is clicked while a slot hold is active (see
+    kal-booking-flow.js: the X used to call closeFlow() directly, which
+    never released slotPicker.holdId, so the hold sat alive server-side —
+    blocking that slot for every other visitor — until it expired on its
+    own instead of right away). "Leave booking" is the one path that
+    actually releases it before closing; "Continue booking" and this
+    card's own corner close button both just dismiss the card and leave
+    the flow exactly as it was. The backdrop itself does NOT dismiss on
+    click, per explicit instruction — same "explicit button only" rule
+    as the main booking-flow dialog (see that element's own close-button
+    comment above): this is a real "are you sure" interruption, not a
+    lightweight popover that should be easy to brush off accidentally.
+    Direct child of <dialog>, not nested inside #kal-booking-flow-content
+    — same containing-block/overflow-clipping reasoning as the calendar
+    modal above.
+  {%- endcomment -%}
+  <div class="kal-leave-booking-modal" data-kal-leave-booking-modal hidden>
+    <div class="kal-leave-booking-modal__backdrop"></div>
+    <div class="kal-leave-booking-modal__panel">
+      <button type="button" class="kal-leave-booking-modal__close" data-kal-leave-booking-dismiss aria-label="Close">
+        {%- render 'kal-booking-icons', icon_name: 'close' -%}
+      </button>
+      <p class="kal-leave-booking-modal__title">Leave booking?</p>
+      <p class="kal-leave-booking-modal__body">If you leave now, your booking progress will be lost. Do you want to continue booking?</p>
+      <div class="kal-leave-booking-modal__actions">
+        <button type="button" class="kal-leave-booking-modal__continue" data-kal-leave-booking-dismiss>Continue booking</button>
+        <button type="button" class="kal-leave-booking-modal__leave" data-kal-leave-booking-confirm>Leave booking</button>
+      </div>
+    </div>
+  </div>
+
 </dialog>

@@ -2156,6 +2156,187 @@ div.kal-calendar-modal__backdrop {
   cursor: pointer;
 }
 
+/* "Leave booking?" confirmation (see kal-booking-flow.liquid's own comment
+   for why this exists). Uses the shared dark dialog-level overlay (not
+   the calendar modal's lighter tint above) since this is a real "are you
+   sure" interruption, not a lightweight popover alongside the flow. */
+.kal-leave-booking-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.kal-leave-booking-modal[hidden] {
+  display: none;
+}
+
+/* div.kal-leave-booking-modal__backdrop, not the plain class alone — same
+   base.css `div:empty { display: none; }` specificity fix as
+   .kal-calendar-modal__backdrop above (this is also an empty, childless
+   click-catching overlay). Its own lighter rgba(0,0,0,0.2) tint, not the
+   shared --kal-booking-flow-color-overlay (0.5) the dialog's own
+   ::backdrop uses — this layers on top of the already-dimmed flow behind
+   it, so a lighter touch here reads as "one more step," not a second
+   full dark overlay stacked on the first. */
+div.kal-leave-booking-modal__backdrop {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Figma "Appointment Card" node, reused here as this confirmation's
+   panel: 328px wide, 24px padding/radius, 16px gap between its three
+   stacked children (title, body, actions). Height is left to auto layout
+   (content-driven) rather than hardcoded to the export's 282px, since
+   that figure is just what this exact copy happened to measure out to. */
+.kal-leave-booking-modal__panel {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 328px;
+  max-width: 100%;
+  padding: var(--kal-booking-flow-space-inset);
+  gap: 16px;
+  background: var(--kal-booking-flow-color-white);
+  border: 1px solid #e5e5e5;
+  border-radius: 24px;
+}
+
+/* Figma's "close_small" — a 24px grey circle inset 16px from the card's
+   own top and right edges (corrected per dev-mode alignment annotation:
+   it sits flush inside the card, not hanging outside the top-right
+   corner like an earlier pass had it). right:16px instead of a hardcoded
+   left offset also keeps it correctly placed if the panel ever shrinks
+   below 328px (max-width:100% above). Icon size inside it (24px glyph
+   per the export's own mask bounds) isn't reliably recoverable from the
+   percentage-based crop Figma gave for it, so sized by eye to sit
+   centered in the circle. */
+.kal-leave-booking-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #4b4b4b;
+  cursor: pointer;
+}
+
+.kal-leave-booking-modal__close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.kal-leave-booking-modal__title {
+  margin: 0;
+  width: 100%;
+  font-family: inherit;
+  font-weight: var(--kal-booking-flow-font-weight-heavy);
+  font-size: 20px;
+  line-height: 140%;
+  color: #4b4b4b;
+}
+
+.kal-leave-booking-modal__body {
+  margin: 0;
+  width: 100%;
+  font-family: inherit;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
+  font-size: 16px;
+  line-height: 140%;
+  color: #4b4b4b;
+}
+
+.kal-leave-booking-modal__actions {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 16px;
+}
+
+.kal-leave-booking-modal__continue,
+.kal-leave-booking-modal__leave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: var(--kal-booking-flow-font-weight-black);
+  font-size: 16px;
+  line-height: 140%;
+  cursor: pointer;
+}
+
+.kal-leave-booking-modal__continue {
+  border: none;
+  background: var(--kal-booking-flow-color-primary-dark);
+  color: var(--kal-booking-flow-color-white);
+}
+
+.kal-leave-booking-modal__leave {
+  border: 1px solid var(--kal-booking-flow-color-primary-dark);
+  background: var(--kal-booking-flow-color-white);
+  color: var(--kal-booking-flow-color-primary-dark);
+}
+
+/* Desktop (node's own "Appointment Card" export, 576px wide): wider
+   panel with a bigger 24px gap (was 16px), and the two actions switch
+   from a stacked full-width column to a single row, right-aligned, each
+   button back to its own content-driven width instead of stretching
+   full-width. white-space:nowrap + width:auto (not the export's literal
+   142px/167px, which clipped "Leave booking" onto two lines at this
+   font-weight) let each button size itself to fit its own label on one
+   line. The close (X) button's own position isn't touched here — per
+   explicit instruction its CSS stays exactly as-is at every width (it
+   already matches this export's left:536/top:16 on a 576px card, i.e.
+   the same top:16/right:16 inset the mobile size uses). Leave booking's
+   box-shadow from this export is deliberately omitted here too, same as
+   mobile — per explicit instruction that CTA shouldn't have one.
+   order:-1 on Leave puts it first/leftmost in this row despite coming
+   second in source order (source order itself is left column-first/top
+   on mobile intentionally, matching the original Figma stack — this
+   reorders only the desktop row, not the underlying markup). */
+@media screen and (min-width: 750px) {
+  .kal-leave-booking-modal__panel {
+    width: 576px;
+    gap: 24px;
+  }
+
+  .kal-leave-booking-modal__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .kal-leave-booking-modal__continue,
+  .kal-leave-booking-modal__leave {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .kal-leave-booking-modal__leave {
+    order: -1;
+  }
+}
+
 /* Header row + .kal-step-progress-bar__labels now share one parent
    (.kal-step-header-group, see kal-booking-flow-step-header.liquid's own
    comment) with its own 8px gap between them, instead of both living
@@ -4214,6 +4395,79 @@ div.kal-calendar-modal__backdrop {
 .kal-form-error__icon svg {
   width: 16px;
   height: 16px;
+}
+
+/* Slot Picker's "that slot was just booked" conflict banner (see
+   kal-booking-flow-step-slot-picker.liquid's own comment on why this is a
+   separate component from .kal-form-error above, not a variant of it) —
+   a standalone amber info banner, not an inline field-error line. Mobile
+   spec (Figma): margin trims the shared 24px gap .kal-step-shell__scroll
+   puts between its children down to 16px above/below this element
+   specifically, same trick .kal-slot-section's own margin-top:-8px already
+   uses on its neighboring gap — 24px left/right is the margin itself,
+   since .kal-step-shell__scroll has no side padding of its own for a
+   sibling to inherit (.kal-slot-section and .kal-slot-tabs each carry
+   their own 24px side padding independently, same reasoning applies
+   here). */
+.kal-slot-conflict-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: -8px 24px -8px;
+  padding: 8px 4px;
+  background: #fff5e5;
+  border: 1px solid #ffc166;
+  border-radius: 8px;
+}
+
+.kal-slot-conflict-banner[hidden] {
+  display: none;
+}
+
+.kal-slot-conflict-banner__icon {
+  display: flex;
+  flex-shrink: 0;
+  color: #925300;
+}
+
+.kal-slot-conflict-banner__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.kal-slot-conflict-banner [data-kal-booking-error-text] {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 100%;
+  color: #925300;
+}
+
+/* Desktop (Figma 452x34 export, same colors/padding/gap as mobile): stays
+   the SAME single element inside .kal-step-shell__scroll at this width
+   too (a separate bare-grid-sibling desktop copy was tried and reverted —
+   see kal-booking-flow-step-slot-picker.liquid's own comment on this
+   banner for why). The vertical -8px/-8px trim is inherited unchanged
+   from the base rule above and still gives the right 16px — .kal-step-
+   shell__scroll's own gap is 24px at both widths (see that rule, no
+   desktop override touches it), so the same trim math applies either way;
+   only the horizontal margin needs to change here. 0, not the spec's
+   24px: at this width the PANEL itself (.kal-step-shell--progress-panel
+   .kal-step-shell__panel) supplies a 24px side inset, and every sibling in
+   this scroll region (.kal-slot-section, .kal-slot-tabs — see their own
+   desktop zero-out rules) drops its own independent 24px to avoid
+   doubling it to 48px; this banner follows the same pattern. Width is
+   intentionally not set to a literal 452px — that's this banner's size at
+   the Figma reference viewport, not a fixed value; the panel's own inset
+   already constrains its real width the same way every other
+   sized-from-Figma element in this file is handled (e.g.
+   .kal-concern-select__banner's own desktop rule above, which also only
+   sets height, never width). */
+@media screen and (min-width: 750px) {
+  .kal-slot-conflict-banner {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 /* Phone Number field's country-code picker (node 438:7643 for the

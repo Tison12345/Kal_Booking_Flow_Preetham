@@ -376,17 +376,22 @@
     </svg>
 
   {%- comment -%}
-    'info' — not part of the sprite sheet export (the concern banner's "i"
-    icon was given only as a solid-color placeholder block in the Figma CSS,
-    no path data), so this is hand-built in the same stroke-icon style as
-    the rest of this file.
+    'info' — real Figma export now (Slot Picker's conflict banner), filled
+    glyph rather than the hand-built stroke circle this used to be (the
+    concern banner's own "i" was only ever given as a solid-color
+    placeholder block in the Figma CSS, no path data — this is a
+    different, later export with real paths). Same <mask>-removal
+    treatment as location-pin/shopping-cart above: Figma's own export
+    wraps the path in a <mask> that's just an opaque full-20x20-bounds
+    rect (not actually cropping anything) — dropped, keeping just the
+    path. fill="currentColor" (not the export's hardcoded #1C1B1F) so it
+    still inherits whatever color each context sets, same convention as
+    every other icon here.
   {%- endcomment -%}
 
   {% when 'info' %}
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ class }}">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M12 16v-4"/>
-      <path d="M12 8h.01"/>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="{{ class }}">
+      <path d="M10.383 13.6359C10.4888 13.5322 10.5417 13.4036 10.5417 13.2501V9.54175C10.5417 9.38828 10.4902 9.25959 10.3872 9.15571C10.2841 9.05196 10.1565 9.00008 10.0042 9.00008C9.85189 9.00008 9.72286 9.05196 9.61716 9.15571C9.51133 9.25959 9.45842 9.38828 9.45842 9.54175V13.2501C9.45842 13.4036 9.50994 13.5322 9.613 13.6359C9.71605 13.7398 9.84369 13.7917 9.99591 13.7917C10.1483 13.7917 10.2773 13.7398 10.383 13.6359ZM10.4151 7.57217C10.5316 7.45994 10.5899 7.32092 10.5899 7.15508C10.5899 6.98925 10.5338 6.84876 10.4215 6.73362C10.3093 6.61862 10.1703 6.56112 10.0045 6.56112C9.83862 6.56112 9.69814 6.61716 9.583 6.72925C9.46786 6.84147 9.41029 6.9805 9.41029 7.14633C9.41029 7.31217 9.4671 7.45265 9.58071 7.56779C9.69418 7.68293 9.83251 7.7405 9.99571 7.7405C10.1589 7.7405 10.2987 7.68439 10.4151 7.57217ZM10.0072 17.5834C8.96397 17.5834 7.98147 17.3861 7.05966 16.9913C6.13786 16.5966 5.33105 16.0535 4.63925 15.362C3.94744 14.6704 3.40404 13.8642 3.00904 12.9434C2.61418 12.0227 2.41675 11.0389 2.41675 9.99196C2.41675 8.94501 2.61411 7.96411 3.00883 7.04925C3.40355 6.13439 3.94668 5.33105 4.63821 4.63925C5.32973 3.94744 6.13592 3.40404 7.05675 3.00904C7.97744 2.61418 8.96126 2.41675 10.0082 2.41675C11.0552 2.41675 12.0361 2.61411 12.9509 3.00883C13.8658 3.40355 14.6691 3.94668 15.3609 4.63821C16.0527 5.32973 16.5961 6.13425 16.9911 7.05175C17.386 7.96939 17.5834 8.9498 17.5834 9.993C17.5834 11.0362 17.3861 12.0187 16.9913 12.9405C16.5966 13.8623 16.0535 14.6691 15.362 15.3609C14.6704 16.0527 13.8659 16.5961 12.9484 16.9911C12.0308 17.386 11.0504 17.5834 10.0072 17.5834ZM10.0001 16.5001C11.8056 16.5001 13.3404 15.8681 14.6042 14.6042C15.8681 13.3404 16.5001 11.8056 16.5001 10.0001C16.5001 8.19453 15.8681 6.6598 14.6042 5.39591C13.3404 4.13203 11.8056 3.50008 10.0001 3.50008C8.19453 3.50008 6.6598 4.13203 5.39591 5.39591C4.13203 6.6598 3.50008 8.19453 3.50008 10.0001C3.50008 11.8056 4.13203 13.3404 5.39591 14.6042C6.6598 15.8681 8.19453 16.5001 10.0001 16.5001Z" fill="currentColor"/>
     </svg>
 
   {%- comment -%}

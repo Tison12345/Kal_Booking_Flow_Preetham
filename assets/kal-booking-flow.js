@@ -24,6 +24,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.style.overflow = '';
   };
 
+  // "Leave booking?" confirmation — see its own comment in
+  // kal-booking-flow.liquid for why this exists (closing used to drop an
+  // active hold on the floor instead of releasing it). Defined here,
+  // ahead of the click delegation further below that opens/dismisses it.
+  const leaveBookingModal = flow.querySelector('[data-kal-leave-booking-modal]');
+  const openLeaveBookingModal = () => {
+    if (leaveBookingModal) leaveBookingModal.hidden = false;
+  };
+  const closeLeaveBookingModal = () => {
+    if (leaveBookingModal) leaveBookingModal.hidden = true;
+  };
+  const confirmLeaveBooking = () => {
+    if (slotPicker.holdId) {
+      void releaseSlotHoldViaPartnerApi(slotPicker.holdId);
+      slotPicker.holdId = null;
+      slotPicker.heldSlot = null;
+      slotPicker.holdContext = null;
+    }
+    closeLeaveBookingModal();
+    closeFlow();
+  };
+
   // ----------------------------------------------------------------------
   // BOOKING EXPERIMENT — two separate real-site CTAs open this same popup
   // at different starting steps, otherwise identical:
@@ -638,6 +660,31 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   };
 
+  // Overwrites the theme-editor-authored "Next slot - Today, 11:00 AM" text
+  // (kal-doctor-card-source blocks are otherwise real, backend-driven doctor
+  // data except for this one line — see /doctors' nextSlotToday field) with
+  // the doctor's REAL next available slot: today's first open slot, or
+  // tomorrow's if today is fully booked/a day off, straight from the same
+  // availability pipeline the Slot Picker itself uses (resolveNextSlotCard()
+  // on the partner API side). No source card / no field in the static block
+  // both mean the same thing here (nowhere to put the line, or genuinely
+  // nothing available in the next 2 days) — leave the line out rather than
+  // show something wrong or stale.
+  const applyDoctorCardNextSlot = (card, nextSlotToday) => {
+    const el = card.querySelector('.kal-doctor-card__next-slot');
+    if (!el) return;
+    el.textContent = '';
+    if (!nextSlotToday) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.append(`Next slot - `);
+    const strong = document.createElement('strong');
+    strong.textContent = `${nextSlotToday.label}, ${formatTime12h(nextSlotToday.time)}`;
+    el.appendChild(strong);
+  };
+
   // Keyed by facility id, same pattern as therapyDoctorCache below (which
   // hits this exact endpoint too) — revisiting Doctor Select after going
   // forward and back (e.g. Slot Picker's own Back button) re-runs
@@ -673,6 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (source) applyDoctorNamePrefix(card);
       card.classList.toggle('kal-doctor-card--selected', doctor.id === nextSelectedId);
       applyDoctorCardConcernBadges(card);
+      applyDoctorCardNextSlot(card, doctor.nextSlotToday);
       list.appendChild(card);
     });
 
@@ -943,7 +991,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (stepName === 'slot-picker') {
       refreshDayStrip();
-      refreshSlotsForSelectedDate();
+      // Reaching this step is not always "start over": Back from Patient
+      // Details (after Continue already confirmed a hold) lands here too,
+      // and that hold is still genuinely active server-side — wiping it
+      // and showing nothing selected, forcing a re-pick of a slot the
+      // visitor already has, was the actual bug report this is fixing.
+      // Only preserve it when doctor/mode genuinely haven't changed since
+      // it was placed (see slotPicker.holdContext's own comment) — picking
+      // a different doctor or consult mode further back and returning here
+      // must still fall through to a real reset, since the hold would
+      // otherwise be wrong for what's now on screen.
+      const canPreserveHold =
+        Boolean(slotPicker.holdId) &&
+        slotPicker.holdContext?.doctorId === selectedDoctorId &&
+        slotPicker.holdContext?.mode === slotPicker.mode;
+      // Re-sync the UI selection back to whatever's actually held before
+      // this one-time refresh renders the grid — selectedSlot can only
+      // have drifted from heldSlot by browsing other chips on THIS same
+      // screen load without pressing Continue again, which never survives
+      // a real navigation away and back (leaving always requires a
+      // successful Continue, which re-syncs the two itself). Explicit here
+      // anyway so the invariant doesn't depend on that reasoning holding
+      // forever as this file changes.
+      if (canPreserveHold) slotPicker.selectedSlot = slotPicker.heldSlot;
+      refreshSlotsForSelectedDate({ preserveHold: canPreserveHold });
     }
 
     // Prefetch starts here (step 1), not on arrival at step 2 — see
@@ -1476,24 +1547,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // selectedSlot starts null — the real slot grid hasn't loaded yet when
   // the flow first opens; renderConfirmationSummary() already falls back
-  // to an em dash until a real slot is fetched and picked. holdId mirrors
-  // the CMS staff-side booking wizard's own holdId state (appointment-
-  // booking-wizard.tsx) — a real CMS slot hold now exists as soon as a
-  // slot is clicked here too, not just at final payment (see
-  // handleSlotSelection() below) — null until that hold call succeeds.
+  // to an em dash until a real slot is fetched and picked. Unlike the CMS
+  // staff-side booking wizard (which holds the instant a slot is clicked),
+  // selectedSlot here is purely a UI selection — clicking a chip
+  // (selectSlotLocally()) never calls the backend, so selectedSlot can
+  // change freely while browsing without creating/replacing any real hold.
+  // holdId/heldSlot only change in handleSlotContinue() below, at the
+  // single moment the visitor actually commits — explicit decision:
+  // holding on every click let browsing visitors fight over slots they
+  // never intended to book.
   const slotPicker = {
     mode: 'in-clinic', // mirrors the toggle's default active button (Doctor Select's In-Clinic, per the updated Figma spec)
     selectedDate: new Date(),
     selectedSlot: null,
     holdId: null,
+    // The exact slot {start_time, end_time} holdId was actually placed
+    // for — distinct from selectedSlot, which can drift ahead of it while
+    // the visitor browses other chips before pressing Continue again.
+    // handleSlotContinue() compares the two to decide whether a fresh
+    // hold/replace is even needed, and goToStep('slot-picker') re-syncs
+    // selectedSlot back to this on arrival so the grid highlights what's
+    // actually held, not whatever was last clicked.
+    heldSlot: null,
+    // Which doctor/mode holdId was actually placed under — set alongside
+    // holdId everywhere it's assigned a real value, cleared alongside it
+    // everywhere it's nulled. Lets goToStep('slot-picker') (see below) tell
+    // "the visitor just went Back/Continue, nothing about their booking
+    // changed" apart from "they went back further and picked a different
+    // doctor or mode" — only the former should preserve the hold; the
+    // latter must still fall through to a real reset, since the hold would
+    // otherwise be silently wrong for what's now on screen.
+    holdContext: null,
     calendarMonth: new Date(),
   };
 
   // Guards against a slower earlier hold request resolving after a faster
-  // later one (e.g. the visitor clicks two different slots quickly) —
-  // same pattern as the CMS wizard's holdRequestSequence ref. Only the
-  // response matching the most recent click is allowed to write into
-  // slotPicker.
+  // later one (e.g. a quick Back-then-Continue-again double click) — same
+  // pattern as the CMS wizard's holdRequestSequence ref. Only the response
+  // matching the most recent Continue click is allowed to write into
+  // slotPicker. placingSlotHold is true only for that same brief window
+  // (see updateSlotContinueButton() above and handleSlotContinue() below) —
+  // there's deliberately no background polling here (removed: it added
+  // load on every open slot-picker tab for a grid that, now that holding
+  // is deferred to Continue, only actually needs to be fresh at the moment
+  // of commitment — see handleSlotContinue()'s own refresh-on-conflict).
   let slotHoldRequestSequence = 0;
   let placingSlotHold = false;
 
@@ -1619,45 +1716,53 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Classifies a "HH:MM" start time into the same three tabs the static
-  // markup already had — no spec beyond matching the existing panels'
-  // own example boundaries (morning ends before noon, evening starts at
-  // 4 PM).
+  // markup already had. Boundaries match the CMS staff wizard's own
+  // morning/afternoon/evening split exactly (appointment-date-time-
+  // picker.tsx: morning < 12, afternoon 12-16:59, evening >= 17) — this
+  // used to cut afternoon/evening at 4 PM instead of 5 PM, showing a slot
+  // in a different tab here than it would in CMS for the same time.
   const periodForTime = (time) => {
     const hour = parseInt(time.slice(0, 2), 10);
     if (hour < 12) return 'morning';
-    if (hour < 16) return 'afternoon';
+    if (hour < 17) return 'afternoon';
     return 'evening';
   };
 
-  // Slot Picker's Continue is disabled until a slot is actually clicked
-  // AND its hold has actually been confirmed by the CMS (data-kal-slot-
-  // continue) — same disabled-until-chosen pattern as Doctor Select's
-  // updateDoctorSelectContinueButton() above, but gated on holdId rather
-  // than selectedSlot: selectedSlot is set optimistically the instant a
-  // chip is clicked (see handleSlotSelection()), before the hold call
-  // has resolved, so Continue must wait for the real confirmation.
-  // Re-checked on every render pass (resets to disabled) and every
-  // slot-chip click/hold response.
+  // Slot Picker's Continue is disabled until a slot is actually picked —
+  // picking a chip (selectSlotLocally()) is now a pure UI selection with no
+  // backend call at all (explicit decision: holding on every click let
+  // browsing visitors fight over slots they never intended to book, and
+  // this file no longer polls the grid in the background either — see
+  // handleSlotContinue() below for where the real hold is placed instead,
+  // only at the moment of commitment). Also gated on !placingSlotHold,
+  // which is now only ever true for the short window of Continue's own
+  // hold-placement request — this both blocks a double-submit on Continue
+  // itself and (via the slot-chip click handler's own placingSlotHold
+  // guard) freezes the grid against further picks while that request is
+  // in flight, so a hold can never land for a slot other than the one
+  // Continue was actually clicked for.
   const updateSlotContinueButton = () => {
-    // Also gated on !placingSlotHold — holdId can legitimately still point
-    // at a still-valid PREVIOUS slot while a switch to a different slot is
-    // in flight (see handleSlotSelection: holdId is deliberately left
-    // untouched until the new hold actually succeeds), which would
-    // otherwise let Continue submit a mismatched holdId/selectedSlot pair
-    // mid-switch.
-    const hasConfirmedHold = Boolean(slotPicker.holdId) && !placingSlotHold;
+    const hasSelection = Boolean(slotPicker.selectedSlot) && !placingSlotHold;
     flow.querySelectorAll('[data-kal-slot-continue]').forEach((btn) => {
-      btn.disabled = !hasConfirmedHold;
+      btn.disabled = !hasSelection;
     });
   };
 
-  const buildSlotChip = (slot, isActive) => {
+  const buildSlotChip = (slot, isActive, isOwnHold) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `kal-slot-chip${isActive ? ' kal-slot-chip--active' : ''}`;
     btn.dataset.kalSlotStart = slot.time;
     btn.dataset.kalSlotEnd = slot.endTime;
-    if (!slot.available) btn.disabled = true;
+    // The visitor's own hold (and every other 15-minute candidate it
+    // overlaps, e.g. a 45-minute hold at 09:00 also covers 09:15/09:30 —
+    // see renderSlotPanels's ownHeldSlots handling) comes back from the API
+    // with available:false too. isOwnHold (slot.holdId matches this
+    // visitor's own holdId), not just isActive, must keep the chip enabled
+    // — otherwise every candidate except the exact one clicked reads as
+    // struck-through/dead and the visitor has no way to switch within their
+    // own hold's range, even though doing so is a perfectly normal replace.
+    if (!slot.available && !isOwnHold) btn.disabled = true;
     btn.textContent = formatTime12h(slot.time);
     return btn;
   };
@@ -1668,32 +1773,115 @@ document.addEventListener('DOMContentLoaded', () => {
   // highlighted or recorded as selectedSlot; explicit instruction, since
   // the old auto-selected-first-slot default made it look like a time was
   // already chosen before the visitor had picked anything.
-  const renderSlotPanels = (slots) => {
-    // Only available slots are shown at all — a struck-through, disabled
-    // chip for an already-booked time isn't useful to a visitor choosing
-    // when to come in, it's just noise (and clutter on mobile). The API
-    // still returns unavailable ones (staff-side views need them), this
-    // just filters them out before they ever reach the grid.
-    const availableSlots = slots.filter((slot) => slot.available);
+  // preserveHold: true keeps whatever slotPicker.holdId/heldSlot already is
+  // instead of resetting it — for a refresh that is NOT a real date/
+  // doctor/facility/mode change (arriving/returning at Slot Picker with a
+  // still-valid hold, and the same-date conflict-recovery refresh in
+  // handleSlotContinue's catch block). An actual change still always resets
+  // (see the two refreshSlotsForSelectedDate
+  // call sites below that don't pass this), same as the CMS wizard's
+  // holdSelectionInputs effect. Without this distinction, ANY re-render —
+  // including one that only exists to recover from a conflict on the SAME
+  // date — silently released a hold that was still perfectly valid, since
+  // this function couldn't tell the two cases apart (see
+  // SHOPIFY_HOLD_SWITCHING_PLAN.md's rapid-switch RCA).
+  const renderSlotPanels = (slots, { preserveHold = false, revealBlockedBy = null } = {}) => {
+    // Only available slots are shown at all by default — a struck-through,
+    // disabled chip for an already-booked time isn't useful to a visitor
+    // browsing when to come in, it's just noise (and clutter on mobile).
+    // revealBlockedBy ({ attemptedTime }) punches a narrow, precise hole in
+    // that for one case: the conflict-recovery refresh in
+    // handleSlotContinue's catch block, right after a Continue attempt just
+    // lost a race. Every slot the API returns already carries the real
+    // holdId/appointmentId of whatever occupies it (same field this file
+    // already reads for isOwnHold matching) — so instead of guessing a time
+    // window or diffing against stale render history (both tried and both
+    // wrong: time-window math swept in unrelated pre-existing unavailable
+    // slots that merely happened to overlap; diffing against the last
+    // render went stale the moment a SECOND conflict followed a first one,
+    // since slots already unavailable from the earlier conflict no longer
+    // registered as "newly" lost — reported live, see SHOPIFY_HOLD_
+    // SWITCHING_PLAN.md), this looks up whatever hold/appointment actually
+    // occupies attemptedTime in THIS fresh fetch, then reveals every other
+    // slot sharing that exact same id. That's the real, current, precise
+    // set of candidates blocked by the one specific thing that just beat
+    // this visitor to it — nothing unrelated gets swept in, and it's
+    // self-correcting on every fetch rather than depending on history.
+    // Any other still-unavailable slot stays hidden exactly like it always
+    // does. buildSlotChip already disables any slot.available:false chip
+    // it's handed (except the visitor's own held one, via isOwnHold) — the
+    // only thing hiding the rest was this filter never letting them reach
+    // it.
+    const blockingSlot = revealBlockedBy && slots.find((slot) => slot.time === revealBlockedBy.attemptedTime);
+    const blockingHoldId = blockingSlot && !blockingSlot.available ? blockingSlot.holdId : null;
+    const blockingAppointmentId = blockingSlot && !blockingSlot.available ? blockingSlot.appointmentId : null;
+    const isBlockedBySameConflict = (slot) =>
+      (blockingHoldId && slot.holdId === blockingHoldId) ||
+      (blockingAppointmentId && slot.appointmentId === blockingAppointmentId);
+    let availableSlots = slots.filter((slot) => slot.available || isBlockedBySameConflict(slot));
+
+    // A slot the visitor is actively holding comes back from the API as
+    // available:false too — the endpoint has no notion of "unavailable
+    // because of MY OWN hold" vs. anyone else's, it just reports whether
+    // the time is free. Without this, the arrival-at-Slot-Picker refresh
+    // (goToStep('slot-picker') preserving a hold placed earlier) or the
+    // same-date conflict-recovery refresh (handleSlotContinue's catch
+    // block) would silently drop the visitor's own held chip from the grid
+    // the moment the server echoes it back as held, reading as if the
+    // selection was lost even though the hold is still genuinely active.
+    // slot.holdId on the API response (same AppointmentSlotRecord shape
+    // the CMS wizard's Active View uses) is how we tell "it's mine" apart
+    // from "someone/something else has it" — compare against the hold ID
+    // THIS visitor actually holds, never against selectedSlot/time alone.
+    // IMPORTANT: a hold's duration can span several 15-minute grid candidates
+    // (e.g. a 45-minute hold at 08:15 also overlaps — and so also carries
+    // the same holdId on — the 07:45/08:00/08:30/08:45 candidates). All of
+    // them need to come back into the grid, not just the one actually
+    // clicked: those overlapping candidates are only unavailable because of
+    // THIS visitor's own hold, so they must stay switchable (clicking one
+    // just updates the local selection — see selectSlotLocally() — the
+    // actual replace only happens next time Continue is pressed) instead of
+    // silently disappearing. The exact held time is still tracked
+    // separately (slotPicker.heldSlot) so only that one renders as the
+    // active chip — see isActive below.
+    if (preserveHold && slotPicker.holdId) {
+      const alreadyIncludedTimes = new Set(availableSlots.map((slot) => slot.time));
+      const ownHeldSlots = slots.filter(
+        (slot) => slot.holdId === slotPicker.holdId && !alreadyIncludedTimes.has(slot.time)
+      );
+      if (ownHeldSlots.length) {
+        // Re-sort after inserting — the API returns slots time-ordered
+        // already, but splicing the held ones back in at the end would
+        // otherwise put them after later times within the same period.
+        availableSlots = [...availableSlots, ...ownHeldSlots].sort((a, b) => a.time.localeCompare(b.time));
+      }
+    }
 
     const byPeriod = { morning: [], afternoon: [], evening: [] };
     availableSlots.forEach((slot) => {
       byPeriod[periodForTime(slot.time)].push(slot);
     });
 
-    // Re-rendering this grid (date change, or landing on this step at all —
-    // see goToStep('slot-picker')) always starts from no selection and no
-    // hold, same as the CMS wizard's own releaseActiveHold() firing
-    // whenever date/doctor/facility/mode change (appointment-booking-
-    // wizard.tsx's holdSelectionInputs effect) — any hold that was active
-    // for the previous slot/date is explicitly released here too now (see
-    // releaseSlotHoldViaPartnerApi() below), not just abandoned to expire.
-    const staleHoldId = slotPicker.holdId;
-    slotPicker.selectedSlot = null;
-    slotPicker.holdId = null;
-    slotHoldRequestSequence += 1;
-    if (staleHoldId) void releaseSlotHoldViaPartnerApi(staleHoldId);
-    updateSlotContinueButton();
+    if (!preserveHold) {
+      // Re-rendering this grid for a real date/doctor/facility/mode change
+      // starts from no selection and no hold, same as the CMS wizard's own
+      // releaseActiveHold() firing whenever those inputs change
+      // (appointment-booking-wizard.tsx's holdSelectionInputs effect) — any
+      // hold that was active for the previous slot/date is explicitly
+      // released here too now (see releaseSlotHoldViaPartnerApi() below),
+      // not just abandoned to expire. Landing on this step at all no
+      // longer unconditionally lands here — see goToStep('slot-picker'),
+      // which now preserves a still-valid hold across Back/Continue
+      // instead of always discarding it.
+      const staleHoldId = slotPicker.holdId;
+      slotPicker.selectedSlot = null;
+      slotPicker.holdId = null;
+      slotPicker.heldSlot = null;
+      slotPicker.holdContext = null;
+      slotHoldRequestSequence += 1;
+      if (staleHoldId) void releaseSlotHoldViaPartnerApi(staleHoldId);
+      updateSlotContinueButton();
+    }
 
     const firstAvailable = availableSlots[0] || null;
 
@@ -1709,11 +1897,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       byPeriod[period].forEach((slot) => {
-        panel.appendChild(buildSlotChip(slot, false));
+        // Active highlight tracks heldSlot, not selectedSlot — this render
+        // only ever runs with preserveHold true right after the caller has
+        // synced selectedSlot back to heldSlot anyway (goToStep /
+        // handleSlotContinue's conflict fallback), but reading heldSlot
+        // directly here doesn't depend on that still being true everywhere
+        // this function is ever called from in the future.
+        const isActive =
+          preserveHold && Boolean(slotPicker.heldSlot) && slot.time === slotPicker.heldSlot.start_time;
+        const isOwnHold = preserveHold && Boolean(slotPicker.holdId) && slot.holdId === slotPicker.holdId;
+        panel.appendChild(buildSlotChip(slot, isActive, isOwnHold));
       });
     });
 
-    if (firstAvailable) {
+    // A preserved selection stays on whichever tab it's already showing —
+    // only an actual reset (new date, or no prior selection to keep) should
+    // jump the visitor to the first available period.
+    if (firstAvailable && !(preserveHold && slotPicker.selectedSlot)) {
       setSlotTab(periodForTime(firstAvailable.time));
     }
   };
@@ -1731,20 +1931,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // changes (day-strip click or calendar pick). Shows a loading state in
   // all three panels while the fetch is in flight so switching dates
   // doesn't leave the previous date's (now-stale) slots on screen.
-  const refreshSlotsForSelectedDate = async () => {
-    ['morning', 'afternoon', 'evening'].forEach((period) => {
-      const panel = flow.querySelector(`.kal-slot-grid[data-kal-slot-panel="${period}"]`);
-      if (panel) setDoctorListEmptyState(panel, 'Loading slots…');
-    });
-    const slots = await fetchSlotsForDate(slotPicker.selectedDate);
-    if (slots === null) {
+  const refreshSlotsForSelectedDate = async ({ preserveHold = false, revealBlockedBy = null } = {}) => {
+    // A preserving refresh (arrival at Slot Picker with a still-valid hold,
+    // or same-date conflict recovery) must not blank the grid to "Loading
+    // slots…" first — the visitor's current selection/hold is still valid
+    // and still on screen; same as the CMS wizard's react-query refetch
+    // keeping previous data visible instead of flashing a loading state.
+    if (!preserveHold) {
       ['morning', 'afternoon', 'evening'].forEach((period) => {
         const panel = flow.querySelector(`.kal-slot-grid[data-kal-slot-panel="${period}"]`);
-        if (panel) setDoctorListEmptyState(panel, 'Unable to load slots right now.');
+        if (panel) setDoctorListEmptyState(panel, 'Loading slots…');
       });
+    }
+    const slots = await fetchSlotsForDate(slotPicker.selectedDate);
+    if (slots === null) {
+      if (!preserveHold) {
+        ['morning', 'afternoon', 'evening'].forEach((period) => {
+          const panel = flow.querySelector(`.kal-slot-grid[data-kal-slot-panel="${period}"]`);
+          if (panel) setDoctorListEmptyState(panel, 'Unable to load slots right now.');
+        });
+      }
       return;
     }
-    renderSlotPanels(slots);
+    renderSlotPanels(slots, { preserveHold, revealBlockedBy });
   };
 
   // The strip now spans every bookable day (today through +90, the same
@@ -2880,18 +3089,25 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
-  // SLOT HOLD ON CLICK — same hold-the-instant-you-click-and-release-on-
-  // supersede behavior as the CMS staff-side booking wizard's own
-  // handleSlotSelection()/placeHoldForSlot()/releaseActiveHold()
-  // (apps/web/src/features/appointments/components/appointment-booking-
-  // wizard.tsx), rather than this flow's previous design of only ever
-  // calling availability/holds once, at final "Proceed to Payment". The
-  // partner API now has its own release endpoint too (POST availability/
-  // holds/:holdId/release, added alongside this — see
-  // releaseSlotHoldViaPartnerApi() below), reusing the exact same
-  // AppointmentsService.releaseSlotHold() the staff wizard's DELETE
-  // appointments/slot-holds/:holdId already calls — no new release logic
-  // on the CMS side, just a partner-authenticated route onto it.
+  // SLOT HOLD ON CONTINUE — deliberately NOT the CMS staff wizard's
+  // hold-the-instant-you-click pattern. On the public Shopify storefront,
+  // every visitor is anonymous and many of them are just browsing —
+  // holding on every click meant a visitor who never intended to book
+  // could still force real holds (and real releases) against the advisory
+  // lock for every slot they glanced at, fighting other visitors over
+  // slots nobody was actually committing to. The real hold now only gets
+  // placed once, at the moment the visitor actually presses Continue (see
+  // handleSlotContinue() below) — picking a chip beforehand
+  // (selectSlotLocally()) is a pure UI selection with no backend call.
+  // This also removes the need for background polling (see
+  // slotHoldRequestSequence's own comment above): the grid only has to be
+  // fresh at that one commit moment, not continuously.
+  // The partner API still has its own release endpoint (POST
+  // availability/holds/:holdId/release — see releaseSlotHoldViaPartnerApi()
+  // below), reusing the exact same AppointmentsService.releaseSlotHold()
+  // the staff wizard's DELETE appointments/slot-holds/:holdId already
+  // calls — no new release logic on the CMS side, just a
+  // partner-authenticated route onto it.
   // ----------------------------------------------------------------------
 
   const placeHoldForSlot = async (slot, replacingHoldId) => {
@@ -2935,85 +3151,125 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Mirrors the CMS wizard's handleSlotSelection(): reflects the click
-  // immediately (selectedSlot + active chip), places the real hold, and
-  // only then enables Continue (see updateSlotContinueButton(), gated on
-  // holdId not selectedSlot). slotHoldRequestSequence guards against a
-  // slower earlier click's response landing after a faster later one's —
-  // same pattern as the CMS wizard's holdRequestSequence ref. Two release
-  // cases, same as the CMS wizard: if this click's own hold resolves
-  // after an even-newer click already won, release the one THIS call just
-  // placed (it's the stale one now); otherwise adopt it and release
-  // whatever hold was active before this click, if any.
-  const handleSlotSelection = async (slotChipTrigger) => {
+  // Pure local selection — no backend call. Updates selectedSlot (the
+  // visitor's current UI pick) and the active chip highlight only; holdId/
+  // heldSlot are untouched here and only ever change in
+  // handleSlotContinue() below. Guarded against firing while a Continue
+  // click's own hold request is in flight (placingSlotHold) — that window
+  // is now brief and rare (only right after pressing Continue), but a
+  // chip clicked mid-flight must not silently redirect where that
+  // in-flight hold ends up landing relative to what's now on screen.
+  const selectSlotLocally = (slotChipTrigger) => {
+    if (placingSlotHold) return;
     const slot = {
       start_time: slotChipTrigger.dataset.kalSlotStart,
       end_time: slotChipTrigger.dataset.kalSlotEnd,
     };
+    if (slotPicker.selectedSlot?.start_time === slot.start_time) return;
 
-    if (placingSlotHold && slotPicker.selectedSlot?.start_time === slot.start_time) return;
-    if (slotPicker.holdId && slotPicker.selectedSlot?.start_time === slot.start_time) return;
-
-    const previousHoldId = slotPicker.holdId;
-    const previousSlot = slotPicker.selectedSlot;
-    const requestId = ++slotHoldRequestSequence;
     clearBookingError();
     slotPicker.selectedSlot = slot;
-    // slotPicker.holdId is deliberately left untouched here — only ever
-    // reassigned once the new hold below actually succeeds (mirrors the
-    // CMS staff wizard's activeHoldId.current pattern). Nulling it
-    // immediately, as this used to, meant a failed switch permanently lost
-    // the reference to a still-valid original hold: the visitor couldn't
-    // act on either slot until the orphaned hold's 5-minute TTL lapsed.
-    // updateSlotContinueButton() below separately guards against this
-    // leaving Continue clickable mid-switch (via placingSlotHold).
     flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
       chip.classList.toggle('kal-slot-chip--active', chip.dataset.kalSlotStart === slot.start_time);
     });
     updateSlotContinueButton();
+  };
+
+  // Slot Picker's real Continue handler (data-kal-slot-continue — excluded
+  // from the generic data-kal-goto delegation below, same precedent as
+  // data-kal-patient-continue/data-kal-confirm-booking, since this must
+  // only navigate after a real hold succeeds, not unconditionally).
+  // Places/replaces the hold for whatever's currently selected, same
+  // release-on-supersede behavior the old click-time version had, just
+  // moved to fire once here instead of on every chip click.
+  const handleSlotContinue = async () => {
+    if (placingSlotHold) return;
+    const slot = slotPicker.selectedSlot;
+    if (!slot) return;
+
+    // Already holding exactly this slot — e.g. the visitor came back via
+    // Back without changing their pick (goToStep('slot-picker') already
+    // re-synced selectedSlot to heldSlot in that case). Nothing to place
+    // or replace; just proceed.
+    if (
+      slotPicker.holdId &&
+      slotPicker.heldSlot?.start_time === slot.start_time &&
+      slotPicker.holdContext?.doctorId === selectedDoctorId &&
+      slotPicker.holdContext?.mode === slotPicker.mode
+    ) {
+      goToStep('patient-details');
+      return;
+    }
+
+    const previousHoldId = slotPicker.holdId;
+    const previousHeldSlot = slotPicker.heldSlot;
+    const requestId = ++slotHoldRequestSequence;
+    clearBookingError();
     placingSlotHold = true;
+    updateSlotContinueButton();
 
     try {
       const holdId = await placeHoldForSlot(slot, previousHoldId);
       if (requestId !== slotHoldRequestSequence) {
-        // A newer click already took over while this hold was in flight —
-        // this one is now orphaned, release it rather than leave it.
+        // A newer Continue click already took over while this one was in
+        // flight — this hold is now orphaned, release it rather than leave it.
         void releaseSlotHoldViaPartnerApi(holdId);
         return;
       }
       slotPicker.holdId = holdId;
+      slotPicker.heldSlot = slot;
+      // facility isn't tracked here — nothing in this flow lets a visitor
+      // change clinic once Slot Picker is reachable (it's fixed by
+      // whichever card/CTA opened the modal), so doctor + mode are the only
+      // inputs that can actually change out from under a still-active hold.
+      slotPicker.holdContext = { doctorId: selectedDoctorId, mode: slotPicker.mode };
       if (previousHoldId && previousHoldId !== holdId) {
         void releaseSlotHoldViaPartnerApi(previousHoldId);
       }
+      goToStep('patient-details');
     } catch (err) {
       if (requestId === slotHoldRequestSequence) {
-        // The switch failed — fall back to the previous selection rather
-        // than leaving the visitor on a dead one. previousHoldId itself was
-        // never touched above, so if it's still valid, this restores a
-        // fully consistent, still-bookable state (matching chip active,
-        // holdId and selectedSlot both pointing at the same real slot)
-        // instead of just clearing everything to "nothing selected".
-        slotPicker.selectedSlot = previousSlot;
+        // Someone else took this slot (or another conflict happened) in the
+        // time since the grid was last fetched (there's no background
+        // polling now — see SLOT HOLD ON CONTINUE above). Fall back to
+        // whatever's actually still held, if anything, rather than leaving
+        // the visitor on a dead selection with no obvious next step.
+        // previousHoldId/previousHeldSlot were never touched above, so if
+        // still valid they restore a fully consistent state.
+        slotPicker.selectedSlot = previousHeldSlot;
         flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
           chip.classList.toggle(
             'kal-slot-chip--active',
-            Boolean(previousSlot) && chip.dataset.kalSlotStart === previousSlot.start_time,
+            Boolean(previousHeldSlot) && chip.dataset.kalSlotStart === previousHeldSlot.start_time,
           );
         });
-        showBookingError(
-          err instanceof Error && err.message && !err.message.startsWith('HTTP')
-            ? err.message
-            : 'Unable to reserve that slot right now. Please try another.',
-        );
-        // Someone else just took this slot (or another conflict happened) —
-        // the grid on screen is now stale, still showing it as pickable.
-        // Re-fetch so the visitor sees what's actually still available
-        // instead of being able to click the same dead slot again. The
-        // error banner clears once the refreshed grid actually lands —
-        // left showing until then would read as "still broken" even after
-        // the grid already reflects current availability.
-        void refreshSlotsForSelectedDate().then(() => {
-          if (requestId === slotHoldRequestSequence) clearBookingError();
+        // Always this fixed copy, never the server's raw message (e.g.
+        // "The selected slot is unavailable") — explicit text from the
+        // Figma spec for this banner, not something that should drift
+        // depending on which backend message happened to come back.
+        showBookingError('That slot was just booked. Please choose another time.');
+        // Re-fetch once, revealing every other slot blocked by the exact
+        // same hold/appointment that just blocked this attempt (see
+        // renderSlotPanels's revealBlockedBy param — it looks up
+        // slot.start_time's real holdId/appointmentId in the fresh fetch
+        // itself, no history or time-math needed). Left showing (no
+        // auto-clear) until the visitor actually picks a different slot —
+        // see clearBookingError() in selectSlotLocally() above.
+        // preserveHold:true always (same as the old click-time version):
+        // when there IS a still-valid prior hold, this is a same-date
+        // recovery that must not wipe it; when there wasn't one (first-ever
+        // Continue attempt), holdId is still null, so renderSlotPanels's
+        // own preserveHold-gated branches both no-op correctly on their own
+        // — nothing to reinject, nothing to reset that wasn't already reset
+        // above. Deliberately NOT awaited — a full (non-preserving) refresh
+        // would bump slotHoldRequestSequence itself (see renderSlotPanels),
+        // which would make this requestId stop matching before the finally
+        // block below gets to run; this path always uses preserveHold:true
+        // so that never happens, but staying fire-and-forget keeps that
+        // invariant from being load-bearing.
+        void refreshSlotsForSelectedDate({
+          preserveHold: true,
+          revealBlockedBy: { attemptedTime: slot.start_time },
         });
       }
     } finally {
@@ -3053,10 +3309,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const appointmentDate = toIsoDate(slotPicker.selectedDate);
       const appointmentTime = slotPicker.selectedSlot.start_time;
 
-      // The hold was already placed the instant the slot was clicked (see
-      // handleSlotSelection() above) — reused here rather than placing a
-      // second one, matching the CMS wizard's own one-hold-per-selection
-      // model instead of this flow's previous hold-right-before-booking.
+      // The hold was already placed when Continue was pressed on Slot
+      // Picker (see handleSlotContinue() above) — reused here rather than
+      // placing a second one.
       const concerns = collectSelectedConcernLabels();
       const appointment = await postToPartnerApi(
         'appointments',
@@ -3087,8 +3342,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ? err.message
           : 'Unable to complete your booking right now. Please try again.',
       );
-      // The hold was already placed before this call (handleSlotSelection()
-      // above, at slot-click time) — if creating the appointment itself
+      // The hold was already placed before this call (handleSlotContinue()
+      // above, on Slot Picker's Continue) — if creating the appointment itself
       // failed, no appointment exists to protect, so release it rather
       // than leave the visitor's own in-progress hold sitting there for
       // its full TTL. Best-effort, same fallback as every other release
@@ -3100,6 +3355,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const failedHoldId = slotPicker.holdId;
       if (failedHoldId) {
         slotPicker.holdId = null;
+        slotPicker.heldSlot = null;
+        slotPicker.holdContext = null;
         slotPicker.selectedSlot = null;
         flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
           chip.classList.remove('kal-slot-chip--active');
@@ -3254,7 +3511,23 @@ document.addEventListener('DOMContentLoaded', () => {
       goToStep('entry');
     }
     if (e.target.closest('[data-kal-close]')) {
-      closeFlow();
+      // An active hold would otherwise just be dropped on the floor by
+      // closeFlow() — ask first instead of closing straight away. Nothing
+      // to lose if no hold is active yet (e.g. closing from Entry/Concern
+      // Select/Doctor Select), so skip the confirmation entirely there.
+      if (slotPicker.holdId) {
+        openLeaveBookingModal();
+      } else {
+        closeFlow();
+      }
+    }
+
+    if (e.target.closest('[data-kal-leave-booking-dismiss]')) {
+      closeLeaveBookingModal();
+    }
+
+    if (e.target.closest('[data-kal-leave-booking-confirm]')) {
+      confirmLeaveBooking();
     }
 
     // Concern Select's floating scroll hint (mobile only, see that
@@ -3276,12 +3549,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // is never disabled (always clickable, errors shown on click instead —
     // see validatePatientDetailsAndShowErrors), this generic handler would
     // otherwise navigate unconditionally on every click, before validation
-    // ever got a say. Also excludes data-kal-confirm-booking — see its own
-    // dedicated handler below (BOOKING SUBMISSION) for why: it must only
-    // navigate after a real hold+appointment succeed, not unconditionally.
-    const gotoTrigger = e.target.closest('[data-kal-goto]:not([data-kal-patient-continue]):not([data-kal-confirm-booking])');
+    // ever got a say. Also excludes data-kal-confirm-booking (own handler
+    // below, BOOKING SUBMISSION) and data-kal-slot-continue (own handler
+    // below, handleSlotContinue()) — both must only navigate after a real
+    // hold (+appointment, for the former) succeeds, not unconditionally.
+    const gotoTrigger = e.target.closest(
+      '[data-kal-goto]:not([data-kal-patient-continue]):not([data-kal-confirm-booking]):not([data-kal-slot-continue])',
+    );
     if (gotoTrigger) {
       goToStep(gotoTrigger.dataset.kalGoto);
+    }
+
+    // Slot Picker's Continue — places/replaces the real hold for whatever's
+    // currently selected and only navigates once that succeeds (see
+    // handleSlotContinue() above for why this moved off the per-click
+    // handler).
+    const slotContinueTrigger = e.target.closest('[data-kal-slot-continue]:not(:disabled)');
+    if (slotContinueTrigger) {
+      void handleSlotContinue();
     }
 
     // Confirmation's "Proceed to Payment"/"Continue" — runs the real
@@ -3407,7 +3692,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const slotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');
     if (slotChipTrigger && slotChipTrigger.dataset.kalSlotStart) {
-      void handleSlotSelection(slotChipTrigger);
+      selectSlotLocally(slotChipTrigger);
     }
 
     const slotTabTrigger = e.target.closest('[data-kal-slot-tab]');
