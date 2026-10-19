@@ -663,37 +663,71 @@ document.addEventListener('DOMContentLoaded', () => {
   // Overwrites the theme-editor-authored "Next slot - Today, 11:00 AM" text
   // (kal-doctor-card-source blocks are otherwise real, backend-driven doctor
   // data except for this one line — see /doctors' nextSlotToday field) with
-  // the doctor's REAL next available slot: today's first open slot, or
-  // tomorrow's if today is fully booked/a day off, straight from the same
-  // availability pipeline the Slot Picker itself uses (resolveNextSlotCard()
-  // on the partner API side). No source card / no field in the static block
-  // both mean the same thing here (nowhere to put the line, or genuinely
-  // nothing available in the next 2 days) — leave the line out rather than
-  // show something wrong or stale.
+  // the doctor's REAL next available slot: the earliest bookable slot for
+  // the CURRENT consultation mode, searched across the same horizon the
+  // Slot Picker's own calendar covers, straight from the same availability
+  // pipeline the Slot Picker itself uses (resolveNextSlotCard() on the
+  // partner API side, which is mode-aware exactly the way Slot Picker's
+  // own slot fetch is). nextSlotToday is null when the doctor has nothing
+  // bookable anywhere in that horizon under the current mode — shown as
+  // "No upcoming slots" rather than hiding the line, so the card never
+  // looks broken/blank. No source card at all (buildFallbackDoctorCard) is
+  // the one case with nowhere to put this line — nothing to do there.
   const applyDoctorCardNextSlot = (card, nextSlotToday) => {
     const el = card.querySelector('.kal-doctor-card__next-slot');
     if (!el) return;
     el.textContent = '';
+    el.hidden = false;
     if (!nextSlotToday) {
-      el.hidden = true;
+      el.textContent = 'No upcoming slots';
       return;
     }
-    el.hidden = false;
     el.append(`Next slot - `);
     const strong = document.createElement('strong');
     strong.textContent = `${nextSlotToday.label}, ${formatTime12h(nextSlotToday.time)}`;
     el.appendChild(strong);
   };
 
-  // Keyed by facility id, same pattern as therapyDoctorCache below (which
-  // hits this exact endpoint too) — revisiting Doctor Select after going
-  // forward and back (e.g. Slot Picker's own Back button) re-runs
-  // goToStep('doctor-select') -> loadDoctorsForFacility() unconditionally,
-  // so without this every such revisit refetched and fully re-rendered an
-  // identical list the visitor had already seen.
-  let doctorListCache = null; // { facilityId, doctors }
+  // Keyed by (facilityId, mode) — the "Next slot" badge is mode-specific
+  // now (see applyDoctorCardNextSlot above), so a cached list fetched under
+  // one mode must never be reused to render the other; same facility+mode
+  // pair hit again (e.g. revisiting Doctor Select via Slot Picker's Back
+  // button) still reuses the cache instead of re-fetching an identical
+  // list, same intent as the old facility-only cache had.
+  let doctorListCache = null; // { facilityId, mode, doctors }
+  // Bumped every time a NEW doctor-list fetch actually starts (facility or
+  // mode genuinely changed) — same pattern as slotHoldRequestSequence
+  // elsewhere in this file. A fetch whose requestId no longer matches by
+  // the time it resolves belongs to a facility/mode selection the visitor
+  // has since moved on from, so its result is silently dropped instead of
+  // overwriting whatever's already on screen for the CURRENT selection.
+  let doctorListRequestSequence = 0;
 
-  const renderDoctorList = (list, doctors) => {
+  const renderDoctorList = (list, allDoctors) => {
+    // Hide doctors who don't take the mode currently on screen — the API
+    // returns supportsOnline/supportsOffline per doctor (derived from the
+    // same slotType schedule-window data that already drives availability
+    // filtering), so an incompatible doctor never gets picked in the first
+    // place instead of only surfacing as an empty Slot Picker a step later.
+    const doctors = allDoctors.filter((doctor) =>
+      slotPicker.mode === 'video' ? doctor.supportsOnline : doctor.supportsOffline,
+    );
+
+    if (doctors.length === 0) {
+      list.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'kal-step-doctor-select__list-empty';
+      p.textContent =
+        slotPicker.mode === 'video'
+          ? 'No doctors available for video consultation at this clinic.'
+          : 'No doctors available for in-clinic consultation at this clinic.';
+      list.appendChild(p);
+      if (selectedDoctorId !== null) clearDayAvailabilityCache();
+      selectedDoctorId = null;
+      updateDoctorSelectContinueButton();
+      return;
+    }
+
     // lastDoctorSelection only counts as "still active" if it was made
     // under the mode currently on screen — a pick made under the other
     // mode is deliberately forgotten the instant a new one is made (see
@@ -756,11 +790,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const facility = await getCurrentFacility();
     if (!facility || !facility.id) {
       doctorListCache = null;
+      doctorListRequestSequence += 1; // any in-flight fetch is now stale
       setEmptyState('Pick a clinic first to see available doctors.');
       return;
     }
 
-    if (doctorListCache && doctorListCache.facilityId === facility.id) {
+    const mode = slotPicker.mode === 'video' ? 'online' : 'offline';
+
+    if (doctorListCache && doctorListCache.facilityId === facility.id && doctorListCache.mode === mode) {
       renderDoctorList(list, doctorListCache.doctors);
       return;
     }
@@ -772,20 +809,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setEmptyState('Loading doctors…');
+    const requestId = ++doctorListRequestSequence;
 
     let doctors;
     try {
       const response = await fetch(
-        `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}`,
+        `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}&mode=${encodeURIComponent(mode)}`,
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       doctors = Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
     } catch (err) {
+      if (requestId !== doctorListRequestSequence) return; // superseded by a newer facility/mode selection
       console.error('[kal-booking-flow] Failed to load doctors:', err);
       setEmptyState('Unable to load doctors right now.');
       return;
     }
+
+    // A newer call (facility or mode changed again while this fetch was in
+    // flight) has already started — that one owns the screen now. Drop
+    // this result entirely rather than let a slow, stale response race
+    // ahead of a faster, newer one and overwrite the correct badges.
+    if (requestId !== doctorListRequestSequence) return;
 
     if (doctors.length === 0) {
       doctorListCache = null;
@@ -793,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    doctorListCache = { facilityId: facility.id, doctors };
+    doctorListCache = { facilityId: facility.id, mode, doctors };
     renderDoctorList(list, doctors);
   };
 
@@ -1594,6 +1639,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let slotHoldRequestSequence = 0;
   let placingSlotHold = false;
 
+  // Same re-entrancy guard pattern as placingSlotHold above, but for the
+  // async Razorpay order-creation + Checkout + verification sequence
+  // (ensurePaymentVerified() below) — true only for that brief window so a
+  // double-click on "Proceed to Payment" can't open two Checkout modals or
+  // fire two orders for the same hold.
+  let placingPayment = false;
+
   // Keyed by ISO date ("YYYY-MM-DD") -> the day-summaries endpoint's
   // per-day summary object ({ availableSlots, totalSlots, ... }). Shared
   // by the day-strip and the calendar modal so a date fetched for one is
@@ -1910,10 +1962,18 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // A preserved selection stays on whichever tab it's already showing —
-    // only an actual reset (new date, or no prior selection to keep) should
-    // jump the visitor to the first available period.
-    if (firstAvailable && !(preserveHold && slotPicker.selectedSlot)) {
+    // A preserveHold render stays on whichever tab is already showing —
+    // only an actual reset (new date/doctor/mode, no hold to preserve at
+    // all) should jump the visitor to the first available period. This
+    // used to also require slotPicker.selectedSlot to be set, which broke
+    // the conflict-recovery case: a visitor's FIRST-EVER Continue attempt
+    // (no successful hold placed yet) that loses a race to someone else
+    // has no selectedSlot to restore, so that extra check jumped them all
+    // the way to Morning even if they'd been looking at Evening the whole
+    // time — only the hold-restore part of "preserve" should be
+    // conditional on actually having something to restore; staying on the
+    // current tab should not be.
+    if (firstAvailable && !preserveHold) {
       setSlotTab(periodForTime(firstAvailable.time));
     }
   };
@@ -3023,6 +3083,32 @@ document.addEventListener('DOMContentLoaded', () => {
     return `kal-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   };
 
+  // Payment-operation idempotency keys, scoped ONLY to the two payment calls
+  // inside ensurePaymentVerified() below (payments/orders, payments/verify).
+  // Every other generateIdempotencyKey() call site in this file (hold
+  // placement, hold release, appointment submit, therapy request) is
+  // untouched — those are out of scope for this fix.
+  //
+  // A fresh key on every call (plain generateIdempotencyKey()) defeats the
+  // backend's idempotency replay/conflict-guard: retries and concurrent
+  // duplicate submissions of the SAME logical attempt (same hold, same
+  // operation) need to send the SAME key so the backend actually recognizes
+  // them as the same attempt. Keyed off `${holdId}:${operation}` so a
+  // genuinely new hold (new booking attempt) still gets a new key, and
+  // in-memory only is sufficient — no persistence across a hard refresh is
+  // required.
+  const paymentIdempotencyKeys = new Map();
+
+  const getPaymentIdempotencyKey = (holdId, operation) => {
+    const cacheKey = `${holdId}:${operation}`;
+    let key = paymentIdempotencyKeys.get(cacheKey);
+    if (!key) {
+      key = generateIdempotencyKey();
+      paymentIdempotencyKeys.set(cacheKey, key);
+    }
+    return key;
+  };
+
   // Stored format matches the CMS's own parseStoredPhone() convention
   // (packages/validation/src/phone.schema.ts) — dial code immediately
   // followed by the digits, e.g. "+919876543210".
@@ -3083,10 +3169,138 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.success) {
       const message = data?.message || `HTTP ${response.status}`;
-      throw new Error(message);
+      const error = new Error(message);
+      // Some failures carry a machine-readable code in data.data.code (e.g.
+      // the backend's SLOT_LOST_REFUNDED response -- see
+      // ensurePaymentVerified()/submitBooking() below) that callers need to
+      // branch on instead of matching the human message text. Attached as a
+      // plain extra property so every existing catch (err) handler in this
+      // file -- which only ever reads err.message -- keeps working exactly
+      // as before.
+      error.code = data?.data?.code || null;
+      throw error;
     }
     return data.data;
   };
+
+  // ----------------------------------------------------------------------
+  // RAZORPAY PAYMENT (Test Mode, ₹1 fixed test amount server-side — the
+  // amount is never sent from here) — POST payments/orders creates/reopens
+  // a Razorpay order for the already-placed hold, Razorpay's own Checkout
+  // modal collects card/UPI/netbanking details, and POST payments/verify
+  // confirms the result server-side (signature + a server-to-server
+  // Razorpay lookup) before submitBooking() is allowed to proceed to the
+  // real POST appointments call. Never trusts Checkout's own callback by
+  // itself — only a successful payments/verify response counts.
+  // ----------------------------------------------------------------------
+
+  // Resolves once a real, verified payment exists for slotPicker.holdId, or
+  // rejects with a plain Error (message shown via showBookingError, same as
+  // every other booking failure) — including a distinct
+  // err.code === 'SLOT_LOST_REFUNDED' when the backend reports the slot
+  // was lost after payment and refunded it (see submitBooking() below for
+  // the one branch that checks this).
+  const ensurePaymentVerified = () => new Promise((resolve, reject) => {
+    if (!window.Razorpay) {
+      reject(new Error('Payment is temporarily unavailable. Please try again in a moment.'));
+      return;
+    }
+    // Razorpay's modal.ondismiss fires not only on a manual close, but
+    // also a moment AFTER a successful payment (the widget's own closing
+    // counts as a "dismiss" from its point of view) — without this guard,
+    // a successful handler() could resolve, start the real booking, and
+    // then a couple seconds later ondismiss still fires, calling
+    // flow.showModal() on an already-open <dialog> (invalid state) and
+    // trying to reject an already-settled promise. Once the real outcome
+    // is decided (success, a verify failure, or payment.failed), `settled`
+    // makes every later callback here a no-op instead of re-running any
+    // of this dialog/reject logic.
+    let settled = false;
+    const settle = (fn) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+    postToPartnerApi('payments/orders', { holdId: slotPicker.holdId }, getPaymentIdempotencyKey(slotPicker.holdId, 'payment-order'))
+      .then((order) => {
+        const rzp = new window.Razorpay({
+          key: order.razorpayKeyId,
+          amount: order.amount,
+          currency: order.currency,
+          order_id: order.razorpayOrderId,
+          name: 'Kerala Ayurveda',
+          description: 'Consultation booking',
+          handler: (response) => {
+            // Razorpay doesn't call handler() until AFTER its own
+            // "Payment Successful" screen finishes its ~3s auto-redirect
+            // and closes itself — our dialog was closed (flow.close()
+            // below) for that whole time, so the Shopify storefront was
+            // visible underneath until something reopened it. Reopening
+            // HERE, synchronously, the instant handler() fires — not
+            // after the verify API call below resolves — closes that gap:
+            // the storefront is never visible, because our dialog is back
+            // the moment Razorpay's is gone, regardless of how long
+            // verification takes. Safe to call unconditionally; handler()
+            // only ever fires once per Checkout session.
+            flow.showModal();
+            postToPartnerApi(
+              'payments/verify',
+              {
+                holdId: slotPicker.holdId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              },
+              getPaymentIdempotencyKey(slotPicker.holdId, 'payment-verify'),
+            ).then(() => {
+              settle(() => resolve());
+            }).catch((err) => {
+              settle(() => reject(err));
+            });
+          },
+          modal: {
+            // Visitor closed Checkout without paying — the hold is left
+            // exactly as it was (same "let them retry without losing their
+            // slot" behavior as every other recoverable failure in this
+            // flow), so this is just a plain retry-friendly message, not a
+            // navigation away from Confirmation. Checkout has definitely
+            // closed by the time this fires, so this is also the right
+            // moment to bring our own dialog back — guarded by both
+            // `!flow.open` (handler() above may have already reopened it)
+            // and `settle()` (so a late ondismiss firing after a real
+            // success/failure was already handled above is just ignored).
+            ondismiss: () => {
+              settle(() => {
+                if (!flow.open) flow.showModal();
+                reject(new Error('Payment was not completed. Please try again.'));
+              });
+            },
+          },
+        });
+        rzp.on('payment.failed', (resp) => {
+          // Checkout's own UI stays open here (it lets the visitor retry
+          // with a different method without us re-opening/closing
+          // anything) — deliberately NOT calling flow.showModal() yet;
+          // ondismiss above is what brings our dialog back once Checkout
+          // itself actually closes.
+          settle(() => {
+            reject(new Error(resp?.error?.description || 'Payment failed. Please try again.'));
+          });
+        });
+        // Native <dialog> content renders in the browser's "top layer",
+        // which sits above EVERYTHING outside that layer regardless of
+        // z-index — including Razorpay's own checkout widget (a plain
+        // fixed-position overlay, not a top-layer element). Closing our
+        // dialog here (not removing anything from the DOM, just exiting
+        // the top layer) is what lets Checkout actually render on top;
+        // every exit path above (success/dismiss/failure-then-dismiss)
+        // calls flow.showModal() to bring Confirmation back once
+        // Checkout is done with the screen.
+        flow.close();
+        rzp.open();
+      })
+      .catch((err) => reject(err));
+  });
 
   // ----------------------------------------------------------------------
   // SLOT HOLD ON CONTINUE — deliberately NOT the CMS staff wizard's
@@ -3303,8 +3517,28 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Read fresh at submit time -- there's no stored JS variable for the
+    // selected payment card, only the CSS class setPaymentMethod() toggles.
+    // Video Consult's fee card (kal-payment-fee-card) is a non-interactive
+    // info card with no data-kal-payment-method of its own, so it never
+    // matches this selector -- video's online-payment requirement comes
+    // entirely from slotPicker.mode below, never from reading this card.
+    const selectedPaymentMethod = flow.querySelector('[data-kal-payment-method].kal-payment-option--selected')
+      ?.dataset.kalPaymentMethod;
+    const requiresOnlinePayment = selectedPaymentMethod === 'pay-now' || slotPicker.mode === 'video';
+
     setBookingButtonsBusy(true);
     try {
+      if (requiresOnlinePayment) {
+        if (placingPayment) return;
+        placingPayment = true;
+        try {
+          await ensurePaymentVerified();
+        } finally {
+          placingPayment = false;
+        }
+      }
+
       const mode = slotPicker.mode === 'video' ? 'online' : 'offline';
       const appointmentDate = toIsoDate(slotPicker.selectedDate);
       const appointmentTime = slotPicker.selectedSlot.start_time;
@@ -3334,6 +3568,19 @@ document.addEventListener('DOMContentLoaded', () => {
       );
 
       lastBookingResult = appointment;
+      // The hold is now a real, confirmed appointment server-side — not
+      // "still open" anymore. Without clearing it here, data-kal-close's
+      // handler (if (slotPicker.holdId) openLeaveBookingModal()) kept
+      // showing the "Leave booking? Your progress will be lost"
+      // confirmation even on THIS success screen, where there's no
+      // progress left to lose; worse, clicking its "Leave booking"
+      // button would then try to release a hold that's already been
+      // consumed into the booking it just made. Mirrors the cleanup the
+      // SLOT_LOST_REFUNDED failure branch below already does for the
+      // same reason, just on the success path instead.
+      slotPicker.holdId = null;
+      slotPicker.heldSlot = null;
+      slotPicker.holdContext = null;
       goToStep('booking-confirmed');
     } catch (err) {
       console.error('[kal-booking-flow] Booking failed:', err);
@@ -3342,6 +3589,26 @@ document.addEventListener('DOMContentLoaded', () => {
           ? err.message
           : 'Unable to complete your booking right now. Please try again.',
       );
+      // SLOT_LOST_REFUNDED: the backend already tried to re-establish this
+      // exact slot (it was gone) and refunded the captured payment in
+      // full -- the hold itself no longer exists server-side by this
+      // point, so there's nothing meaningful left to release, unlike the
+      // plain hold-expiry case below. err.message is already the
+      // visitor-facing "your payment has been refunded" copy from the
+      // backend (partner-booking.use-cases.ts), shown above via
+      // showBookingError.
+      if (err && err.code === 'SLOT_LOST_REFUNDED') {
+        slotPicker.holdId = null;
+        slotPicker.heldSlot = null;
+        slotPicker.holdContext = null;
+        slotPicker.selectedSlot = null;
+        flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
+          chip.classList.remove('kal-slot-chip--active');
+        });
+        updateSlotContinueButton();
+        goToStep('slot-picker');
+        return;
+      }
       // The hold was already placed before this call (handleSlotContinue()
       // above, on Slot Picker's Continue) — if creating the appointment itself
       // failed, no appointment exists to protect, so release it rather

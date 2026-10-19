@@ -71,6 +71,17 @@
 {% endstyle %}
 {{ 'kal-booking-flow.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'kal-booking-flow.js' | asset_url }}" defer></script>
+{%- comment -%}
+  Razorpay-hosted Checkout loader (Test Mode and live both use this same
+  script -- which mode runs is controlled entirely by which key id the
+  backend hands back from POST payments/orders, never by anything here).
+  Loaded from Razorpay's own CDN rather than vendored, same as this file's
+  other external resources (fonts) are self-hosted but this one specific
+  script isn't -- flag if the team wants it vendored instead. Deferred, same
+  as kal-booking-flow.js above, since it's only needed once a visitor
+  reaches Confirmation and picks an online-payment option.
+{%- endcomment -%}
+<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
 <dialog
   id="kal-booking-flow"

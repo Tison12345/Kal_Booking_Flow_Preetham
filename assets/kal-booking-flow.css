@@ -700,30 +700,35 @@
   text-align: left;
   font-family: inherit;
   box-sizing: border-box;
-  transition: transform 0.15s ease;
 }
 
-.kal-option-card:hover {
-  transform: translateY(-1px);
-}
-
+/* Per explicit instruction: no longer the green/shadowed treatment —
+   same plain white card + border as --secondary below, not a visually
+   "primary" CTA anymore. */
 .kal-option-card--primary {
-  background: var(--kal-booking-flow-color-primary-dark);
-  border: none;
-  box-shadow: 0px 14px 28px -10px rgba(25, 25, 25, 0.5);
+  background: var(--kal-booking-flow-color-white);
+  border: 1px solid var(--kal-booking-flow-color-border);
 }
 
 /* Same theme button:hover box-shadow leak fix as .kal-doctor-card--selected
    above — this is a <button>, so the theme's global button:hover rule
    (specificity 0,1,1) would otherwise beat this plain class (0,1,0) on
-   hover and swap in a heavy black shadow. */
+   hover and reintroduce a heavy black shadow that shouldn't be there
+   anymore now that this card isn't shadowed at rest either. */
 .kal-option-card--primary:hover {
-  box-shadow: 0px 14px 28px -10px rgba(25, 25, 25, 0.5);
+  box-shadow: none;
 }
 
 .kal-option-card--secondary {
   background: var(--kal-booking-flow-color-white);
   border: 1px solid var(--kal-booking-flow-color-border);
+}
+
+/* Same theme button:hover box-shadow leak fix as --primary above —
+   this card never had a shadow at rest either, so without this the
+   theme's own hover rule would introduce one that wasn't there before. */
+.kal-option-card--secondary:hover {
+  box-shadow: none;
 }
 
 .kal-option-card__text {
@@ -743,8 +748,8 @@
 }
 
 .kal-option-card--primary .kal-option-card__title {
-  font-weight: var(--kal-booking-flow-font-weight-black);
-  color: var(--kal-booking-flow-color-white);
+  font-weight: var(--kal-booking-flow-font-weight-heavy);
+  color: var(--kal-booking-flow-color-heading);
 }
 
 .kal-option-card--secondary .kal-option-card__title {
@@ -759,8 +764,10 @@
 }
 
 .kal-option-card--primary .kal-option-card__subtitle {
-  color: var(--kal-booking-flow-color-white);
-  opacity: 0.8;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--kal-booking-flow-font-weight-medium);
+  color: var(--kal-booking-flow-color-location-text);
 }
 
 .kal-option-card--secondary .kal-option-card__subtitle {
@@ -805,8 +812,7 @@
 }
 
 .kal-option-card--primary .kal-icon--arrow {
-  color: var(--kal-booking-flow-color-on-primary);
-  opacity: 0.8;
+  color: var(--kal-booking-flow-color-body);
 }
 
 .kal-option-card--secondary .kal-icon--arrow {
@@ -2775,10 +2781,6 @@ div.kal-leave-booking-modal__backdrop {
     margin-top: -16px;
     margin-left: -24px;
     margin-right: -24px;
-  }
-
-  .kal-step-doctor-select .kal-doctor-card {
-    margin-bottom: 16px;
   }
 }
 
