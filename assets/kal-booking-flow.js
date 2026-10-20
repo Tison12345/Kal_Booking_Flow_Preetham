@@ -688,13 +688,50 @@ document.addEventListener('DOMContentLoaded', () => {
     el.appendChild(strong);
   };
 
-  // Keyed by (facilityId, mode) — the "Next slot" badge is mode-specific
-  // now (see applyDoctorCardNextSlot above), so a cached list fetched under
-  // one mode must never be reused to render the other; same facility+mode
-  // pair hit again (e.g. revisiting Doctor Select via Slot Picker's Back
-  // button) still reuses the cache instead of re-fetching an identical
-  // list, same intent as the old facility-only cache had.
-  let doctorListCache = null; // { facilityId, mode, doctors }
+  // Overwrites the theme-editor-authored static price text (same
+  // kal-doctor-card-source blocks as applyDoctorCardNextSlot above — see
+  // /doctors' inClinicPrice/onlinePrice fields) with the doctor's REAL
+  // price for the CURRENT consultation mode, read from the same Shopify
+  // doctor_pricing metaobject lookup createOrder() uses to decide what
+  // Razorpay actually charges — so what's displayed here can never drift
+  // from what gets charged at payment time the way the old static text
+  // could. Sets BOTH the visible .kal-doctor-card__price text AND
+  // data-kal-doctor-price (the dataset downstream code — Slot Picker/
+  // Patient Details/Confirmation's shared appointment card,
+  // applyRealConsultationPricing()'s 10%-off/full-price math — already
+  // reads via getSelectedDoctorPrice()), so every one of those stays in
+  // sync automatically; no separate fix needed there. null (no pricing
+  // entry configured in Shopify yet) shows an honest "Pricing unavailable"
+  // rather than falling back to stale/fake text, same "No upcoming slots"
+  // treatment nextSlotToday got above.
+  const formatRupeesFromPaise = (amountPaise) => `₹${Math.round(amountPaise / 100).toLocaleString('en-IN')}`;
+
+  const applyDoctorCardPrice = (card, doctor) => {
+    const priceForMode = slotPicker.mode === 'video' ? doctor.onlinePrice : doctor.inClinicPrice;
+    const el = card.querySelector('.kal-doctor-card__price');
+    const text = priceForMode ? formatRupeesFromPaise(priceForMode.amountPaise) : 'Pricing unavailable';
+    if (el) el.textContent = text;
+    card.dataset.kalDoctorPrice = priceForMode ? text : '';
+  };
+
+  // Keyed by `${facilityId}:${mode}` — one entry per facility+mode pair, so
+  // In-Clinic and Video Consult each keep their own cached doctor list and
+  // switching the toggle back and forth no longer re-fetches an identical
+  // list every time (the "Next slot" badge is mode-specific — see
+  // applyDoctorCardNextSlot above — so an In-Clinic entry must never be
+  // reused to render Video Consult or vice versa; a separate entry per mode
+  // is what makes that safe). Each entry carries fetchedAt so it can expire
+  // after DOCTOR_LIST_CACHE_TTL_MS instead of being trusted forever —
+  // nextSlotToday reflects real-time availability, so an unbounded cache
+  // could show a slot that's since been booked by someone else.
+  const DOCTOR_LIST_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+  const doctorListCache = new Map(); // key -> { doctors, fetchedAt }
+  // A toggle fired twice in quick succession before the first fetch for
+  // that facility+mode resolves (e.g. a fast double click) would otherwise
+  // start a second, redundant request for data the first one is already
+  // fetching. Sharing the in-flight Promise for that key means the second
+  // call just awaits the same response instead of firing its own.
+  const doctorListInFlight = new Map(); // key -> Promise<doctors[]>
   // Bumped every time a NEW doctor-list fetch actually starts (facility or
   // mode genuinely changed) — same pattern as slotHoldRequestSequence
   // elsewhere in this file. A fetch whose requestId no longer matches by
@@ -755,6 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.classList.toggle('kal-doctor-card--selected', doctor.id === nextSelectedId);
       applyDoctorCardConcernBadges(card);
       applyDoctorCardNextSlot(card, doctor.nextSlotToday);
+      applyDoctorCardPrice(card, doctor);
       list.appendChild(card);
     });
 
@@ -789,16 +827,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // "Find a Clinic" — same fallback applyStoredFacility() relies on.
     const facility = await getCurrentFacility();
     if (!facility || !facility.id) {
-      doctorListCache = null;
+      doctorListCache.clear();
+      doctorListInFlight.clear();
       doctorListRequestSequence += 1; // any in-flight fetch is now stale
       setEmptyState('Pick a clinic first to see available doctors.');
       return;
     }
 
     const mode = slotPicker.mode === 'video' ? 'online' : 'offline';
+    const cacheKey = `${facility.id}:${mode}`;
 
-    if (doctorListCache && doctorListCache.facilityId === facility.id && doctorListCache.mode === mode) {
-      renderDoctorList(list, doctorListCache.doctors);
+    const cached = doctorListCache.get(cacheKey);
+    if (cached && Date.now() - cached.fetchedAt < DOCTOR_LIST_CACHE_TTL_MS) {
+      renderDoctorList(list, cached.doctors);
       return;
     }
 
@@ -811,14 +852,28 @@ document.addEventListener('DOMContentLoaded', () => {
     setEmptyState('Loading doctors…');
     const requestId = ++doctorListRequestSequence;
 
+    // Reuse an already-in-flight fetch for this exact facility+mode instead
+    // of starting a second, redundant request (e.g. a fast double toggle
+    // before the first response lands).
+    let fetchPromise = doctorListInFlight.get(cacheKey);
+    if (!fetchPromise) {
+      fetchPromise = fetch(
+        `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}&mode=${encodeURIComponent(mode)}`,
+      )
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          return Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
+        })
+        .finally(() => {
+          doctorListInFlight.delete(cacheKey);
+        });
+      doctorListInFlight.set(cacheKey, fetchPromise);
+    }
+
     let doctors;
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}&mode=${encodeURIComponent(mode)}`,
-      );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      doctors = Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
+      doctors = await fetchPromise;
     } catch (err) {
       if (requestId !== doctorListRequestSequence) return; // superseded by a newer facility/mode selection
       console.error('[kal-booking-flow] Failed to load doctors:', err);
@@ -833,12 +888,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (requestId !== doctorListRequestSequence) return;
 
     if (doctors.length === 0) {
-      doctorListCache = null;
+      doctorListCache.delete(cacheKey);
       setEmptyState('No doctors available at this clinic yet.');
       return;
     }
 
-    doctorListCache = { facilityId: facility.id, mode, doctors };
+    doctorListCache.set(cacheKey, { doctors, fetchedAt: Date.now() });
     renderDoctorList(list, doctors);
   };
 
