@@ -2778,6 +2778,7 @@ div.kal-leave-booking-modal__backdrop {
     padding-top: 16px;
     padding-left: 24px;
     padding-right: 24px;
+    padding-bottom: 16px;
     margin-top: -16px;
     margin-left: -24px;
     margin-right: -24px;
@@ -4024,8 +4025,9 @@ div.kal-leave-booking-modal__backdrop {
 }
 
 .kal-slot-chip:disabled {
-  background: rgba(250, 250, 250, 0.35);
-  color: var(--kal-booking-flow-color-text-muted);
+  background: var(--kal-booking-flow-color-track-bg);
+  border-color: var(--kal-booking-flow-color-border-faint);
+  color: var(--kal-booking-flow-color-text-disabled);
   text-decoration: line-through;
   cursor: not-allowed;
 }
@@ -7704,4 +7706,10 @@ div.kal-leave-booking-modal__backdrop {
   .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
     margin-top: 16px;
   }
+}
+
+/* hidden must win over the display rules above when a doctor has no pay-now discount configured */
+.kal-payment-option__badge[hidden],
+.kal-payment-option__price-strike[hidden] {
+  display: none !important;
 }

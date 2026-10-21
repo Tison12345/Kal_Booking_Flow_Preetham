@@ -332,6 +332,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return card ? card.dataset.kalDoctorPrice : null;
   };
 
+  const getSelectedDoctorPayNow = () => {
+    const card = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
+    return {
+      price: card ? card.dataset.kalDoctorPayNowPrice || null : null,
+      percent: card ? card.dataset.kalDoctorPayNowPercent || null : null,
+    };
+  };
+
   // Doctor Select's Continue is disabled until a card is actually
   // selected (see that step's own liquid comment) — matters most for
   // Video Consult, which deliberately starts with none selected, but
@@ -369,14 +377,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const numeric = priceText ? parseInt(priceText.replace(/[^\d]/g, ''), 10) : NaN;
     if (!Number.isFinite(numeric) || numeric <= 0) return;
     const formatRupees = (value) => `₹${Math.round(value).toLocaleString('en-IN')}`;
-    const discounted = formatRupees(numeric * 0.9);
     const full = formatRupees(numeric);
+    // The discounted "Pay now" price and its percentage come from the doctor's
+    // Shopify pricing entry via /doctors (see applyDoctorCardPrice) — never
+    // computed here. No discount configured: Pay now simply shows the full
+    // price, with no strike-through and no "Save N%" pill.
+    const payNow = getSelectedDoctorPayNow();
+    const hasDiscount = Boolean(payNow.price);
 
     flow.querySelectorAll('[data-kal-payment-price-now]').forEach((el) => {
-      el.textContent = discounted;
+      el.textContent = hasDiscount ? payNow.price : full;
     });
     flow.querySelectorAll('[data-kal-payment-price-now-strike]').forEach((el) => {
       el.textContent = full;
+      el.hidden = !hasDiscount;
+    });
+    flow.querySelectorAll('[data-kal-payment-save-badge]').forEach((el) => {
+      el.textContent = hasDiscount ? `Save ${payNow.percent}%` : '';
+      el.hidden = !hasDiscount;
     });
     flow.querySelectorAll('[data-kal-payment-price-clinic]').forEach((el) => {
       el.textContent = full;
@@ -704,7 +722,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // entry configured in Shopify yet) shows an honest "Pricing unavailable"
   // rather than falling back to stale/fake text, same "No upcoming slots"
   // treatment nextSlotToday got above.
-  const formatRupeesFromPaise = (amountPaise) => `₹${Math.round(amountPaise / 100).toLocaleString('en-IN')}`;
+  const formatRupeesFromPaise = (amountPaise) => {
+    const rupees = amountPaise / 100;
+    const whole = Number.isInteger(rupees);
+    return `₹${rupees.toLocaleString('en-IN', whole ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   const applyDoctorCardPrice = (card, doctor) => {
     const priceForMode = slotPicker.mode === 'video' ? doctor.onlinePrice : doctor.inClinicPrice;
@@ -712,6 +734,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = priceForMode ? formatRupeesFromPaise(priceForMode.amountPaise) : 'Pricing unavailable';
     if (el) el.textContent = text;
     card.dataset.kalDoctorPrice = priceForMode ? text : '';
+    // The "Pay now" figure for an In-Clinic visit, straight from the server
+    // (the same amount Razorpay will charge) — empty when this doctor has no
+    // discount configured in Shopify or the visitor is on Video Consult,
+    // which is never discounted.
+    const payNow = slotPicker.mode === 'video' ? null : doctor.inClinicPayNowPrice;
+    card.dataset.kalDoctorPayNowPrice = payNow ? formatRupeesFromPaise(payNow.amountPaise) : '';
+    card.dataset.kalDoctorPayNowPercent = payNow ? String(doctor.payNowDiscountPercent) : '';
   };
 
   // Keyed by `${facilityId}:${mode}` — one entry per facility+mode pair, so
