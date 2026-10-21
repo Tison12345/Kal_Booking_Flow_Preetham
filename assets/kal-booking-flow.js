@@ -1696,7 +1696,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Same re-entrancy guard pattern as placingSlotHold above, but for the
   // async Razorpay order-creation + Checkout + verification sequence
-  // (ensurePaymentVerified() below) — true only for that brief window so a
+  // (collectPayment() below) — true only for that brief window so a
   // double-click on "Proceed to Payment" can't open two Checkout modals or
   // fire two orders for the same hold.
   let placingPayment = false;
@@ -3139,7 +3139,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Payment-operation idempotency keys, scoped ONLY to the two payment calls
-  // inside ensurePaymentVerified() below (payments/orders, payments/verify).
+  // inside collectPayment() below (payments/orders).
   // Every other generateIdempotencyKey() call site in this file (hold
   // placement, hold release, appointment submit, therapy request) is
   // untouched — those are out of scope for this fix.
@@ -3226,8 +3226,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const message = data?.message || `HTTP ${response.status}`;
       const error = new Error(message);
       // Some failures carry a machine-readable code in data.data.code (e.g.
-      // the backend's SLOT_LOST_REFUNDED response -- see
-      // ensurePaymentVerified()/submitBooking() below) that callers need to
+      // the backend's SLOT_LOST_PAYMENT_CAPTURED response -- see
+      // collectPayment()/submitBooking() below) that callers need to
       // branch on instead of matching the human message text. Attached as a
       // plain extra property so every existing catch (err) handler in this
       // file -- which only ever reads err.message -- keeps working exactly
@@ -3239,23 +3239,20 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
-  // RAZORPAY PAYMENT (Test Mode, ₹1 fixed test amount server-side — the
-  // amount is never sent from here) — POST payments/orders creates/reopens
-  // a Razorpay order for the already-placed hold, Razorpay's own Checkout
-  // modal collects card/UPI/netbanking details, and POST payments/verify
-  // confirms the result server-side (signature + a server-to-server
-  // Razorpay lookup) before submitBooking() is allowed to proceed to the
-  // real POST appointments call. Never trusts Checkout's own callback by
-  // itself — only a successful payments/verify response counts.
+  // RAZORPAY PAYMENT — the amount is never sent from here; the server prices
+  // it from Shopify. POST payments/orders creates/reopens a Razorpay order
+  // for the already-placed hold and Razorpay's own Checkout modal collects
+  // card/UPI/netbanking details. Checkout's callback is never trusted by
+  // itself: its order/payment/signature values are sent along with POST
+  // appointments, and the server verifies the signature there — only a
+  // successful booking response means the payment counted.
   // ----------------------------------------------------------------------
 
-  // Resolves once a real, verified payment exists for slotPicker.holdId, or
-  // rejects with a plain Error (message shown via showBookingError, same as
-  // every other booking failure) — including a distinct
-  // err.code === 'SLOT_LOST_REFUNDED' when the backend reports the slot
-  // was lost after payment and refunded it (see submitBooking() below for
-  // the one branch that checks this).
-  const ensurePaymentVerified = () => new Promise((resolve, reject) => {
+  // Resolves with Checkout's { razorpayOrderId, razorpayPaymentId,
+  // razorpaySignature } once the visitor has paid, or rejects with a plain
+  // Error (message shown via showBookingError, same as every other booking
+  // failure) if they dismiss Checkout or the payment fails.
+  const collectPayment = () => new Promise((resolve, reject) => {
     if (!window.Razorpay) {
       reject(new Error('Payment is temporarily unavailable. Please try again in a moment.'));
       return;
@@ -3298,20 +3295,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // verification takes. Safe to call unconditionally; handler()
             // only ever fires once per Checkout session.
             flow.showModal();
-            postToPartnerApi(
-              'payments/verify',
-              {
-                holdId: slotPicker.holdId,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-              },
-              getPaymentIdempotencyKey(slotPicker.holdId, 'payment-verify'),
-            ).then(() => {
-              settle(() => resolve());
-            }).catch((err) => {
-              settle(() => reject(err));
-            });
+            // No separate verify call: these three values ride along on
+            // POST appointments, where the server checks the signature and
+            // sets isPaid in the same request.
+            settle(() => resolve({
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }));
           },
           modal: {
             // Visitor closed Checkout without paying — the hold is left
@@ -3584,11 +3575,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setBookingButtonsBusy(true);
     try {
+      let paymentFields = {};
       if (requiresOnlinePayment) {
         if (placingPayment) return;
         placingPayment = true;
         try {
-          await ensurePaymentVerified();
+          paymentFields = await collectPayment();
         } finally {
           placingPayment = false;
         }
@@ -3618,6 +3610,7 @@ document.addEventListener('DOMContentLoaded', () => {
           patientEmail: patientDetails.email.trim() || null,
           concerns: concerns.length ? concerns : undefined,
           notes: isExperimentB && patientDetails.concern.trim() ? patientDetails.concern.trim() : null,
+          ...paymentFields,
         },
         generateIdempotencyKey(),
       );
@@ -3631,7 +3624,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // progress left to lose; worse, clicking its "Leave booking"
       // button would then try to release a hold that's already been
       // consumed into the booking it just made. Mirrors the cleanup the
-      // SLOT_LOST_REFUNDED failure branch below already does for the
+      // SLOT_LOST_PAYMENT_CAPTURED failure branch below already does for the
       // same reason, just on the success path instead.
       slotPicker.holdId = null;
       slotPicker.heldSlot = null;
@@ -3644,15 +3637,15 @@ document.addEventListener('DOMContentLoaded', () => {
           ? err.message
           : 'Unable to complete your booking right now. Please try again.',
       );
-      // SLOT_LOST_REFUNDED: the backend already tried to re-establish this
-      // exact slot (it was gone) and refunded the captured payment in
-      // full -- the hold itself no longer exists server-side by this
-      // point, so there's nothing meaningful left to release, unlike the
-      // plain hold-expiry case below. err.message is already the
-      // visitor-facing "your payment has been refunded" copy from the
-      // backend (partner-booking.use-cases.ts), shown above via
-      // showBookingError.
-      if (err && err.code === 'SLOT_LOST_REFUNDED') {
+      // SLOT_LOST_PAYMENT_CAPTURED: the backend already tried to
+      // re-establish this exact slot (it was gone) but the payment was
+      // captured -- nothing is refunded automatically, support resolves it.
+      // The hold itself no longer exists server-side by this point, so
+      // there's nothing meaningful left to release, unlike the plain
+      // hold-expiry case below. err.message is already the visitor-facing
+      // copy from the backend (partner-booking.use-cases.ts), shown above
+      // via showBookingError.
+      if (err && err.code === 'SLOT_LOST_PAYMENT_CAPTURED') {
         slotPicker.holdId = null;
         slotPicker.heldSlot = null;
         slotPicker.holdContext = null;
