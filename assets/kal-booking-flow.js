@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const whatsappNumber = flow.dataset.whatsappNumber || '';
 
   const openFlow = () => {
+    // Every reopen lands back on Entry (see the three goToStep('entry')
+    // call sites right after openFlow()), so the mode toggle must reset
+    // alongside it. Without this, a prior session that switched to Video
+    // Consult on Doctor Select left slotPicker.mode/the header icon stuck
+    // on "online" — applyStoredFacility() below only overwrites the
+    // header's TEXT back to the real facility name, never its icon, so
+    // the badge showed the real clinic name next to the monitor icon
+    // instead of the location pin.
+    setOnlineHeaderState(false);
+    slotPicker.mode = 'in-clinic';
     applyStoredFacility();
     flow.showModal();
     document.body.style.overflow = 'hidden';
@@ -1729,6 +1739,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // double-click on "Proceed to Payment" can't open two Checkout modals or
   // fire two orders for the same hold.
   let placingPayment = false;
+  // The Razorpay values from a payment that already succeeded for slotPicker.
+  // holdId, kept until that booking completes. If the booking request fails
+  // after the visitor has paid, a retry reuses these instead of opening
+  // Checkout again -- the only way to avoid charging them twice.
+  let capturedPayment = null; // { holdId, fields }
 
   // Keyed by ISO date ("YYYY-MM-DD") -> the day-summaries endpoint's
   // per-day summary object ({ availableSlots, totalSlots, ... }). Shared
@@ -3211,7 +3226,28 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll('[data-kal-booking-error]').forEach((el) => {
       const textEl = el.querySelector('[data-kal-booking-error-text]');
       if (textEl) textEl.textContent = message;
+      el.classList.remove('kal-form-error--progress');
       el.hidden = false;
+    });
+  };
+
+  // Neutral "working on it" line in the same banner spot as the error, so it
+  // inherits that spot's placement on mobile and desktop. The booking request
+  // can take several seconds after Checkout closes, and the buttons are
+  // disabled meanwhile, so without this the page looks frozen.
+  const showBookingProgress = (message) => {
+    flow.querySelectorAll('[data-kal-booking-error]').forEach((el) => {
+      const textEl = el.querySelector('[data-kal-booking-error-text]');
+      if (textEl) textEl.textContent = message;
+      el.classList.add('kal-form-error--progress');
+      el.hidden = false;
+    });
+  };
+
+  const clearBookingProgress = () => {
+    flow.querySelectorAll('[data-kal-booking-error].kal-form-error--progress').forEach((el) => {
+      el.classList.remove('kal-form-error--progress');
+      el.hidden = true;
     });
   };
 
@@ -3280,7 +3316,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Resolves with Checkout's { razorpayOrderId, razorpayPaymentId,
   // razorpaySignature } once the visitor has paid, or rejects with a plain
   // Error (message shown via showBookingError, same as every other booking
-  // failure) if they dismiss Checkout or the payment fails.
+  // failure) if they close Checkout without paying. A failed attempt alone
+  // doesn't end it: Checkout stays open for a retry.
   const collectPayment = () => new Promise((resolve, reject) => {
     if (!window.Razorpay) {
       reject(new Error('Payment is temporarily unavailable. Please try again in a moment.'));
@@ -3293,10 +3330,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // then a couple seconds later ondismiss still fires, calling
     // flow.showModal() on an already-open <dialog> (invalid state) and
     // trying to reject an already-settled promise. Once the real outcome
-    // is decided (success, a verify failure, or payment.failed), `settled`
+    // is decided (success or a close without paying), `settled`
     // makes every later callback here a no-op instead of re-running any
     // of this dialog/reject logic.
     let settled = false;
+    // Reason from the most recent failed attempt inside this Checkout, shown
+    // only if the visitor closes Checkout without a successful payment.
+    let lastPaymentFailure = null;
     const settle = (fn) => {
       if (settled) return;
       settled = true;
@@ -3311,6 +3351,15 @@ document.addEventListener('DOMContentLoaded', () => {
           order_id: order.razorpayOrderId,
           name: 'Kerala Ayurveda',
           description: 'Consultation booking',
+          // Convenience only (fewer fields to type, and the Razorpay
+          // Dashboard record shows who paid) -- never used as booking data.
+          prefill: {
+            name: patientDetails.name.trim(),
+            contact: buildPatientPhone(),
+          },
+          // The server's own Checkout window (it sizes the slot hold from
+          // the same number), so Checkout can't outlive the hold's runway.
+          timeout: order.checkoutTimeoutSeconds,
           handler: (response) => {
             // Razorpay doesn't call handler() until AFTER its own
             // "Payment Successful" screen finishes its ~3s auto-redirect
@@ -3347,20 +3396,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ondismiss: () => {
               settle(() => {
                 if (!flow.open) flow.showModal();
-                reject(new Error('Payment was not completed. Please try again.'));
+                reject(new Error(lastPaymentFailure || 'Payment was not completed. Please try again.'));
               });
             },
           },
         });
         rzp.on('payment.failed', (resp) => {
-          // Checkout's own UI stays open here (it lets the visitor retry
-          // with a different method without us re-opening/closing
-          // anything) — deliberately NOT calling flow.showModal() yet;
-          // ondismiss above is what brings our dialog back once Checkout
-          // itself actually closes.
-          settle(() => {
-            reject(new Error(resp?.error?.description || 'Payment failed. Please try again.'));
-          });
+          // A failed attempt is NOT the final outcome: Checkout's own UI
+          // stays open and lets the visitor retry with another method, and
+          // a retry can still succeed. Rejecting here (as this used to)
+          // settled the promise, released the hold, and made handler()
+          // ignore the later successful retry -- money captured, no
+          // booking. So only remember the reason; the outcome is decided
+          // by handler() (paid) or ondismiss (closed without paying), and
+          // ondismiss shows this reason if there was one.
+          lastPaymentFailure = resp?.error?.description || null;
         });
         // Native <dialog> content renders in the browser's "top layer",
         // which sits above EVERYTHING outside that layer regardless of
@@ -3606,12 +3656,17 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       let paymentFields = {};
       if (requiresOnlinePayment) {
-        if (placingPayment) return;
-        placingPayment = true;
-        try {
-          paymentFields = await collectPayment();
-        } finally {
-          placingPayment = false;
+        if (capturedPayment && capturedPayment.holdId === slotPicker.holdId) {
+          paymentFields = capturedPayment.fields;
+        } else {
+          if (placingPayment) return;
+          placingPayment = true;
+          try {
+            paymentFields = await collectPayment();
+            capturedPayment = { holdId: slotPicker.holdId, fields: paymentFields };
+          } finally {
+            placingPayment = false;
+          }
         }
       }
 
@@ -3623,6 +3678,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Picker (see handleSlotContinue() above) — reused here rather than
       // placing a second one.
       const concerns = collectSelectedConcernLabels();
+      showBookingProgress(
+        requiresOnlinePayment ? 'Confirming your payment and booking…' : 'Confirming your booking…',
+      );
       const appointment = await postToPartnerApi(
         'appointments',
         {
@@ -3645,6 +3703,7 @@ document.addEventListener('DOMContentLoaded', () => {
       );
 
       lastBookingResult = appointment;
+      capturedPayment = null;
       // The hold is now a real, confirmed appointment server-side — not
       // "still open" anymore. Without clearing it here, data-kal-close's
       // handler (if (slotPicker.holdId) openLeaveBookingModal()) kept
@@ -3658,8 +3717,10 @@ document.addEventListener('DOMContentLoaded', () => {
       slotPicker.holdId = null;
       slotPicker.heldSlot = null;
       slotPicker.holdContext = null;
+      clearBookingProgress();
       goToStep('booking-confirmed');
     } catch (err) {
+      clearBookingProgress();
       console.error('[kal-booking-flow] Booking failed:', err);
       showBookingError(
         err instanceof Error && err.message && !err.message.startsWith('HTTP')
@@ -3675,6 +3736,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // copy from the backend (partner-booking.use-cases.ts), shown above
       // via showBookingError.
       if (err && err.code === 'SLOT_LOST_PAYMENT_CAPTURED') {
+        capturedPayment = null;
         slotPicker.holdId = null;
         slotPicker.heldSlot = null;
         slotPicker.holdContext = null;
@@ -3684,6 +3746,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         updateSlotContinueButton();
         goToStep('slot-picker');
+        return;
+      }
+      // The visitor has already paid (Checkout succeeded, or we are retrying
+      // with the values from an earlier success). Do NOT release the hold or
+      // send them back to pick a slot: the error above explains the situation,
+      // a retry reuses the captured payment (no second charge), and the hold
+      // simply expires on its own if they never come back.
+      if (capturedPayment && capturedPayment.holdId === slotPicker.holdId) {
         return;
       }
       // The hold was already placed before this call (handleSlotContinue()
