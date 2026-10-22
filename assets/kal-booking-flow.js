@@ -886,13 +886,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let doctorListRequestSequence = 0;
 
   // "Next slot" is the one part of a doctor card that needs the CMS schedule,
-  // so it is loaded separately, one request per card, after the cards are
-  // already on screen. Until a card's answer arrives it shows a quiet
-  // "Checking availability…" line; a slow or failed lookup never holds the
-  // cards back. Answers are remembered briefly per clinic, mode and doctor.
+  // so it is loaded separately after the cards are already on screen: ONE
+  // request asks for every card's doctor at once. Until the answer arrives
+  // each card shows a quiet "Checking availability…" line; a slow or failed
+  // lookup never holds the cards back. Answers are remembered briefly per
+  // clinic, mode and doctor.
   const NEXT_SLOT_CACHE_TTL_MS = 2 * 60 * 1000;
   const nextSlotCache = new Map(); // `${facilityId}:${mode}:${doctorId}` -> { slot, fetchedAt }
-  const nextSlotInFlight = new Map(); // same key -> Promise<slot | null>
 
   const applyDoctorCardNextSlotLoading = (card) => {
     const el = card.querySelector('.kal-doctor-card__next-slot');
@@ -902,60 +902,61 @@ document.addEventListener('DOMContentLoaded', () => {
     el.textContent = 'Checking availability…';
   };
 
-  const fetchDoctorNextSlot = (facilityId, mode, doctorId) => {
-    const key = `${facilityId}:${mode}:${doctorId}`;
-    const cached = nextSlotCache.get(key);
-    if (cached && Date.now() - cached.fetchedAt < NEXT_SLOT_CACHE_TTL_MS) return Promise.resolve(cached.slot);
-
-    let promise = nextSlotInFlight.get(key);
-    if (!promise) {
-      promise = fetch(
-        `${apiBaseUrl}/api/shopify/public/doctors/next-slot?facilityId=${encodeURIComponent(facilityId)}&doctorId=${encodeURIComponent(doctorId)}&mode=${encodeURIComponent(mode)}`,
-      )
-        .then(async (response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const data = await response.json();
-          const slot = data?.data?.nextSlot ?? null;
-          nextSlotCache.set(key, { slot, fetchedAt: Date.now() });
-          return slot;
-        })
-        .finally(() => {
-          nextSlotInFlight.delete(key);
-        });
-      nextSlotInFlight.set(key, promise);
+  // Fetches the next slot of every doctor not already remembered, in one
+  // request, and remembers each answer.
+  const fetchDoctorsNextSlots = async (facilityId, mode, doctorIds) => {
+    const missing = doctorIds.filter((id) => {
+      const cached = nextSlotCache.get(`${facilityId}:${mode}:${id}`);
+      return !(cached && Date.now() - cached.fetchedAt < NEXT_SLOT_CACHE_TTL_MS);
+    });
+    if (missing.length) {
+      const response = await fetch(
+        `${apiBaseUrl}/api/shopify/public/doctors/next-slots?facilityId=${encodeURIComponent(facilityId)}&doctorIds=${missing.map(encodeURIComponent).join(',')}&mode=${encodeURIComponent(mode)}`,
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const rows = Array.isArray(data?.data?.nextSlots) ? data.data.nextSlots : [];
+      missing.forEach((id) => {
+        const row = rows.find((item) => item.doctorId === id);
+        nextSlotCache.set(`${facilityId}:${mode}:${id}`, { slot: row ? row.nextSlot ?? null : null, fetchedAt: Date.now() });
+      });
     }
-    return promise;
+    return doctorIds.map((id) => nextSlotCache.get(`${facilityId}:${mode}:${id}`).slot);
   };
 
-  // Starts one next-slot request per card and fills each card in as its own
-  // answer arrives. An answer is applied only if that card is still on screen
+  // Starts the single next-slot request for all cards and fills each card in
+  // when it arrives. An answer is applied only if that card is still on screen
   // for the same clinic, mode and doctor it was requested for.
   const loadDoctorCardNextSlots = (list, doctors, facilityId, mode) => {
-    doctors.forEach((doctor) => {
+    const cardFor = (doctor) => {
       const key = `${facilityId}:${mode}:${doctor.id}`;
-      const cardFor = () => {
-        const card = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
-        return card && card.isConnected && card.dataset.kalNextSlotKey === key ? card : null;
-      };
+      const card = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
+      return card && card.isConnected && card.dataset.kalNextSlotKey === key ? card : null;
+    };
+    doctors.forEach((doctor) => {
       const initialCard = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
-      if (initialCard) initialCard.dataset.kalNextSlotKey = key;
+      if (initialCard) initialCard.dataset.kalNextSlotKey = `${facilityId}:${mode}:${doctor.id}`;
+    });
 
-      fetchDoctorNextSlot(facilityId, mode, doctor.id)
-        .then((slot) => {
-          const card = cardFor();
+    fetchDoctorsNextSlots(facilityId, mode, doctors.map((doctor) => doctor.id))
+      .then((slots) => {
+        doctors.forEach((doctor, index) => {
+          const card = cardFor(doctor);
           if (!card) return;
           card.querySelector('.kal-doctor-card__next-slot')?.classList.remove('kal-doctor-card__next-slot--loading');
-          applyDoctorCardNextSlot(card, slot);
-        })
-        .catch((err) => {
-          console.error('[kal-booking-flow] Failed to load next slot:', err);
-          const card = cardFor();
+          applyDoctorCardNextSlot(card, slots[index]);
+        });
+      })
+      .catch((err) => {
+        console.error('[kal-booking-flow] Failed to load next slots:', err);
+        doctors.forEach((doctor) => {
+          const card = cardFor(doctor);
           const el = card && card.querySelector('.kal-doctor-card__next-slot');
           if (!el) return;
           el.classList.remove('kal-doctor-card__next-slot--loading');
           el.textContent = 'Availability unavailable';
         });
-    });
+      });
   };
 
   const renderDoctorList = (list, allDoctors, facilityId, mode) => {
