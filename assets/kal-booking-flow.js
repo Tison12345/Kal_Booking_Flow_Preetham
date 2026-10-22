@@ -1190,6 +1190,16 @@ document.addEventListener('DOMContentLoaded', () => {
     selected: new Set(),
   };
 
+  // Patient Details' free-text Concern field (data-kal-concern-field) was
+  // built for Experiment B only (see that field's own liquid comment), but
+  // Experiment A's own concern list has an "Other" row (concern_key
+  // "other", see sections/kal-concern-options.liquid) whose whole point is
+  // that the checkbox alone doesn't say what the visitor actually means —
+  // same open-ended case Experiment B solves this field for. So this field
+  // shows whenever EITHER path needs it: Experiment B always, or Experiment
+  // A once "Other" is checked.
+  const shouldShowConcernField = () => isExperimentB || concernSelect.selected.has('other');
+
   const updateConcernContinueButton = () => {
     const hasSelection = concernSelect.selected.size > 0;
     // Per the updated Figma spec, the footer (not just the button) is
@@ -1221,6 +1231,7 @@ document.addEventListener('DOMContentLoaded', () => {
       row.setAttribute('aria-pressed', String(isSelected));
     });
     updateConcernContinueButton();
+    applyExperimentVisibility();
   };
 
   // Populates Concern Select's list from sections/kal-concern-options.liquid's
@@ -1739,11 +1750,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // double-click on "Proceed to Payment" can't open two Checkout modals or
   // fire two orders for the same hold.
   let placingPayment = false;
-  // The Razorpay values from a payment that already succeeded for slotPicker.
-  // holdId, kept until that booking completes. If the booking request fails
-  // after the visitor has paid, a retry reuses these instead of opening
-  // Checkout again -- the only way to avoid charging them twice.
-  let capturedPayment = null; // { holdId, fields }
+  // The Razorpay order a visitor has already paid for, for slotPicker.holdId,
+  // kept until that booking is confirmed. If confirming it fails or times out
+  // after they have paid, a retry keeps waiting for this same order instead of
+  // opening Checkout again -- the only way to avoid charging them twice.
+  let paidOrder = null; // { holdId, razorpayOrderId }
 
   // Keyed by ISO date ("YYYY-MM-DD") -> the day-summaries endpoint's
   // per-day summary object ({ availableSlots, totalSlots, ... }). Shared
@@ -2965,7 +2976,7 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFieldError('email');
     }
 
-    if (isExperimentB) {
+    if (shouldShowConcernField()) {
       if (patientDetails.concern.trim() === '') {
         showFieldError('concern', 'Please tell us your concern.');
         allValid = false;
@@ -2980,17 +2991,21 @@ document.addEventListener('DOMContentLoaded', () => {
     return allValid;
   };
 
-  // Shows/hides Patient Details' Concern field per isExperimentB (see
-  // BOOKING EXPERIMENT above) and keeps its state harmless when hidden —
-  // cleared value + cleared error, so switching from B back to A (e.g. the
-  // visitor closes the flow and reopens it via the other CTA) never leaves
-  // a stale concern value sitting in patientDetails or an error showing on
-  // a field they can no longer see.
+  // Shows/hides Patient Details' Concern field per shouldShowConcernField()
+  // (Experiment B always, Experiment A once "Other" is checked — see that
+  // helper's own comment) and keeps its state harmless when hidden —
+  // cleared value + cleared error, so leaving the field hidden again (B
+  // reopened as A, or "Other" unchecked back on Concern Select) never
+  // leaves a stale concern value sitting in patientDetails or an error
+  // showing on a field they can no longer see. Also re-run from
+  // toggleConcern() itself, not just the experiment-open call sites, so
+  // checking/unchecking "Other" updates this live.
   const applyExperimentVisibility = () => {
+    const showConcernField = shouldShowConcernField();
     flow.querySelectorAll('[data-kal-concern-field]').forEach((el) => {
-      el.hidden = !isExperimentB;
+      el.hidden = !showConcernField;
     });
-    if (!isExperimentB) {
+    if (!showConcernField) {
       patientDetails.concern = '';
       flow.querySelectorAll('[data-kal-field="concern"]').forEach((el) => {
         el.value = '';
@@ -3198,8 +3213,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // required.
   const paymentIdempotencyKeys = new Map();
 
-  const getPaymentIdempotencyKey = (holdId, operation) => {
-    const cacheKey = `${holdId}:${operation}`;
+  // `discriminator` (the request body) makes an edited retry for the same hold
+  // a different request with its own key: the backend rejects reusing a key
+  // with a different body.
+  const getPaymentIdempotencyKey = (holdId, operation, discriminator = '') => {
+    const cacheKey = `${holdId}:${operation}:${discriminator}`;
     let key = paymentIdempotencyKeys.get(cacheKey);
     if (!key) {
       key = generateIdempotencyKey();
@@ -3228,26 +3246,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (textEl) textEl.textContent = message;
       el.classList.remove('kal-form-error--progress');
       el.hidden = false;
-    });
-  };
-
-  // Neutral "working on it" line in the same banner spot as the error, so it
-  // inherits that spot's placement on mobile and desktop. The booking request
-  // can take several seconds after Checkout closes, and the buttons are
-  // disabled meanwhile, so without this the page looks frozen.
-  const showBookingProgress = (message) => {
-    flow.querySelectorAll('[data-kal-booking-error]').forEach((el) => {
-      const textEl = el.querySelector('[data-kal-booking-error-text]');
-      if (textEl) textEl.textContent = message;
-      el.classList.add('kal-form-error--progress');
-      el.hidden = false;
-    });
-  };
-
-  const clearBookingProgress = () => {
-    flow.querySelectorAll('[data-kal-booking-error].kal-form-error--progress').forEach((el) => {
-      el.classList.remove('kal-form-error--progress');
-      el.hidden = true;
     });
   };
 
@@ -3303,22 +3301,31 @@ document.addEventListener('DOMContentLoaded', () => {
     return data.data;
   };
 
+  const getFromPartnerApi = async (path) => {
+    const response = await fetch(`${apiBaseUrl}/api/shopify/public/${path}`);
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.message || `HTTP ${response.status}`);
+    }
+    return data.data;
+  };
+
   // ----------------------------------------------------------------------
   // RAZORPAY PAYMENT — the amount is never sent from here; the server prices
-  // it from Shopify. POST payments/orders creates/reopens a Razorpay order
-  // for the already-placed hold and Razorpay's own Checkout modal collects
-  // card/UPI/netbanking details. Checkout's callback is never trusted by
-  // itself: its order/payment/signature values are sent along with POST
-  // appointments, and the server verifies the signature there — only a
-  // successful booking response means the payment counted.
+  // it from Shopify. POST payments/orders sends the booking details (kept
+  // server-side, not in Razorpay) and creates/reopens a Razorpay order for the
+  // already-placed hold; Razorpay's own Checkout modal collects card/UPI/
+  // netbanking details. Nothing here ever creates the appointment for an
+  // online payment: Razorpay tells our server the order is paid (webhook) and
+  // the server books it. The page only waits, by polling the order's status
+  // (waitForPaidBooking), and only a "confirmed" answer means it counted.
   // ----------------------------------------------------------------------
 
-  // Resolves with Checkout's { razorpayOrderId, razorpayPaymentId,
-  // razorpaySignature } once the visitor has paid, or rejects with a plain
-  // Error (message shown via showBookingError, same as every other booking
-  // failure) if they close Checkout without paying. A failed attempt alone
-  // doesn't end it: Checkout stays open for a retry.
-  const collectPayment = () => new Promise((resolve, reject) => {
+  // Resolves with the Razorpay order id once the visitor has paid, or rejects
+  // with a plain Error (message shown via showBookingError, same as every
+  // other booking failure) if they close Checkout without paying. A failed
+  // attempt alone doesn't end it: Checkout stays open for a retry.
+  const collectPayment = (details) => new Promise((resolve, reject) => {
     if (!window.Razorpay) {
       reject(new Error('Payment is temporarily unavailable. Please try again in a moment.'));
       return;
@@ -3342,7 +3349,11 @@ document.addEventListener('DOMContentLoaded', () => {
       settled = true;
       fn();
     };
-    postToPartnerApi('payments/orders', { holdId: slotPicker.holdId }, getPaymentIdempotencyKey(slotPicker.holdId, 'payment-order'))
+    postToPartnerApi(
+      'payments/orders',
+      details,
+      getPaymentIdempotencyKey(slotPicker.holdId, 'payment-order', JSON.stringify(details)),
+    )
       .then((order) => {
         const rzp = new window.Razorpay({
           key: order.razorpayKeyId,
@@ -3373,14 +3384,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // verification takes. Safe to call unconditionally; handler()
             // only ever fires once per Checkout session.
             flow.showModal();
-            // No separate verify call: these three values ride along on
-            // POST appointments, where the server checks the signature and
-            // sets isPaid in the same request.
-            settle(() => resolve({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            }));
+            // Nothing from Checkout's callback is sent to the server as proof:
+            // the server learns the payment happened from Razorpay itself
+            // (webhook), so only the order id is needed, to ask how it went.
+            settle(() => resolve(response.razorpay_order_id || order.razorpayOrderId));
           },
           modal: {
             // Visitor closed Checkout without paying — the hold is left
@@ -3619,6 +3626,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const PAID_BOOKING_POLL_INTERVAL_MS = 1500;
+  // How long to wait for the server to finish booking a paid order before
+  // telling the visitor it is still being confirmed. Razorpay normally tells
+  // the server within seconds; the booking itself then takes several more.
+  const PAID_BOOKING_WAIT_MS = 90 * 1000;
+
+  // Polls the paid order's status until the server has booked it. Resolves
+  // with the appointment summary; rejects with an Error carrying the server's
+  // code when the booking could not be completed (the payment was still
+  // received), or BOOKING_CONFIRMATION_PENDING when it is just taking long.
+  // A single failed poll (network blip, rate limit) is not the end: keep going.
+  const waitForPaidBooking = async (razorpayOrderId) => {
+    const deadline = Date.now() + PAID_BOOKING_WAIT_MS;
+    while (Date.now() < deadline) {
+      try {
+        const status = await getFromPartnerApi(`payments/orders/${encodeURIComponent(razorpayOrderId)}/status`);
+        if (status.status === 'confirmed') return status.appointment;
+        if (status.status === 'failed') {
+          const error = new Error(status.message);
+          error.code = status.code;
+          throw error;
+        }
+      } catch (err) {
+        if (err && err.code) throw err;
+        console.error('[kal-booking-flow] Booking status check failed, will retry:', err);
+      }
+      await new Promise((resolve) => setTimeout(resolve, PAID_BOOKING_POLL_INTERVAL_MS));
+    }
+    const pending = new Error(
+      'Your payment was received and we are still confirming your booking. Please wait a moment and try again. Do not pay again.',
+    );
+    pending.code = 'BOOKING_CONFIRMATION_PENDING';
+    throw pending;
+  };
+
   // Set once createAppointment succeeds — nothing in this build reads it
   // yet (Booking Confirmed has no appointment-id display, and reschedule/
   // cancel is a separate, not-yet-built feature), but it's the real
@@ -3654,56 +3696,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setBookingButtonsBusy(true);
     try {
-      let paymentFields = {};
-      if (requiresOnlinePayment) {
-        if (capturedPayment && capturedPayment.holdId === slotPicker.holdId) {
-          paymentFields = capturedPayment.fields;
-        } else {
-          if (placingPayment) return;
-          placingPayment = true;
-          try {
-            paymentFields = await collectPayment();
-            capturedPayment = { holdId: slotPicker.holdId, fields: paymentFields };
-          } finally {
-            placingPayment = false;
-          }
-        }
-      }
-
-      const mode = slotPicker.mode === 'video' ? 'online' : 'offline';
-      const appointmentDate = toIsoDate(slotPicker.selectedDate);
-      const appointmentTime = slotPicker.selectedSlot.start_time;
-
       // The hold was already placed when Continue was pressed on Slot
       // Picker (see handleSlotContinue() above) — reused here rather than
       // placing a second one.
       const concerns = collectSelectedConcernLabels();
-      showBookingProgress(
-        requiresOnlinePayment ? 'Confirming your payment and booking…' : 'Confirming your booking…',
-      );
-      const appointment = await postToPartnerApi(
-        'appointments',
-        {
-          holdId: slotPicker.holdId,
-          facilityId: facility.id,
-          doctorStaffId: selectedDoctorId,
-          appointmentDate,
-          appointmentTime,
-          durationMinutes: CONSULT_DURATION_MINUTES,
-          mode,
-          patientName: patientDetails.name.trim(),
-          patientPhone: buildPatientPhone(),
-          patientGender: patientDetails.gender || null,
-          patientEmail: patientDetails.email.trim() || null,
-          concerns: concerns.length ? concerns : undefined,
-          notes: isExperimentB && patientDetails.concern.trim() ? patientDetails.concern.trim() : null,
-          ...paymentFields,
-        },
-        generateIdempotencyKey(),
-      );
+      const details = {
+        holdId: slotPicker.holdId,
+        facilityId: facility.id,
+        doctorStaffId: selectedDoctorId,
+        appointmentDate: toIsoDate(slotPicker.selectedDate),
+        appointmentTime: slotPicker.selectedSlot.start_time,
+        durationMinutes: CONSULT_DURATION_MINUTES,
+        mode: slotPicker.mode === 'video' ? 'online' : 'offline',
+        patientName: patientDetails.name.trim(),
+        patientPhone: buildPatientPhone(),
+        patientGender: patientDetails.gender || null,
+        patientEmail: patientDetails.email.trim() || null,
+        concerns: concerns.length ? concerns : undefined,
+        notes: shouldShowConcernField() && patientDetails.concern.trim() ? patientDetails.concern.trim() : null,
+      };
+
+      let appointment;
+      if (requiresOnlinePayment) {
+        // Pay online: the details go to the server with the order, Checkout
+        // takes the payment, and the server books it when Razorpay reports
+        // the order paid. This page never creates the appointment, it waits.
+        if (!(paidOrder && paidOrder.holdId === slotPicker.holdId)) {
+          if (placingPayment) return;
+          placingPayment = true;
+          try {
+            const razorpayOrderId = await collectPayment(details);
+            paidOrder = { holdId: slotPicker.holdId, razorpayOrderId };
+          } finally {
+            placingPayment = false;
+          }
+        }
+        appointment = await waitForPaidBooking(paidOrder.razorpayOrderId);
+      } else {
+        // Pay at clinic: nothing to pay, the appointment is created right here.
+        appointment = await postToPartnerApi('appointments', details, generateIdempotencyKey());
+      }
 
       lastBookingResult = appointment;
-      capturedPayment = null;
+      paidOrder = null;
       // The hold is now a real, confirmed appointment server-side — not
       // "still open" anymore. Without clearing it here, data-kal-close's
       // handler (if (slotPicker.holdId) openLeaveBookingModal()) kept
@@ -3717,10 +3752,8 @@ document.addEventListener('DOMContentLoaded', () => {
       slotPicker.holdId = null;
       slotPicker.heldSlot = null;
       slotPicker.holdContext = null;
-      clearBookingProgress();
       goToStep('booking-confirmed');
     } catch (err) {
-      clearBookingProgress();
       console.error('[kal-booking-flow] Booking failed:', err);
       showBookingError(
         err instanceof Error && err.message && !err.message.startsWith('HTTP')
@@ -3736,7 +3769,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // copy from the backend (partner-booking.use-cases.ts), shown above
       // via showBookingError.
       if (err && err.code === 'SLOT_LOST_PAYMENT_CAPTURED') {
-        capturedPayment = null;
+        paidOrder = null;
         slotPicker.holdId = null;
         slotPicker.heldSlot = null;
         slotPicker.holdContext = null;
@@ -3748,12 +3781,11 @@ document.addEventListener('DOMContentLoaded', () => {
         goToStep('slot-picker');
         return;
       }
-      // The visitor has already paid (Checkout succeeded, or we are retrying
-      // with the values from an earlier success). Do NOT release the hold or
-      // send them back to pick a slot: the error above explains the situation,
-      // a retry reuses the captured payment (no second charge), and the hold
-      // simply expires on its own if they never come back.
-      if (capturedPayment && capturedPayment.holdId === slotPicker.holdId) {
+      // The visitor has already paid (Checkout succeeded). Do NOT release the
+      // hold or send them back to pick a slot: the error above explains the
+      // situation, and a retry keeps waiting for this same paid order (no
+      // second charge).
+      if (paidOrder && paidOrder.holdId === slotPicker.holdId) {
         return;
       }
       // The hold was already placed before this call (handleSlotContinue()
