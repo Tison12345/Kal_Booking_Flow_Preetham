@@ -53,6 +53,26 @@
   {%- endfor -%}
 </div>
 
+{%- comment -%}
+  An empty card the script clones for every doctor whose details come from
+  Shopify (the Doctor entry linked to their consultation product). It carries
+  the same markup and icons as the blocks above; the script fills in name,
+  degree, experience, languages, photo and tags. The one placeholder tag only
+  makes the tags container render so the script has somewhere to put the real ones.
+{%- endcomment -%}
+<div class="kal-doctor-card-template" hidden>
+  {%- render 'kal-booking-flow-doctor-card',
+    name: '',
+    degree: '',
+    languages: '',
+    experience: '',
+    tags: 'x',
+    next_slot: '',
+    price: '',
+    photo_url: ''
+  -%}
+</div>
+
 {% schema %}
 {
   "name": "Doctor cards (Kal)",

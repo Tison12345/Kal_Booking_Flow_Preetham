@@ -181,34 +181,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
   };
 
-  // Real facility IDs come from this account's own GET /partner/facilities
-  // (via the proxy) — never hand-typed into the theme editor. Fetched once
-  // and cached; shared by both the "Find a Clinic" page's selection lookup
-  // below and getCurrentFacility()'s own no-selection-yet fallback.
+  // The clinics and doctors come from Shopify, not from the CMS: the theme
+  // renders shop.metaobjects.clinic and shop.metaobjects.doctor into the page
+  // as JSON (snippets/kal-shopify-catalog.liquid) and this reads it back.
+  // A clinic's id is its facility_id field (the CMS clinic id), a doctor's id
+  // is doctor_id (the CMS staff id), so the later booking calls still use real
+  // CMS ids. No request is made to load either list.
+  let shopifyCatalogCache = null;
+
+  const getShopifyCatalog = () => {
+    if (shopifyCatalogCache) return shopifyCatalogCache;
+    let parsed = null;
+    try {
+      const el = document.getElementById('kal-shopify-catalog');
+      parsed = el ? JSON.parse(el.textContent) : null;
+    } catch (err) {
+      console.error('[kal-booking-flow] Could not read the Shopify catalog:', err);
+    }
+    shopifyCatalogCache = {
+      currency: (parsed && parsed.currency) || 'INR',
+      clinics: parsed && Array.isArray(parsed.clinics) ? parsed.clinics : [],
+      doctors: parsed && Array.isArray(parsed.doctors) ? parsed.doctors : [],
+    };
+    return shopifyCatalogCache;
+  };
+
+  // The doctors Shopify offers at one clinic: the Doctor entries whose
+  // "clinics" field includes it, shaped for renderDoctorList(). Prices and
+  // modes come from the doctor's consultation product variants for that clinic
+  // (one variant per clinic and mode); when none are available the card has no
+  // price and both modes stay selectable (the server still decides what can be
+  // paid for).
+  const getCatalogDoctorsForFacility = (facilityId) => {
+    const catalog = getShopifyCatalog();
+    const modeOf = (row) => String(row.mode || '').trim().toLowerCase();
+    return catalog.doctors
+      .filter(
+        (doctor) =>
+          doctor && doctor.id && doctor.name && Array.isArray(doctor.clinicIds) && doctor.clinicIds.indexOf(facilityId) !== -1,
+      )
+      .map((doctor) => {
+        const rows = (doctor.pricing || []).filter((row) => row.facilityId === facilityId);
+        const inClinic = rows.find((row) => modeOf(row) === 'in-clinic') || null;
+        const online = rows.find((row) => modeOf(row) === 'online') || null;
+        const money = (row) => (row ? { amountPaise: row.pricePaise, currency: catalog.currency } : null);
+        const discount = inClinic ? Number(inClinic.payNowDiscountPercent) || 0 : 0;
+        return {
+          id: doctor.id,
+          name: doctor.name,
+          designation: doctor.qualification || null,
+          profile: {
+            name: doctor.name,
+            qualification: doctor.qualification || null,
+            specialization: Array.isArray(doctor.specialization) ? doctor.specialization : [],
+            experience: doctor.experience || null,
+            languages: Array.isArray(doctor.languages) ? doctor.languages : [],
+            photoUrl: doctor.photoUrl || null,
+          },
+          supportsOnline: rows.length ? Boolean(online) : true,
+          supportsOffline: rows.length ? Boolean(inClinic) : true,
+          inClinicPrice: money(inClinic),
+          onlinePrice: money(online),
+          payNowDiscountPercent: discount,
+          inClinicPayNowPrice:
+            inClinic && discount > 0
+              ? {
+                  amountPaise: Math.round((inClinic.pricePaise * (100 - discount)) / 100),
+                  currency: catalog.currency,
+                }
+              : null,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
+
   let facilityOptionsCache = null;
-  let facilityOptionsPromise = null;
 
   const loadFacilityOptions = () => {
-    if (facilityOptionsCache) return Promise.resolve(facilityOptionsCache);
-    if (facilityOptionsPromise) return facilityOptionsPromise;
-    if (!apiBaseUrl) return Promise.resolve([]);
-    facilityOptionsPromise = fetch(`${apiBaseUrl}/api/shopify/public/facilities`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then((data) => {
-        facilityOptionsCache = Array.isArray(data?.data?.facilities) ? data.data.facilities : [];
-        return facilityOptionsCache;
-      })
-      .catch((err) => {
-        console.error('[kal-booking-flow] Failed to load facilities:', err);
-        return [];
-      })
-      .finally(() => {
-        facilityOptionsPromise = null;
-      });
-    return facilityOptionsPromise;
+    if (!facilityOptionsCache) {
+      facilityOptionsCache = getShopifyCatalog()
+        .clinics.filter((clinic) => clinic && clinic.id && clinic.name)
+        .map((clinic) => ({
+          id: clinic.id,
+          name: clinic.name,
+          addressLine1: clinic.address || clinic.city || null,
+          addressLine2: null,
+          city: null,
+          state: null,
+          timings: clinic.timings || null,
+        }));
+    }
+    return Promise.resolve(facilityOptionsCache);
   };
 
   // Renders the "Find a Clinic" page's list straight from GET facilities —
@@ -568,10 +631,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   };
 
-  // Fisher-Yates — used below to randomize which position a doctor's
-  // concern-matched tag lands in, so it doesn't always render in the same
-  // spot (wherever it happens to sit in the theme editor's comma-
-  // separated list).
+  // Fisher-Yates, used to pick and order the concern badges on a doctor card.
   const shuffleArray = (arr) => {
     for (let i = arr.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -580,89 +640,135 @@ document.addEventListener('DOMContentLoaded', () => {
     return arr;
   };
 
-  // Every doctor card shows at least this many specialty badges —
-  // sections/kal-doctor-cards.liquid's schema asks editors to author at
-  // least this many tags per doctor so there's always enough to pad with
-  // below.
-  const MIN_DOCTOR_CARD_TAGS = 4;
+  // Every doctor card shows exactly this many concern badges.
+  const DOCTOR_CARD_TAG_COUNT = 4;
 
-  // Explicit instruction: every concern the visitor picked on Concern
-  // Select becomes its own highlighted badge on EVERY doctor card — not
-  // just a doctor whose own authored tags happen to already mention it
-  // ("if a user clicks gut health then all the cards should have the gut
-  // health badge"). The doctor's own tags (sections/kal-doctor-cards.liquid)
-  // are only used as filler, padding the card up to MIN_DOCTOR_CARD_TAGS
-  // total when fewer than that many concerns are selected. All badges —
-  // concern ones and filler ones alike — are then shuffled together so
-  // the highlighted concern badge(s) don't always land first ("i dont
-  // want all to be in the first so we will shuffle it"). If 4+ concerns
-  // are selected, they alone already satisfy the minimum and no filler is
-  // added ("if 4 concerns are selected all the cards will have the 4
-  // concern and the concern as badge but shuffled"). No-op for a card
-  // with no .kal-doctor-card__tags at all (the minimal fallback card for
-  // a doctor with no configured profile block — nothing to pad from, and
-  // out of scope for this feature). When nothing's selected (Experiment B
-  // skips Concern Select entirely), this just reduces to "show the
-  // doctor's own tags, shuffled" with nothing highlighted.
-  // Keyed by `${doctorId}|${sorted selected concern labels}` -> the
-  // shuffled badge text order last used for that doctor + selection.
-  // Doctor Select gets fully rebuilt from scratch every time it's
-  // (re-)reached (mode toggle, Back/Continue, "Change Clinic" — see
-  // goToStep's own comment), which otherwise meant every revisit
-  // reshuffled every card's badges even when nothing about the selection
-  // had changed — looked like the badges were randomly changing every
-  // time you looked at the same doctor. The point of shuffling is "don't
-  // always put the matched concern(s) first," not "look different every
-  // time," so the order is cached and reused for as long as the doctor
-  // and the selected concerns stay the same; a genuinely different
-  // concern selection gets its own fresh shuffle.
-  const doctorCardBadgeOrderCache = new Map();
+  // Badges on a doctor card are always concerns taken from Concern Select,
+  // whose options are authored in the theme editor (sections/kal-concern-
+  // options.liquid); nothing is listed again in this file or in Liquid, the
+  // labels are read from the rendered rows. Exactly DOCTOR_CARD_TAG_COUNT
+  // badges are shown, picked at random:
+  //   - the concerns the visitor selected come first: if they selected more
+  //     than the limit (4 or 5 or more), a random 4 of them are shown;
+  //   - if they selected fewer, the rest are filled with other concerns from
+  //     the same editor list, again at random;
+  //   - the final badges are shuffled so a selected concern isn't always first.
+  // The doctor's own tags are not used. The result is remembered per doctor
+  // and selection (below) so reopening the step doesn't reshuffle the same
+  // card; a different selection, or a different doctor, gets its own shuffle.
+  // No-op for a card with no .kal-doctor-card__tags container.
+  const doctorCardBadgeCache = new Map();
+
+  // Normalizes a badge label for dedup comparison only (display text is
+  // untouched), so "Skin & Hair" and "Skin, Hair" count as the same concern.
+  const normalizeBadgeKey = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+  // Every concern the editor has configured, read from the rendered Concern
+  // Select rows.
+  const collectAllConcernLabels = () =>
+    [...flow.querySelectorAll('[data-kal-concern] .kal-concern-row__name')]
+      .map((el) => el.textContent.trim())
+      .filter(Boolean);
+
+  const uniqueByKey = (labels) => {
+    const seen = new Set();
+    return labels.filter((label) => {
+      const key = normalizeBadgeKey(label);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   const applyDoctorCardConcernBadges = (card) => {
     const tagsContainer = card.querySelector('.kal-doctor-card__tags');
     if (!tagsContainer) return;
 
-    const ownTagTexts = Array.from(tagsContainer.children).map((el) => el.textContent.trim());
-    const selectedLabels = collectSelectedConcernLabels();
+    const selected = uniqueByKey(collectSelectedConcernLabels());
+    const selectedKeys = new Set(selected.map(normalizeBadgeKey));
+    const others = uniqueByKey(collectAllConcernLabels()).filter((label) => !selectedKeys.has(normalizeBadgeKey(label)));
 
-    const seenLower = new Set();
-    const badges = []; // { text, selected }
-
-    selectedLabels.forEach((label) => {
-      const key = label.toLowerCase();
-      if (seenLower.has(key)) return; // collectSelectedConcernLabels() shouldn't duplicate, but don't rely on that
-      seenLower.add(key);
-      badges.push({ text: label, selected: true });
-    });
-
-    ownTagTexts.forEach((text) => {
-      if (badges.length >= MIN_DOCTOR_CARD_TAGS) return;
-      const key = text.toLowerCase();
-      if (seenLower.has(key)) return; // already shown as a selected-concern badge above
-      seenLower.add(key);
-      badges.push({ text, selected: false });
-    });
-
-    const cacheKey = `${card.dataset.doctorId || ''}|${[...seenLower].sort().join(',')}`;
-    const cachedOrder = doctorCardBadgeOrderCache.get(cacheKey);
-    if (cachedOrder) {
-      badges.sort((a, b) => cachedOrder.indexOf(a.text.toLowerCase()) - cachedOrder.indexOf(b.text.toLowerCase()));
-    } else {
+    const cacheKey = `${card.dataset.doctorId || ''}|${[...selectedKeys].sort().join(',')}|${others.length}`;
+    let badges = doctorCardBadgeCache.get(cacheKey);
+    if (!badges) {
+      badges = shuffleArray([...selected]).slice(0, DOCTOR_CARD_TAG_COUNT);
+      if (badges.length < DOCTOR_CARD_TAG_COUNT) {
+        badges = badges.concat(shuffleArray([...others]).slice(0, DOCTOR_CARD_TAG_COUNT - badges.length));
+      }
       shuffleArray(badges);
-      doctorCardBadgeOrderCache.set(cacheKey, badges.map((b) => b.text.toLowerCase()));
+      doctorCardBadgeCache.set(cacheKey, badges);
     }
 
-    // Explicit instruction: no visual distinction between a concern badge
-    // and a filler one — every badge renders with the plain
-    // .kal-doctor-card__tag look, "selected" above is only used to decide
-    // what goes on the card and dedupe against, not how it's styled.
     tagsContainer.innerHTML = '';
-    badges.forEach(({ text }) => {
+    tagsContainer.hidden = badges.length === 0;
+    badges.forEach((text) => {
       const tagEl = document.createElement('span');
       tagEl.className = 'kal-doctor-card__tag';
       tagEl.textContent = text;
       tagsContainer.appendChild(tagEl);
     });
+  };
+
+  // Puts a text value after the icon in one of the card's meta rows (the icon
+  // span stays), or hides the row when there is nothing to show.
+  const setDoctorCardRowText = (row, text) => {
+    if (!row) return;
+    Array.from(row.childNodes)
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    if (text) row.appendChild(document.createTextNode(` ${text}`));
+    row.hidden = !text;
+  };
+
+  // Fills a card from the doctor's Shopify profile (the Doctor entry linked to
+  // their consultation product), so the card shows exactly what is set there:
+  // the name is used as written (no "Dr." added), degree = qualification,
+  // tags = specialization, languages joined with a dot.
+  const applyDoctorProfile = (card, profile) => {
+    card.dataset.kalDoctorName = profile.name;
+    const nameEl = card.querySelector('.kal-doctor-card__name');
+    if (nameEl) nameEl.textContent = profile.name;
+
+    const rows = card.querySelectorAll('.kal-doctor-card__meta-row');
+    const experience = profile.experience
+      ? /^\d+(\.\d+)?$/.test(profile.experience)
+        ? `${profile.experience} yrs experience`
+        : profile.experience
+      : '';
+    // Same document order as the card snippet: degree, experience, languages.
+    setDoctorCardRowText(rows[0], profile.qualification || '');
+    setDoctorCardRowText(rows[1], experience);
+    setDoctorCardRowText(rows[2], (profile.languages || []).join(' · '));
+
+    card.dataset.kalDoctorPhotoUrl = profile.photoUrl || '';
+    const photoEl = card.querySelector('.kal-doctor-card__photo');
+    if (photoEl && profile.photoUrl) {
+      photoEl.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = profile.photoUrl;
+      img.alt = profile.name;
+      img.loading = 'lazy';
+      photoEl.appendChild(img);
+    }
+
+    const tagsEl = card.querySelector('.kal-doctor-card__tags');
+    if (tagsEl) {
+      tagsEl.innerHTML = '';
+      (profile.specialization || []).forEach((text) => {
+        const tag = document.createElement('span');
+        tag.className = 'kal-doctor-card__tag';
+        tag.textContent = text;
+        tagsEl.appendChild(tag);
+      });
+    }
+  };
+
+  const buildProfileDoctorCard = (doctor) => {
+    const template = document.querySelector('.kal-doctor-card-template .kal-doctor-card');
+    const card = template ? template.cloneNode(true) : buildFallbackDoctorCard(doctor);
+    card.classList.remove('kal-doctor-card--selected');
+    applyDoctorProfile(card, doctor.profile);
+    return card;
   };
 
   const buildFallbackDoctorCard = (doctor) => {
@@ -779,7 +885,80 @@ document.addEventListener('DOMContentLoaded', () => {
   // overwriting whatever's already on screen for the CURRENT selection.
   let doctorListRequestSequence = 0;
 
-  const renderDoctorList = (list, allDoctors) => {
+  // "Next slot" is the one part of a doctor card that needs the CMS schedule,
+  // so it is loaded separately, one request per card, after the cards are
+  // already on screen. Until a card's answer arrives it shows a quiet
+  // "Checking availability…" line; a slow or failed lookup never holds the
+  // cards back. Answers are remembered briefly per clinic, mode and doctor.
+  const NEXT_SLOT_CACHE_TTL_MS = 2 * 60 * 1000;
+  const nextSlotCache = new Map(); // `${facilityId}:${mode}:${doctorId}` -> { slot, fetchedAt }
+  const nextSlotInFlight = new Map(); // same key -> Promise<slot | null>
+
+  const applyDoctorCardNextSlotLoading = (card) => {
+    const el = card.querySelector('.kal-doctor-card__next-slot');
+    if (!el) return;
+    el.hidden = false;
+    el.classList.add('kal-doctor-card__next-slot--loading');
+    el.textContent = 'Checking availability…';
+  };
+
+  const fetchDoctorNextSlot = (facilityId, mode, doctorId) => {
+    const key = `${facilityId}:${mode}:${doctorId}`;
+    const cached = nextSlotCache.get(key);
+    if (cached && Date.now() - cached.fetchedAt < NEXT_SLOT_CACHE_TTL_MS) return Promise.resolve(cached.slot);
+
+    let promise = nextSlotInFlight.get(key);
+    if (!promise) {
+      promise = fetch(
+        `${apiBaseUrl}/api/shopify/public/doctors/next-slot?facilityId=${encodeURIComponent(facilityId)}&doctorId=${encodeURIComponent(doctorId)}&mode=${encodeURIComponent(mode)}`,
+      )
+        .then(async (response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          const slot = data?.data?.nextSlot ?? null;
+          nextSlotCache.set(key, { slot, fetchedAt: Date.now() });
+          return slot;
+        })
+        .finally(() => {
+          nextSlotInFlight.delete(key);
+        });
+      nextSlotInFlight.set(key, promise);
+    }
+    return promise;
+  };
+
+  // Starts one next-slot request per card and fills each card in as its own
+  // answer arrives. An answer is applied only if that card is still on screen
+  // for the same clinic, mode and doctor it was requested for.
+  const loadDoctorCardNextSlots = (list, doctors, facilityId, mode) => {
+    doctors.forEach((doctor) => {
+      const key = `${facilityId}:${mode}:${doctor.id}`;
+      const cardFor = () => {
+        const card = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
+        return card && card.isConnected && card.dataset.kalNextSlotKey === key ? card : null;
+      };
+      const initialCard = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
+      if (initialCard) initialCard.dataset.kalNextSlotKey = key;
+
+      fetchDoctorNextSlot(facilityId, mode, doctor.id)
+        .then((slot) => {
+          const card = cardFor();
+          if (!card) return;
+          card.querySelector('.kal-doctor-card__next-slot')?.classList.remove('kal-doctor-card__next-slot--loading');
+          applyDoctorCardNextSlot(card, slot);
+        })
+        .catch((err) => {
+          console.error('[kal-booking-flow] Failed to load next slot:', err);
+          const card = cardFor();
+          const el = card && card.querySelector('.kal-doctor-card__next-slot');
+          if (!el) return;
+          el.classList.remove('kal-doctor-card__next-slot--loading');
+          el.textContent = 'Availability unavailable';
+        });
+    });
+  };
+
+  const renderDoctorList = (list, allDoctors, facilityId, mode) => {
     // Hide doctors who don't take the mode currently on screen — the API
     // returns supportsOnline/supportsOffline per doctor (derived from the
     // same slotType schedule-window data that already drives availability
@@ -825,15 +1004,24 @@ document.addEventListener('DOMContentLoaded', () => {
       const source = document.querySelector(
         `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
       );
-      const card = source ? source.cloneNode(true) : buildFallbackDoctorCard(doctor);
+      // Details set in Shopify win. A doctor with no Shopify profile keeps the
+      // old behavior: the hand-typed theme block, or a name-only card.
+      const card = doctor.profile
+        ? buildProfileDoctorCard(doctor)
+        : source
+          ? source.cloneNode(true)
+          : buildFallbackDoctorCard(doctor);
       card.dataset.doctorId = doctor.id;
-      if (source) applyDoctorNamePrefix(card);
+      if (source && !doctor.profile) applyDoctorNamePrefix(card);
       card.classList.toggle('kal-doctor-card--selected', doctor.id === nextSelectedId);
       applyDoctorCardConcernBadges(card);
-      applyDoctorCardNextSlot(card, doctor.nextSlotToday);
+      // The next slot is filled in afterwards (loadDoctorCardNextSlots below);
+      // until then the card says it is checking.
+      applyDoctorCardNextSlotLoading(card);
       applyDoctorCardPrice(card, doctor);
       list.appendChild(card);
     });
+    loadDoctorCardNextSlots(list, doctors, facilityId, mode);
 
     // Only the LIVE value is touched here — lastDoctorSelection (the real
     // memory) is deliberately left alone so it survives a round trip
@@ -874,66 +1062,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const mode = slotPicker.mode === 'video' ? 'online' : 'offline';
-    const cacheKey = `${facility.id}:${mode}`;
 
-    const cached = doctorListCache.get(cacheKey);
-    if (cached && Date.now() - cached.fetchedAt < DOCTOR_LIST_CACHE_TTL_MS) {
-      renderDoctorList(list, cached.doctors);
-      return;
-    }
-
-    if (!apiBaseUrl) {
-      console.error('[kal-booking-flow] Missing data-api-base-url on #kal-booking-flow — cannot load doctors.');
-      setEmptyState('Unable to load doctors right now.');
-      return;
-    }
-
-    setEmptyState('Loading doctors…');
-    const requestId = ++doctorListRequestSequence;
-
-    // Reuse an already-in-flight fetch for this exact facility+mode instead
-    // of starting a second, redundant request (e.g. a fast double toggle
-    // before the first response lands).
-    let fetchPromise = doctorListInFlight.get(cacheKey);
-    if (!fetchPromise) {
-      fetchPromise = fetch(
-        `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}&mode=${encodeURIComponent(mode)}`,
-      )
-        .then(async (response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const data = await response.json();
-          return Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
-        })
-        .finally(() => {
-          doctorListInFlight.delete(cacheKey);
-        });
-      doctorListInFlight.set(cacheKey, fetchPromise);
-    }
-
-    let doctors;
-    try {
-      doctors = await fetchPromise;
-    } catch (err) {
-      if (requestId !== doctorListRequestSequence) return; // superseded by a newer facility/mode selection
-      console.error('[kal-booking-flow] Failed to load doctors:', err);
-      setEmptyState('Unable to load doctors right now.');
-      return;
-    }
-
-    // A newer call (facility or mode changed again while this fetch was in
-    // flight) has already started — that one owns the screen now. Drop
-    // this result entirely rather than let a slow, stale response race
-    // ahead of a faster, newer one and overwrite the correct badges.
-    if (requestId !== doctorListRequestSequence) return;
-
+    // The doctors come from the Shopify catalog already on the page, so there is
+    // no request here and nothing to wait for; only each card's next slot is
+    // fetched afterwards (loadDoctorCardNextSlots).
+    doctorListRequestSequence += 1;
+    const doctors = getCatalogDoctorsForFacility(facility.id);
     if (doctors.length === 0) {
-      doctorListCache.delete(cacheKey);
       setEmptyState('No doctors available at this clinic yet.');
       return;
     }
-
-    doctorListCache.set(cacheKey, { doctors, fetchedAt: Date.now() });
-    renderDoctorList(list, doctors);
+    renderDoctorList(list, doctors, facility.id, mode);
   };
 
   // Therapy Details' appointment card — shows the real in-clinic doctor
@@ -974,18 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const promise = (async () => {
-      let doctors;
-      try {
-        const response = await fetch(
-          `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}`,
-        );
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        doctors = Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
-      } catch (err) {
-        console.error('[kal-booking-flow] Failed to load therapy doctor:', err);
-        return null;
-      }
+      const doctors = getCatalogDoctorsForFacility(facility.id);
       if (doctors.length === 0) return null;
 
       const doctor = doctors[0];
@@ -993,18 +1121,32 @@ document.addEventListener('DOMContentLoaded', () => {
         `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
       );
 
-      const name = formatDoctorName(source ? source.dataset.kalDoctorName : doctor.name);
+      // The doctor's Shopify profile (when set) is the source of truth.
+      const profile = doctor.profile || null;
+      const name = profile ? profile.name : formatDoctorName(source ? source.dataset.kalDoctorName : doctor.name);
       if (!name) return null;
 
-      const photoUrl = source ? source.dataset.kalDoctorPhotoUrl : '';
+      const photoUrl = profile ? profile.photoUrl || '' : source ? source.dataset.kalDoctorPhotoUrl : '';
       // Document order inside kal-booking-flow-doctor-card.liquid's
       // .kal-doctor-card__info is always degree, then experience, then
       // languages — read by position rather than a dedicated data
       // attribute, since degree/experience only exist as rendered text
       // in that markup, not as their own data-* hooks.
       const metaRows = source ? source.querySelectorAll('.kal-doctor-card__meta-row') : [];
-      const degree = metaRows[0] ? metaRows[0].textContent.trim() : (doctor.designation || '');
-      const experience = metaRows[1] ? metaRows[1].textContent.trim() : '';
+      const degree = profile
+        ? profile.qualification || ''
+        : metaRows[0]
+          ? metaRows[0].textContent.trim()
+          : doctor.designation || '';
+      const experience = profile
+        ? profile.experience
+          ? /^\d+(\.\d+)?$/.test(profile.experience)
+            ? `${profile.experience} yrs experience`
+            : profile.experience
+          : ''
+        : metaRows[1]
+          ? metaRows[1].textContent.trim()
+          : '';
 
       return { name, photoUrl, degree, experience };
     })();

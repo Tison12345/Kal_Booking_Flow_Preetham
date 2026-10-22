@@ -83,6 +83,12 @@
 {%- endcomment -%}
 <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
+{%- comment -%}
+  Clinics and doctors from Shopify (shop.metaobjects.clinic / .doctor), as JSON
+  for kal-booking-flow.js. No request to the CMS is needed to show them.
+{%- endcomment -%}
+{%- render 'kal-shopify-catalog' -%}
+
 <dialog
   id="kal-booking-flow"
   class="kal-booking-flow"
