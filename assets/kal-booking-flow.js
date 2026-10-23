@@ -3113,7 +3113,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Shown under the phone field when the server says this number is already
   // linked to two or more patients (see checkPhoneIsBookable below).
   const PHONE_NOT_BOOKABLE_MESSAGE =
-    'This number is already used by more than one patient. Please book with a different number.';
+    'This number is linked to multiple patients. Please use a different number.';
 
   // Asks the server, when Continue is pressed on Patient Details, whether the
   // number can be used for an online booking -- so a refusal shows right
