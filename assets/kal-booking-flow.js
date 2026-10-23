@@ -1325,12 +1325,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // display anywhere; that chip-summary pattern belongs to the therapy
   // flow's own "Selected therapies" list (kal-booking-flow-step-therapy-slot.liquid),
   // not this consultation flow.
-  const toggleConcern = (concern) => {
-    if (concernSelect.selected.has(concern)) {
-      concernSelect.selected.delete(concern);
-    } else {
-      concernSelect.selected.add(concern);
-    }
+  // Makes the rows and the Continue footer show exactly what is in
+  // concernSelect.selected. Every change to that set must end here, or the
+  // screen and the selection drift apart (Continue active with nothing
+  // really selected).
+  const syncConcernSelectionUi = () => {
     flow.querySelectorAll('[data-kal-concern]').forEach((row) => {
       const isSelected = concernSelect.selected.has(row.dataset.kalConcern);
       row.classList.toggle('kal-concern-row--selected', isSelected);
@@ -1338,6 +1337,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     updateConcernContinueButton();
     applyExperimentVisibility();
+  };
+
+  const toggleConcern = (concern) => {
+    if (concernSelect.selected.has(concern)) {
+      concernSelect.selected.delete(concern);
+    } else {
+      concernSelect.selected.add(concern);
+    }
+    syncConcernSelectionUi();
+  };
+
+  const clearConcernSelection = () => {
+    concernSelect.selected.clear();
+    syncConcernSelectionUi();
   };
 
   // Populates Concern Select's list from sections/kal-concern-options.liquid's
@@ -4116,7 +4129,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // without this, submitBooking() would still send that stale
       // selection as `concerns`, getting prefixed onto this booking's own
       // typed Concern field server-side ("Concerns: ...\n<typed text>").
-      concernSelect.selected.clear();
+      // Cleared through clearConcernSelection() so the row highlights and
+      // Continue are reset with it, not left showing the old selection.
+      clearConcernSelection();
       applyExperimentVisibility();
       applyExperimentStepNumbering();
       openFlow();
