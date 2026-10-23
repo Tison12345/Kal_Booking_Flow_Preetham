@@ -89,6 +89,27 @@
 {%- endcomment -%}
 {%- render 'kal-shopify-catalog' -%}
 
+{%- comment -%}
+  The empty doctor card the booking flow clones for every doctor (Doctor
+  Select, and the Consult button's direct entry). It carries the card markup
+  and icons only; kal-booking-flow.js fills in everything from the Shopify
+  Doctor entry and the server's price. Nothing about a doctor is typed here.
+  The one placeholder tag only makes the tags container render so the script
+  has somewhere to put the real ones.
+{%- endcomment -%}
+<div class="kal-doctor-card-template" hidden>
+  {%- render 'kal-booking-flow-doctor-card',
+    name: '',
+    degree: '',
+    languages: '',
+    experience: '',
+    tags: 'x',
+    next_slot: '',
+    price: '',
+    photo_url: ''
+  -%}
+</div>
+
 <dialog
   id="kal-booking-flow"
   class="kal-booking-flow"

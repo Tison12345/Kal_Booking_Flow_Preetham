@@ -1,15 +1,13 @@
 {% comment %}
   "Find a Clinic" list section — feeds the booking flow's facility selection.
 
-  Fully backend-driven, per explicit instruction: this section renders an
-  empty container only. kal-booking-flow.js's renderClinicList() fetches
-  GET facilities (via the storefront proxy, same endpoint/cache
-  getCurrentFacility() uses) and builds one card per real facility,
-  carrying that facility's own id and name straight off the response.
-  Clicking a card reads data-facility-id directly off itself — there is no
-  name-matching step and no theme-editor-typed ID — so a clinic's display
-  name can change in the CMS at any time without ever risking the wrong
-  facility getting booked.
+  Renders an empty container only. kal-booking-flow.js's renderClinicList()
+  builds one card per Clinic entry in Shopify (shop.metaobjects.clinic, read
+  from the catalog rendered into the page by snippets/kal-shopify-catalog.liquid),
+  each carrying that entry's own facility_id. Clicking a card reads
+  data-facility-id directly off itself — there is no name-matching step and no
+  theme-editor-typed ID — so a clinic's display name can change in Shopify at
+  any time without ever risking the wrong clinic getting booked.
 {% endcomment %}
 
 {{ 'kal-clinic-list.css' | asset_url | stylesheet_tag }}

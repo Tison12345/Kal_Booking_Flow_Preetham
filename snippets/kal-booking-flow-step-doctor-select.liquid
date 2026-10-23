@@ -3,15 +3,14 @@
   new Concern Select step, not directly from Entry — see that step's own
   comment for why.
 
-  Real backend data: kal-booking-flow.js's loadDoctorsForFacility() calls
-  GET /api/shopify/public/doctors?facilityId= (the BFF proxy for the
-  partner API) on arrival at this step and on every facility/mode change,
-  and matches results against sections/kal-doctor-cards.liquid's blocks
-  by doctor_id (the doctor_id-join approach that lets rich card content
-  stay Shopify-editable without new CMS schema work — see that section's
-  own comment). The list below starts empty on purpose (just the
-  empty-state paragraph) — it's populated entirely by that JS, so there's
-  no static placeholder content to flash before the real fetch resolves.
+  The doctors are the Shopify Doctor entries offered at the chosen clinic:
+  kal-booking-flow.js's loadDoctorsForFacility() reads them from the catalog
+  rendered into the page (snippets/kal-shopify-catalog.liquid) on arrival at
+  this step and on every clinic/mode change, then fills in each card's price
+  (GET doctors/prices) and next slot (GET doctors/next-slots) afterwards. The
+  list below starts empty on purpose (just the empty-state paragraph) — it's
+  populated entirely by that JS, so there's no static placeholder content to
+  flash before the cards are built.
 
   Single shared markup, not a __mobile + __desktop split — see the "SHARED
   STEP SHELL" comment in kal-booking-flow.css for why and how the layout
@@ -97,13 +96,11 @@
     <div class="kal-step-shell__scroll">
       {%- comment -%}
         Populated entirely by loadDoctorsForFacility() in kal-booking-flow.js
-        — real per-facility doctors from the partner API, each card either
-        cloned from sections/kal-doctor-cards.liquid's matching doctor_id
-        block or a minimal fallback if no block's been configured for that
-        doctor yet. The empty-state paragraph below is the only thing
-        rendered server-side; everything else is added client-side so
-        there's never static placeholder content on screen before the
-        real fetch resolves.
+        — one card per Shopify Doctor entry offered at the clinic, cloned
+        from the empty card template in snippets/kal-booking-flow.liquid.
+        The empty-state paragraph below is the only thing rendered
+        server-side; everything else is added client-side so there's never
+        static placeholder content on screen before the cards are built.
       {%- endcomment -%}
       <div class="kal-step-doctor-select__list" data-kal-doctor-list>
         <p class="kal-step-doctor-select__list-empty" data-kal-doctor-list-empty hidden>

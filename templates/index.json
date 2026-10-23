@@ -82,10 +82,6 @@
         "section_heading": "Clinics"
       }
     },
-    "kal_doctor_cards_test": {
-      "type": "kal-doctor-cards",
-      "settings": {}
-    },
     "kal_concern_options_test": {
       "type": "kal-concern-options",
       "blocks": {
@@ -156,7 +152,6 @@
     "image_banner",
     "featured_collection",
     "kal_clinic_list_test",
-    "kal_doctor_cards_test",
     "kal_concern_options_test",
     "kal_therapy_options_test",
     "custom_liquid_tUmp8k"

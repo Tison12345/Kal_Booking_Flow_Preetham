@@ -264,14 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return Promise.resolve(facilityOptionsCache);
   };
 
-  // Renders the "Find a Clinic" page's list straight from GET facilities —
-  // a no-op on any other page, since the querySelector just finds nothing.
-  // Each card's data-facility-id is the backend's own id for that facility,
-  // read directly off the fetched object — never re-derived by matching
-  // against a name afterwards. That's what lets a clinic's display name
-  // change in the CMS at any time without risk: the id travelling with a
-  // card is the same id the card was built from, not a separate lookup
-  // that could drift out of sync with it.
+  // Renders the "Find a Clinic" page's list from the Shopify Clinic entries
+  // (the catalog rendered into the page) — a no-op on any other page, since the
+  // querySelector just finds nothing. Each card's data-facility-id is that
+  // entry's facility_id, read directly off it — never re-derived by matching
+  // against a name afterwards, so renaming a clinic in Shopify can never send
+  // a booking to the wrong clinic.
   const renderClinicList = async () => {
     const list = document.querySelector('[data-kal-clinic-list]');
     if (!list) return;
@@ -345,36 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return defaultFacilityPromise;
   };
 
-  // Ensures every doctor name shown anywhere in the flow reads "Dr. X" —
-  // some theme-editor-authored doctor_profile blocks already type the
-  // "Dr." prefix themselves (schema default: "Dr. Neethu Jayachandran"),
-  // but the real partner API's own `name` field (used by
-  // buildFallbackDoctorCard() for unconfigured doctors) never includes
-  // it. Rather than fixing this at every individual display site, it's
-  // applied once at each place a doctor name first enters the DOM (see
-  // applyDoctorNamePrefix() below) so every downstream read (dataset) is
-  // already correct. Case-insensitive, and tolerant of "Dr"/"Dr." with
-  // or without a trailing space, so an already-correct name is never
-  // double-prefixed.
-  const formatDoctorName = (name) => {
-    if (!name) return name;
-    const trimmed = name.trim();
-    return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
-  };
-
-  // Normalizes a real doctor card cloned from sections/kal-doctor-cards.
-  // liquid's hidden source blocks — those are theme-editor-authored, so
-  // unlike buildFallbackDoctorCard() (which controls the raw API name
-  // directly), this has to fix both the dataset AND the already-rendered
-  // .kal-doctor-card__name text in case the editor typed the name
-  // without "Dr." themselves.
-  const applyDoctorNamePrefix = (card) => {
-    const formatted = formatDoctorName(card.dataset.kalDoctorName);
-    card.dataset.kalDoctorName = formatted;
-    const nameEl = card.querySelector('.kal-doctor-card__name');
-    if (nameEl) nameEl.textContent = formatted;
-  };
-
   // Doctor Select's own click handler (selectDoctorCard, above) already
   // toggles kal-doctor-card--selected on the real card — reading that
   // back is more reliable than tracking a second copy of "which doctor"
@@ -430,16 +398,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // was already there — every one of these steps is only reachable once
   // Continue has been enabled, which itself requires a selection to exist,
   // so in practice name/price are always applied by the time they're seen.
-  // Confirmation's Payment Method section (two In-Clinic cards: "Pay now"
-  // 10% off / "Pay at clinic" full price, plus Video Consult's single fee
-  // card) used to show hardcoded ₹450/₹495 regardless of which doctor was
-  // actually selected — real price in, fake price shown. Derives both
-  // real figures from the same price string getSelectedDoctorPrice()
-  // already provides (e.g. "₹500"), so whatever the doctor_profile block
-  // says is what the visitor sees here too. Payment itself still isn't
-  // wired to Razorpay (blocked on requirements, see
-  // RAZORPAY_PAYMENT_REQUIREMENTS.md) — this only fixes what price is
-  // displayed, not what (if anything) actually gets charged.
+  // Confirmation's Payment Method section (two In-Clinic cards: "Pay now" and
+  // "Pay at clinic", plus Video Consult's single fee card) shows the selected
+  // doctor's price, which is the server's Shopify price for that doctor (see
+  // applyDoctorCardPrice) — the same amount an order is charged.
   const applyRealConsultationPricing = (priceText) => {
     const numeric = priceText ? parseInt(priceText.replace(/[^\d]/g, ''), 10) : NaN;
     if (!Number.isFinite(numeric) || numeric <= 0) return;
@@ -546,17 +508,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
-  // DOCTOR SELECT — re-wired to the real backend (see this step's own
-  // liquid comment for the full history/reasoning). loadDoctorsForFacility()
-  // calls GET /api/shopify/public/doctors (the web app's BFF proxy, which
-  // holds the partner API key) for the facility stored via FACILITY
-  // SELECTION above, and renders one card per doctor it gets back:
-  //   - a real match, cloned from sections/kal-doctor-cards.liquid's
-  //     hidden blocks (matched by doctor_id) — the exact same visual
-  //     component, so nothing to keep in sync by hand
-  //   - or a minimal fallback card, if that doctor_id has no block
-  //     configured yet — a real, bookable doctor should never just
-  //     disappear because marketing hasn't entered their card yet
+  // DOCTOR SELECT — one card per Doctor entry in Shopify offered at the chosen
+  // clinic (see getCatalogDoctorsForFacility()). The details on a card come
+  // from that entry, its price from the server's Shopify price, and only its
+  // next slot from the CMS schedule; nothing about a doctor is typed in the
+  // theme.
   // ----------------------------------------------------------------------
   // selectedDoctorId is the LIVE value every other part of this file reads
   // (fetchSlotsForDate, placeHoldForSlot, submitBooking, the Continue
@@ -762,34 +718,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // The card markup is the empty template rendered sitewide with the booking
+  // flow (snippets/kal-booking-flow.liquid); this fills it from the Doctor entry.
   const buildProfileDoctorCard = (doctor) => {
-    const template = document.querySelector('.kal-doctor-card-template .kal-doctor-card');
-    const card = template ? template.cloneNode(true) : buildFallbackDoctorCard(doctor);
+    const card = document.querySelector('.kal-doctor-card-template .kal-doctor-card').cloneNode(true);
     card.classList.remove('kal-doctor-card--selected');
     applyDoctorProfile(card, doctor.profile);
-    return card;
-  };
-
-  const buildFallbackDoctorCard = (doctor) => {
-    const name = formatDoctorName(doctor.name);
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'kal-doctor-card';
-    card.dataset.doctorId = doctor.id;
-    card.dataset.kalDoctorName = name;
-
-    const nameEl = document.createElement('span');
-    nameEl.className = 'kal-doctor-card__name';
-    nameEl.textContent = name;
-    card.appendChild(nameEl);
-
-    if (doctor.designation) {
-      const metaEl = document.createElement('span');
-      metaEl.className = 'kal-doctor-card__meta-row';
-      metaEl.textContent = doctor.designation;
-      card.appendChild(metaEl);
-    }
-
     return card;
   };
 
@@ -802,8 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // own slot fetch is). nextSlotToday is null when the doctor has nothing
   // bookable anywhere in that horizon under the current mode — shown as
   // "No upcoming slots" rather than hiding the line, so the card never
-  // looks broken/blank. No source card at all (buildFallbackDoctorCard) is
-  // the one case with nowhere to put this line — nothing to do there.
+  // looks broken/blank.
   const applyDoctorCardNextSlot = (card, nextSlotToday) => {
     const el = card.querySelector('.kal-doctor-card__next-slot');
     if (!el) return;
@@ -1061,8 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     list.innerHTML = '';
     doctors.forEach((doctor) => {
-      // Every doctor comes from the Shopify catalog with a profile.
-      const card = doctor.profile ? buildProfileDoctorCard(doctor) : buildFallbackDoctorCard(doctor);
+      const card = buildProfileDoctorCard(doctor);
       card.dataset.doctorId = doctor.id;
       card.classList.toggle('kal-doctor-card--selected', doctor.id === nextSelectedId);
       applyDoctorCardConcernBadges(card);
@@ -1136,17 +1068,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // instead of being a vague promise. Therapy has no Doctor Select step
   // (no choice to make — staff assign the therapist, but the doctor who
   // does the initial consult is just whoever's in-clinic at that
-  // facility), so this just takes the facility's first returned doctor,
-  // same /doctors endpoint loadDoctorsForFacility() already uses. Degree/
-  // experience aren't part of the API response (same partner-API
-  // limitation noted in kal-booking-flow-doctor-card.liquid's own
-  // comment) — they're read back off that doctor's real card markup in
-  // sections/kal-doctor-cards.liquid's hidden source blocks, the exact
-  // same lookup loadDoctorsForFacility()/selectDoctorById() use. If the
-  // facility has no doctors (or the one doctor has no profile block
-  // configured), the photo/name/degree row just stays hidden and the
-  // card quietly falls back to its old text-only description line —
-  // never shows stale/wrong doctor info.
+  // facility), so this takes the first doctor Shopify offers at that
+  // facility and shows what is set on that Doctor entry. If the facility has
+  // no doctors, the photo/name/degree row just stays hidden and the card
+  // quietly falls back to its old text-only description line — never shows
+  // stale/wrong doctor info.
   //
   // Split into a cached fetch (fetchTherapyDoctorData, below) and a DOM-
   // apply step (applyTherapyDoctorCard) so the network call can start as
@@ -1171,20 +1097,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const doctors = getCatalogDoctorsForFacility(facility.id);
       if (doctors.length === 0) return null;
 
-      // The doctor's Shopify profile is the source.
-      const doctor = doctors[0];
-      const profile = doctor.profile || null;
-      const name = profile ? profile.name : formatDoctorName(doctor.name);
+      // The doctor's Shopify entry is the source.
+      const { profile } = doctors[0];
+      const name = profile.name;
       if (!name) return null;
 
-      const photoUrl = profile ? profile.photoUrl || '' : '';
-      const degree = profile ? profile.qualification || '' : doctor.designation || '';
-      const experience =
-        profile && profile.experience
-          ? /^\d+(\.\d+)?$/.test(profile.experience)
-            ? `${profile.experience} yrs experience`
-            : profile.experience
-          : '';
+      const photoUrl = profile.photoUrl || '';
+      const degree = profile.qualification || '';
+      const experience = profile.experience
+        ? /^\d+(\.\d+)?$/.test(profile.experience)
+          ? `${profile.experience} yrs experience`
+          : profile.experience
+        : '';
 
       return { name, photoUrl, degree, experience };
     })();
@@ -4112,13 +4036,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // connection to the booking flow's own markup.
     //
     // No matching step here — renderClinicList() (also in this file)
-    // builds every clinic-list card directly from GET facilities, so
-    // data-facility-id is already that same facility's real backend id.
-    // The flow is: backend returns {id, name} pairs -> cards are built one
-    // per pair, each carrying its own id -> a click reads that id straight
-    // off the card it came from. A clinic's display name can change in the
-    // CMS at any time without this ever pointing at the wrong facility,
-    // since the id was never re-derived from the name in the first place.
+    // builds every clinic-list card from the Shopify Clinic entries, so
+    // data-facility-id is already that entry's facility_id (the CMS clinic
+    // id). The flow is: one card per Clinic entry, each carrying its own id
+    // -> a click reads that id straight off the card it came from. A clinic's
+    // display name can change in Shopify at any time without this ever
+    // pointing at the wrong clinic, since the id was never re-derived from
+    // the name in the first place.
     const facilityTrigger = e.target.closest('[data-kal-select-facility]');
     if (facilityTrigger) {
       const facilityId = facilityTrigger.dataset.facilityId;
