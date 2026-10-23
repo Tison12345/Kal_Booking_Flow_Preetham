@@ -3130,11 +3130,26 @@ div.kal-leave-booking-modal__backdrop {
   height: 14px;
 }
 
+/* Back to flex-wrap, not a 2-column grid — the grid's two tracks split
+   the row 50/50 regardless of content, so a short tag like "Other" sat
+   flush against the left edge of its half while the next tag started at
+   the fixed 50% mark, leaving a dead gap between them even though both
+   were short enough to sit right next to each other. flex-wrap packs
+   each tag to its own content width instead, so neighbors sit gap-apart
+   (the 8px gap below), not column-apart.
+   The 2-row cap this was built for (see kal-booking-flow.js's
+   DOCTOR_CARD_TAG_COUNT) is instead enforced with max-height + overflow:
+   hidden below — 2 × 26px chip row + 1 × 8px gap = 60px. With exactly 4
+   badges this is normally never reached (2 per row fits comfortably at
+   any card width this flow uses) and only guards the rare case a single
+   very long label can't be fully packed two-to-a-row. */
 .kal-doctor-card__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   padding: 0 12px 12px;
+  max-height: 60px;
+  overflow: hidden;
 }
 
 .kal-doctor-card__tag {
@@ -3146,6 +3161,24 @@ div.kal-leave-booking-modal__backdrop {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
   white-space: nowrap;
+  /* max-width caps at just under half the row (the 4px = half the 8px
+     gap, so two capped tags plus the gap between them exactly fill one
+     row) — not 100%. At 100%, a single long label could fill an entire
+     row by itself, which with exactly 4 badges (DOCTOR_CARD_TAG_COUNT)
+     and only a 2-row budget meant the 4th badge got wrapped to a 3rd
+     row and silently clipped by the container's max-height below ("i
+     cant see 4 badges"). Capping every tag at ~half the row guarantees
+     two always fit side by side, so all 4 always land in exactly 2
+     rows — the max-height/overflow below becomes a pure backstop, never
+     actually triggered. A short label is still its own content width
+     under this cap, not stretched to fill it — the gap stays a normal
+     8px either way, this only ever shrinks a tag that's otherwise too
+     long for the row. */
+  max-width: calc(50% - 4px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 /* Sand-tinted gradient by default, plain white only when selected —

@@ -619,10 +619,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const normalizeBadgeKey = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
   // Every concern the editor has configured, read from the rendered Concern
-  // Select rows.
+  // Select rows — except "Other" (concern_key "other", see sections/
+  // kal-concern-options.liquid), which is a catch-all for "none of these
+  // fit", not a real specialty. It makes sense as a Concern Select
+  // checkbox and the trigger for Patient Details' free-text field (see
+  // shouldShowConcernField()), but not as a doctor-card badge — a doctor
+  // doesn't specialize in "Other".
   const collectAllConcernLabels = () =>
-    [...flow.querySelectorAll('[data-kal-concern] .kal-concern-row__name')]
-      .map((el) => el.textContent.trim())
+    [...flow.querySelectorAll('[data-kal-concern]')]
+      .filter((row) => row.dataset.kalConcern !== 'other')
+      .map((row) => row.querySelector('.kal-concern-row__name')?.textContent?.trim())
       .filter(Boolean);
 
   const uniqueByKey = (labels) => {
@@ -639,7 +645,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagsContainer = card.querySelector('.kal-doctor-card__tags');
     if (!tagsContainer) return;
 
-    const selected = uniqueByKey(collectSelectedConcernLabels());
+    // Same "Other" exclusion as collectAllConcernLabels() above, by key
+    // (not by matching display text) — if the visitor checked "Other" on
+    // Concern Select, it still gets sent to the backend as part of
+    // `concerns` (submitBooking calls collectSelectedConcernLabels()
+    // directly, unfiltered), just never shown as a doctor-card badge.
+    const selected = uniqueByKey(
+      [...concernSelect.selected]
+        .filter((key) => key !== 'other')
+        .map((key) => flow.querySelector(`[data-kal-concern="${CSS.escape(key)}"] .kal-concern-row__name`)?.textContent?.trim())
+        .filter(Boolean),
+    );
     const selectedKeys = new Set(selected.map(normalizeBadgeKey));
     const others = uniqueByKey(collectAllConcernLabels()).filter((label) => !selectedKeys.has(normalizeBadgeKey(label)));
 
@@ -660,6 +676,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const tagEl = document.createElement('span');
       tagEl.className = 'kal-doctor-card__tag';
       tagEl.textContent = text;
+      // Full label stays available as a tooltip even once the CSS
+      // ellipsis-truncates its on-card text (see .kal-doctor-card__tag).
+      tagEl.title = text;
       tagsContainer.appendChild(tagEl);
     });
   };
