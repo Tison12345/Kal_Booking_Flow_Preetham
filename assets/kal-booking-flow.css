@@ -164,6 +164,13 @@
   display: none;
 }
 
+/* Disabled while a payment is being confirmed: leaving would release the slot. */
+[data-kal-close]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Concern Select's own close button lives inside .kal-step-shell__header
    (back button/badge/progress-dots row), which this step hides entirely
    on desktop (see its own CSS section) since location/progress moved

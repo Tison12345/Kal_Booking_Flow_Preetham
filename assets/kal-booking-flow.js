@@ -47,7 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   const confirmLeaveBooking = () => {
     if (slotPicker.holdId) {
-      void releaseSlotHoldViaPartnerApi(slotPicker.holdId);
+      // A paid order's slot is booked by the server from the payment, so the
+      // hold is left alone: releasing it would hand that slot to someone else.
+      const paidHold = Boolean(paidOrder) && paidOrder.holdId === slotPicker.holdId;
+      if (!paidHold) void releaseSlotHoldViaPartnerApi(slotPicker.holdId);
       slotPicker.holdId = null;
       slotPicker.heldSlot = null;
       slotPicker.holdContext = null;
@@ -55,6 +58,58 @@ document.addEventListener('DOMContentLoaded', () => {
     closeLeaveBookingModal();
     closeFlow();
   };
+
+  // While a payment is being taken or its booking confirmed, the popup cannot
+  // be closed: the close buttons are disabled and Esc does nothing.
+  let closeBlocked = false;
+  const setCloseBlocked = (blocked) => {
+    closeBlocked = blocked;
+    flow.querySelectorAll('[data-kal-close]').forEach((btn) => {
+      btn.disabled = blocked;
+      btn.setAttribute('aria-disabled', String(blocked));
+    });
+  };
+
+  // The one way a visitor asks to leave, shared by the close button and the
+  // Esc key so both behave the same: ask first when a slot is held (the
+  // confirmation releases it), otherwise just close.
+  const requestClose = () => {
+    if (closeBlocked) return;
+    if (slotPicker.holdId) {
+      openLeaveBookingModal();
+    } else {
+      closeFlow();
+    }
+  };
+
+  // Esc must not close the dialog behind our back: that skipped closeFlow()
+  // (the page stayed unable to scroll) and the leave confirmation. Esc on the
+  // confirmation itself just dismisses it. Listened for on the document, as
+  // the key press goes to whatever has focus (often the page body, not the
+  // dialog), and preventDefault on keydown is what stops the browser closing
+  // the dialog, including on a repeated Esc.
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key !== 'Escape' || !flow.open) return;
+      e.preventDefault();
+      if (leaveBookingModal && !leaveBookingModal.hidden) {
+        closeLeaveBookingModal();
+        return;
+      }
+      requestClose();
+    },
+    true,
+  );
+  flow.addEventListener('cancel', (e) => e.preventDefault());
+
+  // Backstop: however the dialog ends up closed, the page must scroll again.
+  // Not while Razorpay Checkout has it closed on purpose (see
+  // checkoutSuspended): the page stays locked under Checkout.
+  let checkoutSuspended = false;
+  flow.addEventListener('close', () => {
+    if (!checkoutSuspended) document.body.style.overflow = '';
+  });
 
   // ----------------------------------------------------------------------
   // BOOKING EXPERIMENT — two separate real-site CTAs open this same popup
@@ -1793,6 +1848,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // is deferred to Continue, only actually needs to be fresh at the moment
   // of commitment — see handleSlotContinue()'s own refresh-on-conflict).
   let slotHoldRequestSequence = 0;
+  // Numbers every slot-grid request so only the newest one may draw: a slow
+  // answer for a date the visitor has already left must never overwrite the
+  // grid of the date they are on. The older request is also cancelled.
+  let slotsRequestSequence = 0;
+  let slotsAbortController = null;
+  // Slot grids looked at recently, per doctor, mode and date, so going back to
+  // a date within SLOTS_CACHE_TTL_MS needs no request. Emptied whenever a hold
+  // is placed or released, since that changes what the grids show.
+  const SLOTS_CACHE_TTL_MS = 30 * 1000;
+  const slotsCache = new Map(); // `${doctorId}:${mode}:${isoDate}` -> { slots, fetchedAt }
+  // The grid currently on screen (or being loaded), so picking the date that
+  // is already showing does nothing instead of asking again.
+  let slotGridKey = null;
+  const slotsKeyFor = (date) => `${selectedDoctorId}:${slotPicker.mode}:${toIsoDate(date)}`;
   let placingSlotHold = false;
 
   // Same re-entrancy guard pattern as placingSlotHold above, but for the
@@ -1814,7 +1883,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // changes (see clearDayAvailabilityCache below), since availability is
   // specific to that pair.
   let dayAvailabilityCache = new Map();
-  const clearDayAvailabilityCache = () => { dayAvailabilityCache = new Map(); };
+  // When each cached day arrived. A day's summary is reused for this long and
+  // then fetched again, so a day that fills up while the popup stays open is
+  // not shown as free for the whole visit.
+  const DAY_AVAILABILITY_TTL_MS = 2 * 60 * 1000;
+  let dayAvailabilityFetchedAt = new Map();
+  const clearDayAvailabilityCache = () => {
+    dayAvailabilityCache = new Map();
+    dayAvailabilityFetchedAt = new Map();
+  };
+  const hasFreshDaySummary = (isoDate) =>
+    dayAvailabilityCache.has(isoDate) && Date.now() - (dayAvailabilityFetchedAt.get(isoDate) ?? 0) < DAY_AVAILABILITY_TTL_MS;
 
   const toIsoDate = (date) => {
     const d = startOfDay(date);
@@ -1879,6 +1958,7 @@ document.addEventListener('DOMContentLoaded', () => {
       summaries.forEach((entry) => {
         if (entry?.date) {
           dayAvailabilityCache.set(entry.date, entry.summary);
+          dayAvailabilityFetchedAt.set(entry.date, Date.now());
           dayAvailabilityFetchFailedDates.delete(entry.date);
         }
       });
@@ -1906,8 +1986,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Fetches the real slot grid for one date. Returns null on error/missing
   // doctor so callers can show an explicit "unable to load" state rather
-  // than silently rendering an empty grid.
-  const fetchSlotsForDate = async (date) => {
+  // than silently rendering an empty grid. Returns undefined when the request
+  // was cancelled because a newer one replaced it (nothing to show or report).
+  const fetchSlotsForDate = async (date, signal) => {
     const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId) return null;
     try {
@@ -1918,11 +1999,13 @@ document.addEventListener('DOMContentLoaded', () => {
           `&date=${encodeURIComponent(toIsoDate(date))}` +
           `&durationMinutes=${CONSULT_DURATION_MINUTES}` +
           `&mode=${slotPicker.mode === 'video' ? 'online' : 'offline'}`,
+        { signal },
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return Array.isArray(data?.data?.slots) ? data.data.slots : [];
     } catch (err) {
+      if (err && err.name === 'AbortError') return undefined;
       console.error('[kal-booking-flow] Failed to load slots:', err);
       return null;
     }
@@ -2152,7 +2235,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // changes (day-strip click or calendar pick). Shows a loading state in
   // all three panels while the fetch is in flight so switching dates
   // doesn't leave the previous date's (now-stale) slots on screen.
-  const refreshSlotsForSelectedDate = async ({ preserveHold = false, revealBlockedBy = null } = {}) => {
+  //
+  // useCache: a date the visitor looked at in the last SLOTS_CACHE_TTL_MS is
+  // shown straight from memory (browsing back and forth between dates). Only
+  // date picks ask for this: arrival at Slot Picker and conflict recovery
+  // always want what the server says right now, and the hold itself re-checks
+  // the slot when the visitor presses Continue anyway.
+  const refreshSlotsForSelectedDate = async ({
+    preserveHold = false,
+    revealBlockedBy = null,
+    useCache = false,
+  } = {}) => {
+    const key = slotsKeyFor(slotPicker.selectedDate);
+    if (useCache && !preserveHold && !revealBlockedBy) {
+      const cached = slotsCache.get(key);
+      if (cached && Date.now() - cached.fetchedAt < SLOTS_CACHE_TTL_MS) {
+        // Nothing else may draw over this: drop any request still in flight.
+        slotsRequestSequence += 1;
+        slotsAbortController?.abort();
+        slotGridKey = key;
+        renderSlotPanels(cached.slots, { preserveHold, revealBlockedBy });
+        return;
+      }
+    }
+    slotGridKey = key;
     // A preserving refresh (arrival at Slot Picker with a still-valid hold,
     // or same-date conflict recovery) must not blank the grid to "Loading
     // slots…" first — the visitor's current selection/hold is still valid
@@ -2164,8 +2270,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (panel) setDoctorListEmptyState(panel, 'Loading slots…');
       });
     }
-    const slots = await fetchSlotsForDate(slotPicker.selectedDate);
+    // Only the newest request may draw (see slotsRequestSequence): cancel the
+    // previous one, and drop this answer if another request has started since
+    // or the visitor has moved to another date, doctor or mode meanwhile.
+    slotsRequestSequence += 1;
+    const requestId = slotsRequestSequence;
+    slotsAbortController?.abort();
+    slotsAbortController = new AbortController();
+    const requested = {
+      date: toIsoDate(slotPicker.selectedDate),
+      doctorId: selectedDoctorId,
+      mode: slotPicker.mode,
+    };
+    const slots = await fetchSlotsForDate(slotPicker.selectedDate, slotsAbortController.signal);
+    if (
+      slots === undefined ||
+      requestId !== slotsRequestSequence ||
+      requested.date !== toIsoDate(slotPicker.selectedDate) ||
+      requested.doctorId !== selectedDoctorId ||
+      requested.mode !== slotPicker.mode
+    ) {
+      return;
+    }
     if (slots === null) {
+      // Not shown, so clicking this date again must try again.
+      slotGridKey = null;
       if (!preserveHold) {
         ['morning', 'afternoon', 'evening'].forEach((period) => {
           const panel = flow.querySelector(`.kal-slot-grid[data-kal-slot-panel="${period}"]`);
@@ -2174,6 +2303,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
+    slotsCache.set(key, { slots, fetchedAt: Date.now() });
     renderSlotPanels(slots, { preserveHold, revealBlockedBy });
   };
 
@@ -2256,28 +2386,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
   };
 
-  // Eagerly fetching the whole CALENDAR_MAX_FUTURE_DAYS range (or even
-  // DAY_SUMMARY_FETCH_MAX_DAYS) up front turned out to be impractically
-  // slow against the real day-summaries endpoint — a 60-day request
-  // measured at 73.8s live (server logs: 9 sequential batches of
-  // DAY_SUMMARY_CONCURRENCY=7 dates each, every date individually paying
-  // a near-constant ~3.9s tax that server-side timing logs attribute to
-  // Redis lock/cache acquisition retrying against the account's exhausted
-  // Upstash quota — a pre-existing infra issue, not something this chunk
-  // size can fix). An earlier 1-day-vs-7-day timing test looked flat and
-  // suggested a fixed per-request floor, which is what the previous
-  // (wrong) "front-load the max" choice here was based on — that
-  // assumption breaks down once the range spans more than one backend
-  // batch. So the chunk size is kept at exactly one batch
-  // (DAY_SUMMARY_CONCURRENCY) to bound each request to the backend's own
-  // one-batch latency rather than multiplying it by however many batches
-  // a larger chunk would need. Still slow under the current Redis
-  // exhaustion, but bounded instead of taking 70s+ or longer. This
-  // doesn't block or slow down actually picking a time either way:
-  // today's own slot grid loads through the separate, already-existing
-  // refreshSlotsForSelectedDate() call regardless of how much of the
-  // day-strip's badges have finished loading.
-  const DAY_STRIP_CHUNK_DAYS = 7;
+  // The server now reads a doctor's schedule once for the whole range and
+  // works out each day in memory, so a long range costs about the same as a
+  // short one (measured: 7 days ~0.8s, 60 days ~0.8s). The strip is therefore
+  // loaded in the largest pieces the endpoint accepts: days 0-59 on arrival,
+  // days 60-90 in one more request once the visitor scrolls near them -- 2
+  // requests instead of 13. Picking today's time does not wait for the badges:
+  // the slot grid loads through refreshSlotsForSelectedDate() on its own.
+  const DAY_STRIP_CHUNK_DAYS = DAY_SUMMARY_FETCH_MAX_DAYS;
   const DAY_STRIP_INITIAL_FETCH_DAYS = DAY_STRIP_CHUNK_DAYS;
 
   // refreshDayStrip() can legitimately run more than once concurrently —
@@ -2403,7 +2519,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const run = async () => {
         let needsFetch = false;
         for (let offset = chunkStartOffset; offset <= chunkEndOffset; offset += 1) {
-          if (!dayAvailabilityCache.has(toIsoDate(addDays(today, offset)))) {
+          if (!hasFreshDaySummary(toIsoDate(addDays(today, offset)))) {
             needsFetch = true;
             break;
           }
@@ -2596,7 +2712,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const rangeEnd = addDays(todayStart(), CALENDAR_MAX_FUTURE_DAYS);
     const clampedEnd = monthEnd > rangeEnd ? rangeEnd : monthEnd;
     if (rangeStart > clampedEnd) return;
-    await fetchDaySummaries(rangeStart, clampedEnd);
+    // The strip (or an earlier look at this month) has often loaded these days
+    // already: only ask the server when some day is missing or too old.
+    let allFresh = true;
+    for (let day = new Date(rangeStart); day <= clampedEnd; day.setDate(day.getDate() + 1)) {
+      if (!hasFreshDaySummary(toIsoDate(day))) {
+        allFresh = false;
+        break;
+      }
+    }
+    if (!allFresh) await fetchDaySummaries(rangeStart, clampedEnd);
     renderCalendarMonth();
   };
 
@@ -2710,6 +2835,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // date must show it as a real, selected, visible chip, not just change
   // a text label with nothing visibly selected behind it.
   const applyCalendarDateSelection = (date) => {
+    // Picking the date that is already showing (or loading) changes nothing:
+    // no new slot request. The rest below still runs, so a strip chunk that
+    // failed to load for this date is retried.
+    const alreadyShowing = isSameDate(date, slotPicker.selectedDate) && slotGridKey === slotsKeyFor(date);
     slotPicker.selectedDate = date;
 
     // Every date already has a real chip in the strip (see
@@ -2724,7 +2853,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = flow.querySelector('.kal-slot-section__label');
     if (label) label.textContent = 'Choose a Slot';
 
-    refreshSlotsForSelectedDate();
+    if (!alreadyShowing) refreshSlotsForSelectedDate({ useCache: true });
 
     // The picked date (and the rest of its DAY_STRIP_CHUNK_DAYS chunk)
     // may fall beyond whatever the strip has loaded so far — e.g. a
@@ -3434,6 +3563,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // the moment Razorpay's is gone, regardless of how long
             // verification takes. Safe to call unconditionally; handler()
             // only ever fires once per Checkout session.
+            checkoutSuspended = false;
             flow.showModal();
             // Nothing from Checkout's callback is sent to the server as proof:
             // the server learns the payment happened from Razorpay itself
@@ -3453,6 +3583,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // success/failure was already handled above is just ignored).
             ondismiss: () => {
               settle(() => {
+                checkoutSuspended = false;
                 if (!flow.open) flow.showModal();
                 reject(new Error(lastPaymentFailure || 'Payment was not completed. Please try again.'));
               });
@@ -3479,6 +3610,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // every exit path above (success/dismiss/failure-then-dismiss)
         // calls flow.showModal() to bring Confirmation back once
         // Checkout is done with the screen.
+        checkoutSuspended = true;
         flow.close();
         rzp.open();
       })
@@ -3531,6 +3663,7 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       generateIdempotencyKey(),
     );
+    slotsCache.clear();
     return hold.holdId;
   };
 
@@ -3541,6 +3674,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // worker, exactly as every hold already did before this existed. Never
   // thrown to the caller — callers fire this with `void` and move on.
   const releaseSlotHoldViaPartnerApi = async (holdId) => {
+    slotsCache.clear();
     try {
       await postToPartnerApi(`availability/holds/${holdId}/release`, {}, generateIdempotencyKey());
     } catch (err) {
@@ -3755,6 +3889,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const requiresOnlinePayment = selectedPaymentMethod === 'pay-now' || slotPicker.mode === 'video';
 
     setBookingButtonsBusy(true);
+    // Paying online: the popup stays open until the booking is confirmed (or
+    // the wait gives up), so the visitor cannot release the slot they paid for.
+    // Only the call that blocked it unblocks it, so a repeated click cannot.
+    const blockedClose = requiresOnlinePayment && !closeBlocked;
+    if (blockedClose) setCloseBlocked(true);
     try {
       // The hold was already placed when Continue was pressed on Slot
       // Picker (see handleSlotContinue() above) — reused here rather than
@@ -3880,6 +4019,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } finally {
       setBookingButtonsBusy(false);
+      if (blockedClose) setCloseBlocked(false);
     }
   };
 
@@ -4021,12 +4161,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // An active hold would otherwise just be dropped on the floor by
       // closeFlow() — ask first instead of closing straight away. Nothing
       // to lose if no hold is active yet (e.g. closing from Entry/Concern
-      // Select/Doctor Select), so skip the confirmation entirely there.
-      if (slotPicker.holdId) {
-        openLeaveBookingModal();
-      } else {
-        closeFlow();
-      }
+      // Select/Doctor Select), so requestClose() skips the confirmation there.
+      requestClose();
     }
 
     if (e.target.closest('[data-kal-leave-booking-dismiss]')) {
