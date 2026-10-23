@@ -209,11 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // The doctors Shopify offers at one clinic: the Doctor entries whose
   // "clinics" field includes it, shaped for renderDoctorList(). Which modes
   // are offered comes from the doctor's consultation product variants for that
-  // clinic (one variant per clinic and mode); when none are available both
-  // modes stay selectable (the server still decides what can be paid for).
-  // Prices are NOT here: they are fetched from the server (see
-  // loadDoctorCardPrices), because the storefront price can differ from the
-  // amount that is charged.
+  // clinic (one variant per clinic and mode), and so do the prices: the
+  // variant's own price. When no variant is available the card has no price
+  // and both modes stay selectable (the server still decides what can be paid
+  // for, from the same variant price).
   const getCatalogDoctorsForFacility = (facilityId) => {
     const catalog = getShopifyCatalog();
     const modeOf = (row) => String(row.mode || '').trim().toLowerCase();
@@ -223,9 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
           doctor && doctor.id && doctor.name && Array.isArray(doctor.clinicIds) && doctor.clinicIds.indexOf(facilityId) !== -1,
       )
       .map((doctor) => {
-        const rows = (doctor.offered || []).filter((row) => row.facilityId === facilityId);
+        const rows = (doctor.pricing || []).filter((row) => row.facilityId === facilityId);
         const inClinic = rows.find((row) => modeOf(row) === 'in-clinic') || null;
         const online = rows.find((row) => modeOf(row) === 'online') || null;
+        const money = (row) => (row ? { amountPaise: row.pricePaise, currency: catalog.currency } : null);
+        const discount = inClinic ? Number(inClinic.payNowDiscountPercent) || 0 : 0;
         return {
           id: doctor.id,
           name: doctor.name,
@@ -240,6 +241,17 @@ document.addEventListener('DOMContentLoaded', () => {
           },
           supportsOnline: rows.length ? Boolean(online) : true,
           supportsOffline: rows.length ? Boolean(inClinic) : true,
+          inClinicPrice: money(inClinic),
+          onlinePrice: money(online),
+          payNowDiscountPercent: discount,
+          // The same rounding the server uses for the amount it charges.
+          inClinicPayNowPrice:
+            inClinic && discount > 0
+              ? {
+                  amountPaise: Math.round((inClinic.pricePaise * (100 - discount)) / 100),
+                  currency: catalog.currency,
+                }
+              : null,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -379,12 +391,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // every render pass here.
   const updateDoctorSelectContinueButton = () => {
     const hasSelection = getSelectedDoctorName() !== null;
-    // A selected card whose price has not arrived yet holds Continue, so the
-    // visitor can never move on to payment without seeing the real price.
-    const selectedCard = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
-    const priceLoading = Boolean(selectedCard && selectedCard.dataset.kalPriceState === 'loading');
     flow.querySelectorAll('[data-kal-doctor-continue]').forEach((btn) => {
-      btn.disabled = !hasSelection || priceLoading;
+      btn.disabled = !hasSelection;
     });
   };
 
@@ -400,15 +408,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // so in practice name/price are always applied by the time they're seen.
   // Confirmation's Payment Method section (two In-Clinic cards: "Pay now" and
   // "Pay at clinic", plus Video Consult's single fee card) shows the selected
-  // doctor's price, which is the server's Shopify price for that doctor (see
-  // applyDoctorCardPrice) — the same amount an order is charged.
+  // doctor's variant price (see applyDoctorCardPrice), the same price the
+  // server charges.
   const applyRealConsultationPricing = (priceText) => {
     const numeric = priceText ? parseInt(priceText.replace(/[^\d]/g, ''), 10) : NaN;
     if (!Number.isFinite(numeric) || numeric <= 0) return;
     const formatRupees = (value) => `₹${Math.round(value).toLocaleString('en-IN')}`;
     const full = formatRupees(numeric);
     // The discounted "Pay now" price and its percentage come from the doctor's
-    // Shopify pricing entry via /doctors (see applyDoctorCardPrice) — never
+    // Shopify variant (see applyDoctorCardPrice) — never
     // computed here. No discount configured: Pay now simply shows the full
     // price, with no strike-through and no "Save N%" pill.
     const payNow = getSelectedDoctorPayNow();
@@ -553,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // "Consult" CTA already knows exactly which doctor opened it (see
   // BOOKING EXPERIMENT above), so there's no list to click a card in.
   // Builds that doctor's card exactly the way the Doctor Select list does
-  // (same Shopify catalog entry, same card builder, same server price) and
+  // (same Shopify catalog entry, same card builder, same variant price) and
   // marks it selected in Doctor Select's own (unseen, for B) list, so
   // getSelectedDoctorName/PhotoUrl/Price() — which all just read whatever
   // .kal-doctor-card--selected exists inside the flow — and everything
@@ -561,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // booking submission's selectedDoctorId) work completely unchanged.
   // Resolves false (and does nothing) if Shopify does not offer this doctor
   // at the current clinic — same "never silently disappear" principle as the
-  // real list. The price arrives a moment later, like on the list.
+  // real list.
   const selectDoctorById = async (doctorId) => {
     const list = flow.querySelector('[data-kal-doctor-list]');
     const facility = await getCurrentFacility();
@@ -570,19 +578,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!doctor) return false;
     const card = buildProfileDoctorCard(doctor);
     card.dataset.doctorId = doctorId;
-    card.dataset.kalPriceKey = doctorPriceKey(facility.id, doctorId);
     card.classList.add('kal-doctor-card--selected');
     applyDoctorCardConcernBadges(card);
-    const knownPrice = getCachedDoctorPrice(facility.id, doctorId);
-    if (knownPrice) applyDoctorCardPrice(card, knownPrice.price);
-    else applyDoctorCardPriceLoading(card);
+    applyDoctorCardPrice(card, doctor);
     list.innerHTML = '';
     list.appendChild(card);
     if (selectedDoctorId !== doctorId) clearDayAvailabilityCache();
     selectedDoctorId = doctorId;
     lastDoctorSelection = { doctorId, mode: slotPicker.mode };
     applySelectedDoctorToCards();
-    loadDoctorCardPrices(list, [doctor], facility.id);
     return true;
   };
 
@@ -773,101 +777,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // The price on a doctor card, and every price derived from it further on
   // (the appointment card, the payment options and their "Pay now" figure), is
-  // the one the SERVER reports: the Shopify Admin price an order for that
-  // doctor is charged (GET doctors/prices). It is never taken from the page's
-  // own Liquid price, which Shopify Markets or tax display can change. Sets
-  // BOTH the visible .kal-doctor-card__price text AND data-kal-doctor-price
-  // (read downstream via getSelectedDoctorPrice()), so every later step stays
-  // in sync. The cards render first and the prices follow in one request; a
-  // card whose price has not arrived says so and, if selected, holds Continue.
+  // the doctor's variant price from the Shopify catalog rendered into the page.
+  // The server charges from the very same variant price. Sets BOTH the visible
+  // .kal-doctor-card__price text AND data-kal-doctor-price (read downstream via
+  // getSelectedDoctorPrice()), so every later step stays in sync. null (no
+  // variant for this clinic and mode) shows an honest "Pricing unavailable".
   const formatRupeesFromPaise = (amountPaise) => {
     const rupees = amountPaise / 100;
     const whole = Number.isInteger(rupees);
     return `₹${rupees.toLocaleString('en-IN', whole ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const DOCTOR_PRICE_CACHE_TTL_MS = 2 * 60 * 1000;
-  const doctorPriceCache = new Map(); // `${facilityId}:${doctorId}` -> { price, fetchedAt }
-  const doctorPriceKey = (facilityId, doctorId) => `${facilityId}:${doctorId}`;
-  const getCachedDoctorPrice = (facilityId, doctorId) => {
-    const cached = doctorPriceCache.get(doctorPriceKey(facilityId, doctorId));
-    return cached && Date.now() - cached.fetchedAt < DOCTOR_PRICE_CACHE_TTL_MS ? cached : null;
-  };
-
-  const applyDoctorCardPriceLoading = (card) => {
-    const el = card.querySelector('.kal-doctor-card__price');
-    if (el) {
-      el.textContent = 'Checking price…';
-      el.classList.add('kal-doctor-card__price--loading');
-    }
-    card.dataset.kalPriceState = 'loading';
-    card.dataset.kalDoctorPrice = '';
-    card.dataset.kalDoctorPayNowPrice = '';
-    card.dataset.kalDoctorPayNowPercent = '';
-  };
-
-  // `price` is the server's entry for this doctor, or null when none could be
-  // worked out (the card then honestly says "Pricing unavailable").
-  const applyDoctorCardPrice = (card, price) => {
-    const priceForMode = price ? (slotPicker.mode === 'video' ? price.online : price.inClinic) : null;
+  const applyDoctorCardPrice = (card, doctor) => {
+    const priceForMode = slotPicker.mode === 'video' ? doctor.onlinePrice : doctor.inClinicPrice;
     const el = card.querySelector('.kal-doctor-card__price');
     const text = priceForMode ? formatRupeesFromPaise(priceForMode.amountPaise) : 'Pricing unavailable';
-    if (el) {
-      el.textContent = text;
-      el.classList.remove('kal-doctor-card__price--loading');
-    }
-    card.dataset.kalPriceState = priceForMode ? 'ready' : 'unavailable';
+    if (el) el.textContent = text;
     card.dataset.kalDoctorPrice = priceForMode ? text : '';
     // The "Pay now" figure for an In-Clinic visit — empty when this doctor has
     // no discount configured in Shopify or the visitor is on Video Consult,
     // which is never discounted.
-    const payNow = price && slotPicker.mode !== 'video' ? price.inClinicPayNow : null;
+    const payNow = slotPicker.mode === 'video' ? null : doctor.inClinicPayNowPrice;
     card.dataset.kalDoctorPayNowPrice = payNow ? formatRupeesFromPaise(payNow.amountPaise) : '';
-    card.dataset.kalDoctorPayNowPercent = payNow ? String(price.payNowDiscountPercent) : '';
-  };
-
-  // One request for every doctor whose price is not already remembered.
-  const fetchDoctorPrices = async (facilityId, doctorIds) => {
-    const missing = doctorIds.filter((id) => !getCachedDoctorPrice(facilityId, id));
-    if (missing.length) {
-      const response = await fetch(
-        `${apiBaseUrl}/api/shopify/public/doctors/prices?facilityId=${encodeURIComponent(facilityId)}&doctorIds=${missing.map(encodeURIComponent).join(',')}`,
-      );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      const rows = Array.isArray(data?.data?.prices) ? data.data.prices : [];
-      missing.forEach((id) => {
-        const row = rows.find((item) => item.doctorId === id) || null;
-        doctorPriceCache.set(doctorPriceKey(facilityId, id), { price: row, fetchedAt: Date.now() });
-      });
-    }
-    return doctorIds.map((id) => getCachedDoctorPrice(facilityId, id).price);
-  };
-
-  // Fills in the prices of the cards on screen once the single request answers
-  // (cards whose price is already remembered were filled when they rendered).
-  // An answer is applied only to a card still on screen for the same clinic.
-  const loadDoctorCardPrices = (list, doctors, facilityId) => {
-    const pending = doctors.filter((doctor) => !getCachedDoctorPrice(facilityId, doctor.id));
-    if (pending.length === 0) return;
-    const cardFor = (doctor) => {
-      const card = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
-      return card && card.isConnected && card.dataset.kalPriceKey === doctorPriceKey(facilityId, doctor.id) ? card : null;
-    };
-    const finish = (apply) => {
-      pending.forEach((doctor, index) => {
-        const card = cardFor(doctor);
-        if (card) apply(card, index);
-      });
-      updateDoctorSelectContinueButton();
-      applySelectedDoctorToCards();
-    };
-    fetchDoctorPrices(facilityId, pending.map((doctor) => doctor.id))
-      .then((prices) => finish((card, index) => applyDoctorCardPrice(card, prices[index])))
-      .catch((err) => {
-        console.error('[kal-booking-flow] Failed to load doctor prices:', err);
-        finish((card) => applyDoctorCardPrice(card, null));
-      });
+    card.dataset.kalDoctorPayNowPercent = payNow ? String(doctor.payNowDiscountPercent) : '';
   };
 
   // Keyed by `${facilityId}:${mode}` — one entry per facility+mode pair, so
@@ -1020,13 +952,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // The next slot is filled in afterwards (loadDoctorCardNextSlots below);
       // until then the card says it is checking.
       applyDoctorCardNextSlotLoading(card);
-      card.dataset.kalPriceKey = doctorPriceKey(facilityId, doctor.id);
-      const knownPrice = getCachedDoctorPrice(facilityId, doctor.id);
-      if (knownPrice) applyDoctorCardPrice(card, knownPrice.price);
-      else applyDoctorCardPriceLoading(card);
+      applyDoctorCardPrice(card, doctor);
       list.appendChild(card);
     });
-    loadDoctorCardPrices(list, doctors, facilityId);
     loadDoctorCardNextSlots(list, doctors, facilityId, mode);
 
     // Only the LIVE value is touched here — lastDoctorSelection (the real
@@ -3749,6 +3677,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Check often at first, when the booking usually lands within a few seconds,
+  // then ease off so a slow confirmation does not hammer the server.
+  const PAID_BOOKING_FAST_POLL_INTERVAL_MS = 500;
+  const PAID_BOOKING_FAST_POLL_WINDOW_MS = 5 * 1000;
   const PAID_BOOKING_POLL_INTERVAL_MS = 1500;
   // How long to wait for the server to finish booking a paid order before
   // telling the visitor it is still being confirmed. Razorpay normally tells
@@ -3761,7 +3693,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // received), or BOOKING_CONFIRMATION_PENDING when it is just taking long.
   // A single failed poll (network blip, rate limit) is not the end: keep going.
   const waitForPaidBooking = async (razorpayOrderId) => {
-    const deadline = Date.now() + PAID_BOOKING_WAIT_MS;
+    const startedAt = Date.now();
+    const deadline = startedAt + PAID_BOOKING_WAIT_MS;
     while (Date.now() < deadline) {
       try {
         const status = await getFromPartnerApi(`payments/orders/${encodeURIComponent(razorpayOrderId)}/status`);
@@ -3775,7 +3708,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (err && err.code) throw err;
         console.error('[kal-booking-flow] Booking status check failed, will retry:', err);
       }
-      await new Promise((resolve) => setTimeout(resolve, PAID_BOOKING_POLL_INTERVAL_MS));
+      const interval =
+        Date.now() - startedAt < PAID_BOOKING_FAST_POLL_WINDOW_MS
+          ? PAID_BOOKING_FAST_POLL_INTERVAL_MS
+          : PAID_BOOKING_POLL_INTERVAL_MS;
+      await new Promise((resolve) => setTimeout(resolve, interval));
     }
     const pending = new Error(
       'Your payment was received and we are still confirming your booking. Please wait a moment and try again. Do not pay again.',
