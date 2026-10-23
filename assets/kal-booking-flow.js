@@ -3110,6 +3110,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // Shown under the phone field when the server says this number is already
+  // linked to two or more patients (see checkPhoneIsBookable below).
+  const PHONE_NOT_BOOKABLE_MESSAGE =
+    'This number is already used by more than one patient. Please book with a different number.';
+
+  // Asks the server, when Continue is pressed on Patient Details, whether the
+  // number can be used for an online booking -- so a refusal shows right
+  // there, before the visitor goes on to pay. Resolves true when it can. If
+  // the check itself cannot be answered (network, server), it resolves true
+  // and lets the visitor carry on: Proceed to payment checks the number again
+  // before any money is taken, so nothing is lost by not blocking here.
+  let checkingPhone = false;
+  const checkPhoneIsBookable = async () => {
+    try {
+      const result = await postToPartnerApi(
+        'patients/phone-check',
+        { patientPhone: buildPatientPhone() },
+        generateIdempotencyKey(),
+      );
+      return result.canBook !== false;
+    } catch (err) {
+      console.warn('[kal-booking-flow] Could not check the phone number, continuing:', err);
+      return true;
+    }
+  };
+
   // Scrolls the currently visible step's own scroll region so the first
   // invalid field's error is actually in view, rather than just showing
   // a red message somewhere off-screen the visitor has to go hunting
@@ -3967,6 +3993,16 @@ document.addEventListener('DOMContentLoaded', () => {
       goToStep('booking-confirmed');
     } catch (err) {
       console.error('[kal-booking-flow] Booking failed:', err);
+      // The number was fine when Continue checked it on Patient Details but
+      // has since been linked to a second patient. It is the number that is
+      // wrong, not the slot, so keep the hold and send the visitor back to
+      // fix it there, instead of releasing the slot and starting over.
+      if (err && err.code === 'PATIENT_PHONE_AMBIGUOUS') {
+        goToStep('patient-details');
+        showFieldError('phone', PHONE_NOT_BOOKABLE_MESSAGE);
+        scrollToFieldError('phone');
+        return;
+      }
       showBookingError(
         err instanceof Error && err.message && !err.message.startsWith('HTTP')
           ? err.message
@@ -4249,8 +4285,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (validatePatientDetailsAndShowErrors()) {
         if (patientContinueTrigger.hasAttribute('data-kal-submit-therapy')) {
           submitTherapyRequest();
-        } else {
-          goToStep(patientContinueTrigger.dataset.kalGoto || 'confirmation');
+        } else if (!checkingPhone) {
+          // Consultation: the number is checked first, and the visitor stays
+          // on this page with an error under the field if it cannot be used.
+          checkingPhone = true;
+          patientContinueTrigger.disabled = true;
+          void checkPhoneIsBookable()
+            .then((canBook) => {
+              if (canBook) {
+                goToStep(patientContinueTrigger.dataset.kalGoto || 'confirmation');
+              } else {
+                showFieldError('phone', PHONE_NOT_BOOKABLE_MESSAGE);
+                scrollToFieldError('phone');
+              }
+            })
+            .finally(() => {
+              checkingPhone = false;
+              patientContinueTrigger.disabled = false;
+            });
         }
       }
     }
