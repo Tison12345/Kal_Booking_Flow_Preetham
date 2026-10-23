@@ -207,11 +207,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // The doctors Shopify offers at one clinic: the Doctor entries whose
-  // "clinics" field includes it, shaped for renderDoctorList(). Prices and
-  // modes come from the doctor's consultation product variants for that clinic
-  // (one variant per clinic and mode); when none are available the card has no
-  // price and both modes stay selectable (the server still decides what can be
-  // paid for).
+  // "clinics" field includes it, shaped for renderDoctorList(). Which modes
+  // are offered comes from the doctor's consultation product variants for that
+  // clinic (one variant per clinic and mode); when none are available both
+  // modes stay selectable (the server still decides what can be paid for).
+  // Prices are NOT here: they are fetched from the server (see
+  // loadDoctorCardPrices), because the storefront price can differ from the
+  // amount that is charged.
   const getCatalogDoctorsForFacility = (facilityId) => {
     const catalog = getShopifyCatalog();
     const modeOf = (row) => String(row.mode || '').trim().toLowerCase();
@@ -221,11 +223,9 @@ document.addEventListener('DOMContentLoaded', () => {
           doctor && doctor.id && doctor.name && Array.isArray(doctor.clinicIds) && doctor.clinicIds.indexOf(facilityId) !== -1,
       )
       .map((doctor) => {
-        const rows = (doctor.pricing || []).filter((row) => row.facilityId === facilityId);
+        const rows = (doctor.offered || []).filter((row) => row.facilityId === facilityId);
         const inClinic = rows.find((row) => modeOf(row) === 'in-clinic') || null;
         const online = rows.find((row) => modeOf(row) === 'online') || null;
-        const money = (row) => (row ? { amountPaise: row.pricePaise, currency: catalog.currency } : null);
-        const discount = inClinic ? Number(inClinic.payNowDiscountPercent) || 0 : 0;
         return {
           id: doctor.id,
           name: doctor.name,
@@ -240,16 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
           },
           supportsOnline: rows.length ? Boolean(online) : true,
           supportsOffline: rows.length ? Boolean(inClinic) : true,
-          inClinicPrice: money(inClinic),
-          onlinePrice: money(online),
-          payNowDiscountPercent: discount,
-          inClinicPayNowPrice:
-            inClinic && discount > 0
-              ? {
-                  amountPaise: Math.round((inClinic.pricePaise * (100 - discount)) / 100),
-                  currency: catalog.currency,
-                }
-              : null,
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -421,8 +411,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // every render pass here.
   const updateDoctorSelectContinueButton = () => {
     const hasSelection = getSelectedDoctorName() !== null;
+    // A selected card whose price has not arrived yet holds Continue, so the
+    // visitor can never move on to payment without seeing the real price.
+    const selectedCard = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
+    const priceLoading = Boolean(selectedCard && selectedCard.dataset.kalPriceState === 'loading');
     flow.querySelectorAll('[data-kal-doctor-continue]').forEach((btn) => {
-      btn.disabled = !hasSelection;
+      btn.disabled = !hasSelection || priceLoading;
     });
   };
 
@@ -602,32 +596,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // Select's own list/click flow at all — Experiment B's direct-entry
   // "Consult" CTA already knows exactly which doctor opened it (see
   // BOOKING EXPERIMENT above), so there's no list to click a card in.
-  // Clones that doctor's real card from sections/kal-doctor-cards.liquid's
-  // hidden source (same lookup loadDoctorsForFacility() uses) into Doctor
-  // Select's own (unseen, for B) list and marks it selected, so
+  // Builds that doctor's card exactly the way the Doctor Select list does
+  // (same Shopify catalog entry, same card builder, same server price) and
+  // marks it selected in Doctor Select's own (unseen, for B) list, so
   // getSelectedDoctorName/PhotoUrl/Price() — which all just read whatever
   // .kal-doctor-card--selected exists inside the flow — and everything
   // downstream that depends on them (applySelectedDoctorToCards(),
   // booking submission's selectedDoctorId) work completely unchanged.
-  // Returns false (and does nothing) if this doctor has no card configured
-  // yet — same "never silently disappear" principle as the real list.
-  const selectDoctorById = (doctorId) => {
+  // Resolves false (and does nothing) if Shopify does not offer this doctor
+  // at the current clinic — same "never silently disappear" principle as the
+  // real list. The price arrives a moment later, like on the list.
+  const selectDoctorById = async (doctorId) => {
     const list = flow.querySelector('[data-kal-doctor-list]');
-    const source = document.querySelector(
-      `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctorId)}"] .kal-doctor-card`,
-    );
-    if (!list || !source) return false;
-    const card = source.cloneNode(true);
+    const facility = await getCurrentFacility();
+    const doctor =
+      list && facility && facility.id ? getCatalogDoctorsForFacility(facility.id).find((item) => item.id === doctorId) : null;
+    if (!doctor) return false;
+    const card = buildProfileDoctorCard(doctor);
     card.dataset.doctorId = doctorId;
-    applyDoctorNamePrefix(card);
+    card.dataset.kalPriceKey = doctorPriceKey(facility.id, doctorId);
     card.classList.add('kal-doctor-card--selected');
     applyDoctorCardConcernBadges(card);
+    const knownPrice = getCachedDoctorPrice(facility.id, doctorId);
+    if (knownPrice) applyDoctorCardPrice(card, knownPrice.price);
+    else applyDoctorCardPriceLoading(card);
     list.innerHTML = '';
     list.appendChild(card);
     if (selectedDoctorId !== doctorId) clearDayAvailabilityCache();
     selectedDoctorId = doctorId;
     lastDoctorSelection = { doctorId, mode: slotPicker.mode };
     applySelectedDoctorToCards();
+    loadDoctorCardPrices(list, [doctor], facility.id);
     return true;
   };
 
@@ -794,9 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   };
 
-  // Overwrites the theme-editor-authored "Next slot - Today, 11:00 AM" text
-  // (kal-doctor-card-source blocks are otherwise real, backend-driven doctor
-  // data except for this one line — see /doctors' nextSlotToday field) with
+  // Replaces the card's placeholder "Next slot" text with
   // the doctor's REAL next available slot: the earliest bookable slot for
   // the CURRENT consultation mode, searched across the same horizon the
   // Slot Picker's own calendar covers, straight from the same availability
@@ -822,41 +819,103 @@ document.addEventListener('DOMContentLoaded', () => {
     el.appendChild(strong);
   };
 
-  // Overwrites the theme-editor-authored static price text (same
-  // kal-doctor-card-source blocks as applyDoctorCardNextSlot above — see
-  // /doctors' inClinicPrice/onlinePrice fields) with the doctor's REAL
-  // price for the CURRENT consultation mode, read from the same Shopify
-  // doctor_pricing metaobject lookup createOrder() uses to decide what
-  // Razorpay actually charges — so what's displayed here can never drift
-  // from what gets charged at payment time the way the old static text
-  // could. Sets BOTH the visible .kal-doctor-card__price text AND
-  // data-kal-doctor-price (the dataset downstream code — Slot Picker/
-  // Patient Details/Confirmation's shared appointment card,
-  // applyRealConsultationPricing()'s 10%-off/full-price math — already
-  // reads via getSelectedDoctorPrice()), so every one of those stays in
-  // sync automatically; no separate fix needed there. null (no pricing
-  // entry configured in Shopify yet) shows an honest "Pricing unavailable"
-  // rather than falling back to stale/fake text, same "No upcoming slots"
-  // treatment nextSlotToday got above.
+  // The price on a doctor card, and every price derived from it further on
+  // (the appointment card, the payment options and their "Pay now" figure), is
+  // the one the SERVER reports: the Shopify Admin price an order for that
+  // doctor is charged (GET doctors/prices). It is never taken from the page's
+  // own Liquid price, which Shopify Markets or tax display can change. Sets
+  // BOTH the visible .kal-doctor-card__price text AND data-kal-doctor-price
+  // (read downstream via getSelectedDoctorPrice()), so every later step stays
+  // in sync. The cards render first and the prices follow in one request; a
+  // card whose price has not arrived says so and, if selected, holds Continue.
   const formatRupeesFromPaise = (amountPaise) => {
     const rupees = amountPaise / 100;
     const whole = Number.isInteger(rupees);
     return `₹${rupees.toLocaleString('en-IN', whole ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const applyDoctorCardPrice = (card, doctor) => {
-    const priceForMode = slotPicker.mode === 'video' ? doctor.onlinePrice : doctor.inClinicPrice;
+  const DOCTOR_PRICE_CACHE_TTL_MS = 2 * 60 * 1000;
+  const doctorPriceCache = new Map(); // `${facilityId}:${doctorId}` -> { price, fetchedAt }
+  const doctorPriceKey = (facilityId, doctorId) => `${facilityId}:${doctorId}`;
+  const getCachedDoctorPrice = (facilityId, doctorId) => {
+    const cached = doctorPriceCache.get(doctorPriceKey(facilityId, doctorId));
+    return cached && Date.now() - cached.fetchedAt < DOCTOR_PRICE_CACHE_TTL_MS ? cached : null;
+  };
+
+  const applyDoctorCardPriceLoading = (card) => {
+    const el = card.querySelector('.kal-doctor-card__price');
+    if (el) {
+      el.textContent = 'Checking price…';
+      el.classList.add('kal-doctor-card__price--loading');
+    }
+    card.dataset.kalPriceState = 'loading';
+    card.dataset.kalDoctorPrice = '';
+    card.dataset.kalDoctorPayNowPrice = '';
+    card.dataset.kalDoctorPayNowPercent = '';
+  };
+
+  // `price` is the server's entry for this doctor, or null when none could be
+  // worked out (the card then honestly says "Pricing unavailable").
+  const applyDoctorCardPrice = (card, price) => {
+    const priceForMode = price ? (slotPicker.mode === 'video' ? price.online : price.inClinic) : null;
     const el = card.querySelector('.kal-doctor-card__price');
     const text = priceForMode ? formatRupeesFromPaise(priceForMode.amountPaise) : 'Pricing unavailable';
-    if (el) el.textContent = text;
+    if (el) {
+      el.textContent = text;
+      el.classList.remove('kal-doctor-card__price--loading');
+    }
+    card.dataset.kalPriceState = priceForMode ? 'ready' : 'unavailable';
     card.dataset.kalDoctorPrice = priceForMode ? text : '';
-    // The "Pay now" figure for an In-Clinic visit, straight from the server
-    // (the same amount Razorpay will charge) — empty when this doctor has no
-    // discount configured in Shopify or the visitor is on Video Consult,
+    // The "Pay now" figure for an In-Clinic visit — empty when this doctor has
+    // no discount configured in Shopify or the visitor is on Video Consult,
     // which is never discounted.
-    const payNow = slotPicker.mode === 'video' ? null : doctor.inClinicPayNowPrice;
+    const payNow = price && slotPicker.mode !== 'video' ? price.inClinicPayNow : null;
     card.dataset.kalDoctorPayNowPrice = payNow ? formatRupeesFromPaise(payNow.amountPaise) : '';
-    card.dataset.kalDoctorPayNowPercent = payNow ? String(doctor.payNowDiscountPercent) : '';
+    card.dataset.kalDoctorPayNowPercent = payNow ? String(price.payNowDiscountPercent) : '';
+  };
+
+  // One request for every doctor whose price is not already remembered.
+  const fetchDoctorPrices = async (facilityId, doctorIds) => {
+    const missing = doctorIds.filter((id) => !getCachedDoctorPrice(facilityId, id));
+    if (missing.length) {
+      const response = await fetch(
+        `${apiBaseUrl}/api/shopify/public/doctors/prices?facilityId=${encodeURIComponent(facilityId)}&doctorIds=${missing.map(encodeURIComponent).join(',')}`,
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const rows = Array.isArray(data?.data?.prices) ? data.data.prices : [];
+      missing.forEach((id) => {
+        const row = rows.find((item) => item.doctorId === id) || null;
+        doctorPriceCache.set(doctorPriceKey(facilityId, id), { price: row, fetchedAt: Date.now() });
+      });
+    }
+    return doctorIds.map((id) => getCachedDoctorPrice(facilityId, id).price);
+  };
+
+  // Fills in the prices of the cards on screen once the single request answers
+  // (cards whose price is already remembered were filled when they rendered).
+  // An answer is applied only to a card still on screen for the same clinic.
+  const loadDoctorCardPrices = (list, doctors, facilityId) => {
+    const pending = doctors.filter((doctor) => !getCachedDoctorPrice(facilityId, doctor.id));
+    if (pending.length === 0) return;
+    const cardFor = (doctor) => {
+      const card = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
+      return card && card.isConnected && card.dataset.kalPriceKey === doctorPriceKey(facilityId, doctor.id) ? card : null;
+    };
+    const finish = (apply) => {
+      pending.forEach((doctor, index) => {
+        const card = cardFor(doctor);
+        if (card) apply(card, index);
+      });
+      updateDoctorSelectContinueButton();
+      applySelectedDoctorToCards();
+    };
+    fetchDoctorPrices(facilityId, pending.map((doctor) => doctor.id))
+      .then((prices) => finish((card, index) => applyDoctorCardPrice(card, prices[index])))
+      .catch((err) => {
+        console.error('[kal-booking-flow] Failed to load doctor prices:', err);
+        finish((card) => applyDoctorCardPrice(card, null));
+      });
   };
 
   // Keyed by `${facilityId}:${mode}` — one entry per facility+mode pair, so
@@ -1002,26 +1061,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     list.innerHTML = '';
     doctors.forEach((doctor) => {
-      const source = document.querySelector(
-        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
-      );
-      // Details set in Shopify win. A doctor with no Shopify profile keeps the
-      // old behavior: the hand-typed theme block, or a name-only card.
-      const card = doctor.profile
-        ? buildProfileDoctorCard(doctor)
-        : source
-          ? source.cloneNode(true)
-          : buildFallbackDoctorCard(doctor);
+      // Every doctor comes from the Shopify catalog with a profile.
+      const card = doctor.profile ? buildProfileDoctorCard(doctor) : buildFallbackDoctorCard(doctor);
       card.dataset.doctorId = doctor.id;
-      if (source && !doctor.profile) applyDoctorNamePrefix(card);
       card.classList.toggle('kal-doctor-card--selected', doctor.id === nextSelectedId);
       applyDoctorCardConcernBadges(card);
       // The next slot is filled in afterwards (loadDoctorCardNextSlots below);
       // until then the card says it is checking.
       applyDoctorCardNextSlotLoading(card);
-      applyDoctorCardPrice(card, doctor);
+      card.dataset.kalPriceKey = doctorPriceKey(facilityId, doctor.id);
+      const knownPrice = getCachedDoctorPrice(facilityId, doctor.id);
+      if (knownPrice) applyDoctorCardPrice(card, knownPrice.price);
+      else applyDoctorCardPriceLoading(card);
       list.appendChild(card);
     });
+    loadDoctorCardPrices(list, doctors, facilityId);
     loadDoctorCardNextSlots(list, doctors, facilityId, mode);
 
     // Only the LIVE value is touched here — lastDoctorSelection (the real
@@ -1117,36 +1171,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const doctors = getCatalogDoctorsForFacility(facility.id);
       if (doctors.length === 0) return null;
 
+      // The doctor's Shopify profile is the source.
       const doctor = doctors[0];
-      const source = document.querySelector(
-        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
-      );
-
-      // The doctor's Shopify profile (when set) is the source of truth.
       const profile = doctor.profile || null;
-      const name = profile ? profile.name : formatDoctorName(source ? source.dataset.kalDoctorName : doctor.name);
+      const name = profile ? profile.name : formatDoctorName(doctor.name);
       if (!name) return null;
 
-      const photoUrl = profile ? profile.photoUrl || '' : source ? source.dataset.kalDoctorPhotoUrl : '';
-      // Document order inside kal-booking-flow-doctor-card.liquid's
-      // .kal-doctor-card__info is always degree, then experience, then
-      // languages — read by position rather than a dedicated data
-      // attribute, since degree/experience only exist as rendered text
-      // in that markup, not as their own data-* hooks.
-      const metaRows = source ? source.querySelectorAll('.kal-doctor-card__meta-row') : [];
-      const degree = profile
-        ? profile.qualification || ''
-        : metaRows[0]
-          ? metaRows[0].textContent.trim()
-          : doctor.designation || '';
-      const experience = profile
-        ? profile.experience
+      const photoUrl = profile ? profile.photoUrl || '' : '';
+      const degree = profile ? profile.qualification || '' : doctor.designation || '';
+      const experience =
+        profile && profile.experience
           ? /^\d+(\.\d+)?$/.test(profile.experience)
             ? `${profile.experience} yrs experience`
             : profile.experience
-          : ''
-        : metaRows[1]
-          ? metaRows[1].textContent.trim()
           : '';
 
       return { name, photoUrl, degree, experience };
@@ -4063,8 +4100,9 @@ document.addEventListener('DOMContentLoaded', () => {
       applyExperimentVisibility();
       applyExperimentStepNumbering();
       openFlow();
-      if (doctorId) selectDoctorById(doctorId);
-      goToStep('slot-picker');
+      (doctorId ? selectDoctorById(doctorId) : Promise.resolve(false))
+        .catch((err) => console.error('[kal-booking-flow] Could not select the doctor:', err))
+        .then(() => goToStep('slot-picker'));
     }
 
     // Facility selection, from the separate "Find a Clinic" page — see

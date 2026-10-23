@@ -1,0 +1,51 @@
+{%- comment -%}
+  A "meet the doctor" card for every Doctor entry in Shopify
+  (shop.metaobjects.doctor), with a Consult button that opens the booking flow
+  straight at Slot Picker for that doctor (Experiment B, .kal-consult-cta).
+  Everything shown comes from the Doctor entry: name, photo, qualification,
+  specialization (list), experience and languages. The button carries the
+  entry's doctor_id (the CMS staff id), which is what the booking flow reads.
+  Nothing about a doctor is typed in this snippet.
+{%- endcomment -%}
+{%- for doctor in shop.metaobjects.doctor.values -%}
+  {%- assign doctor_id = doctor.doctor_id.value -%}
+  {%- if doctor_id != blank and doctor.name.value != blank -%}
+    {%- assign experience_text = doctor.experience.value | append: '' | strip -%}
+    {%- assign experience_years = experience_text | plus: 0 -%}
+    <div style="max-width:420px;margin:0 auto 20px;border:1px solid #d8d8d0;border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start;font-family:sans-serif;">
+      {%- if doctor.photo.value != blank -%}
+        <img
+          src="{{ doctor.photo.value | image_url: width: 144 }}"
+          alt="{{ doctor.name.value | escape }}"
+          width="72"
+          height="72"
+          loading="lazy"
+          style="width:72px;height:72px;border-radius:50%;object-fit:cover;flex-shrink:0;"
+        >
+      {%- else -%}
+        <div style="width:72px;height:72px;border-radius:50%;background:#2f4f3f;flex-shrink:0;"></div>
+      {%- endif -%}
+      <div>
+        <div style="font-size:18px;font-weight:600;color:#1a1a1a;">{{ doctor.name.value | escape }}</div>
+        {%- if doctor.qualification.value != blank -%}
+          <div style="color:#666;font-size:14px;margin-top:4px;">{{ doctor.qualification.value | escape }}</div>
+        {%- endif -%}
+        {%- if doctor.specialization.value.size > 0 -%}
+          <div style="color:#2f4f3f;font-size:14px;margin-top:4px;">{{ doctor.specialization.value | join: ', ' | escape }}</div>
+        {%- endif -%}
+        {%- if experience_text != blank -%}
+          <div style="color:#666;font-size:13px;margin-top:4px;">
+            {%- if experience_years > 0 -%}{{ experience_years }} years of experience{%- else -%}{{ experience_text | escape }}{%- endif -%}
+          </div>
+        {%- endif -%}
+        {%- if doctor.languages.value.size > 0 -%}
+          <div style="color:#666;font-size:13px;margin-top:4px;">{{ doctor.languages.value | join: ', ' | escape }}</div>
+        {%- endif -%}
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button type="button" style="padding:8px 16px;border:1px solid #ccc;background:#f5f5f0;border-radius:6px;">View Profile</button>
+          <button type="button" class="kal-consult-cta" data-doctor-id="{{ doctor_id | escape }}" style="padding:8px 16px;border:none;background:#2f4f3f;color:#fff;border-radius:6px;cursor:pointer;">Consult</button>
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
+{%- endfor -%}

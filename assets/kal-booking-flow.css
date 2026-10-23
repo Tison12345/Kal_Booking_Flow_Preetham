@@ -3182,7 +3182,8 @@ div.kal-leave-booking-modal__backdrop {
 
 /* The next slot loads after the card is on screen: a soft pulse while the
    availability lookup is running. */
-.kal-doctor-card__next-slot--loading {
+.kal-doctor-card__next-slot--loading,
+.kal-doctor-card__price--loading {
   animation: kal-doctor-card-next-slot-pulse 1.2s ease-in-out infinite;
 }
 
@@ -3197,7 +3198,8 @@ div.kal-leave-booking-modal__backdrop {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kal-doctor-card__next-slot--loading {
+  .kal-doctor-card__next-slot--loading,
+  .kal-doctor-card__price--loading {
     animation: none;
     opacity: 0.7;
   }
