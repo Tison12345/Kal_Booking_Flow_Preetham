@@ -3126,7 +3126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const result = await postToPartnerApi(
         'patients/phone-check',
-        { patientPhone: buildPatientPhone() },
+        // The name lets a number shared by two patients still be used by one of them.
+        { patientPhone: buildPatientPhone(), patientName: (patientDetails.name || '').trim() || undefined },
         generateIdempotencyKey(),
       );
       return result.canBook !== false;
