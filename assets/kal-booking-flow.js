@@ -3034,15 +3034,26 @@ document.addEventListener('DOMContentLoaded', () => {
     setCountryPickerOpen(wrapper, false);
   };
 
-  // Only flags a number as invalid when it's short of the selected
-  // country's required digit count — per explicit instruction, the max
-  // digit count (already enforced by the input's own maxLength/
-  // sanitizePhoneDigits capping what can be typed) and the start-digit
-  // rule (also already enforced while typing) don't need a second,
-  // redundant validation error here on top of that.
+  // Checks the number against the selected country's digit count (min AND max)
+  // and start-digit rule. Typing is already restricted (maxLength /
+  // sanitizePhoneDigits), but that does not cover a number typed under one
+  // country and then kept after switching to another (10 digits typed for
+  // India, then Singapore selected), so the full rule is checked here too, when
+  // Continue is pressed.
   const isValidPhone = (value) => {
     const digits = value.replace(/\D/g, '');
-    return digits.length >= selectedCountry.min;
+    if (digits.length < selectedCountry.min || digits.length > selectedCountry.max) return false;
+    const rule = selectedCountry.start;
+    return !rule || rule.every((allowed, index) => allowed.includes(digits[index]));
+  };
+
+  // What the visitor is told when their number does not fit the selected country.
+  const phoneInvalidMessage = () => {
+    const count =
+      selectedCountry.min === selectedCountry.max
+        ? `${selectedCountry.min}-digit`
+        : `${selectedCountry.min} to ${selectedCountry.max} digit`;
+    return `Enter a valid ${count} mobile number`;
   };
 
   const isValidEmail = (value) => {
@@ -3180,7 +3191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const phoneDigitsTrimmed = patientDetails.phone.replace(/\D/g, '');
     if (!isValidPhone(patientDetails.phone)) {
-      showFieldError('phone', phoneDigitsTrimmed === '' ? 'Enter phone number' : 'Enter a valid phone number');
+      showFieldError('phone', phoneDigitsTrimmed === '' ? 'Enter phone number' : phoneInvalidMessage());
       allValid = false;
       firstInvalidField = firstInvalidField || 'phone';
     } else {
