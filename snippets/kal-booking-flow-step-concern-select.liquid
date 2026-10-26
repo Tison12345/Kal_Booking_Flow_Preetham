@@ -176,6 +176,27 @@
         list can be edited from the theme editor without a code deploy.
       {%- endcomment -%}
       <div class="kal-concern-select__list" data-kal-concern-list></div>
+
+      {%- comment -%}
+        Free-text box for the "Other" concern — hidden until "Other" is
+        checked (see syncConcernSelectionUi() in kal-booking-flow.js), and
+        sits right under the list because "Other" is always its last row.
+        Same markup/classes as Patient Details' own text fields so it looks
+        the same. data-kal-other-concern (not data-kal-field) keeps it out
+        of the Patient Details form handler; what's typed is sent in place
+        of the "Other" label in `concerns`.
+      {%- endcomment -%}
+      <div class="kal-form-field kal-concern-select__other" data-kal-other-concern-field hidden>
+        <label class="kal-form-label" for="kal-other-concern">Your concern*</label>
+        <input
+          type="text"
+          id="kal-other-concern"
+          class="kal-form-input"
+          data-kal-other-concern
+          maxlength="200"
+          placeholder="What brings you in today?"
+        >
+      </div>
     </div>
 
     {%- comment -%}

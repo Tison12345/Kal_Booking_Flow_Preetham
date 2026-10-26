@@ -1491,6 +1491,11 @@
     gap: 16px;
   }
 
+  .kal-step-concern-select .kal-concern-select__other {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
   /* Back on the left, Continue auto-width on the right — not the mobile
      full-width bar (which has no Back button in it at all, see
      .kal-concern-select__footer-back below). */
@@ -2463,6 +2468,11 @@ div.kal-leave-booking-modal__backdrop {
    row 343px wide inside the 393px mobile frame (393 - 2*25 = 343), 2px
    narrower an inset than every other element in this column. Bottom
    padding stays the shared 24px. */
+/* Text box under the list, shown when "Other" is checked. */
+.kal-concern-select__other {
+  padding: 8px 24px 16px;
+}
+
 .kal-concern-select__list {
   display: flex;
   flex-direction: column;
@@ -3155,7 +3165,10 @@ div.kal-leave-booking-modal__backdrop {
   flex-wrap: wrap;
   gap: 8px;
   padding: 0 12px 12px;
-  max-height: 60px;
+  /* 60px of chip rows (2 x 26px + 8px gap) + the 12px bottom padding. The box
+     is border-box, so a plain 60px would clip that padding away and leave no
+     gap between the tags and the "Next slot" bar. */
+  max-height: 72px;
   overflow: hidden;
 }
 
@@ -3287,6 +3300,7 @@ div.kal-leave-booking-modal__backdrop {
     grid-column: 2;
     grid-row: 2;
     padding: 0;
+    max-height: 60px;
   }
 }
 
@@ -4503,6 +4517,20 @@ div.kal-leave-booking-modal__backdrop {
   display: none;
 }
 
+/* "No slots in this window" inside the slot grid: spans the whole grid and
+   drops the negative page-level margins the banner uses between sections. */
+.kal-slot-conflict-banner--empty {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.kal-slot-conflict-banner [data-kal-empty-slots-text] {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 100%;
+  color: #925300;
+}
+
 .kal-slot-conflict-banner__icon {
   display: flex;
   flex-shrink: 0;
@@ -4545,6 +4573,10 @@ div.kal-leave-booking-modal__backdrop {
   .kal-slot-conflict-banner {
     margin-left: 0;
     margin-right: 0;
+  }
+
+  .kal-slot-conflict-banner--empty {
+    margin: 0;
   }
 }
 

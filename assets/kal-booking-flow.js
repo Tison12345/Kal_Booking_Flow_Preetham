@@ -1294,20 +1294,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // rather than a single string.
   const concernSelect = {
     selected: new Set(),
+    // What the visitor typed in the box under "Other" (only meaningful
+    // while "Other" is checked).
+    otherText: '',
   };
 
-  // Patient Details' free-text Concern field (data-kal-concern-field) was
-  // built for Experiment B only (see that field's own liquid comment), but
-  // Experiment A's own concern list has an "Other" row (concern_key
-  // "other", see sections/kal-concern-options.liquid) whose whole point is
-  // that the checkbox alone doesn't say what the visitor actually means —
-  // same open-ended case Experiment B solves this field for. So this field
-  // shows whenever EITHER path needs it: Experiment B always, or Experiment
-  // A once "Other" is checked.
-  const shouldShowConcernField = () => isExperimentB || concernSelect.selected.has('other');
+  // Patient Details' free-text Concern field (data-kal-concern-field) is for
+  // Experiment B only (see that field's own liquid comment). Experiment A's
+  // "Other" row has its own text box on Concern Select instead (see
+  // data-kal-other-concern-field), so Patient Details stays the normal form.
+  const shouldShowConcernField = () => isExperimentB;
+
+  // "Other" needs a typed concern before the visitor can continue.
+  const otherConcernIsMissing = () =>
+    concernSelect.selected.has('other') && concernSelect.otherText.trim() === '';
 
   const updateConcernContinueButton = () => {
     const hasSelection = concernSelect.selected.size > 0;
+    const canContinue = hasSelection && !otherConcernIsMissing();
     // Per the updated Figma spec, the footer (not just the button) is
     // absent until at least one concern is picked — a disabled-but-visible
     // button was the old behavior, before this pass.
@@ -1315,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
       footer.hidden = !hasSelection;
     });
     flow.querySelectorAll('[data-kal-concern-continue]').forEach((btn) => {
-      btn.disabled = !hasSelection;
+      btn.disabled = !canContinue;
     });
   };
 
@@ -1334,6 +1338,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const isSelected = concernSelect.selected.has(row.dataset.kalConcern);
       row.classList.toggle('kal-concern-row--selected', isSelected);
       row.setAttribute('aria-pressed', String(isSelected));
+    });
+    // The "Other" text box shows only while "Other" is checked; unchecking
+    // it throws away what was typed.
+    const otherChecked = concernSelect.selected.has('other');
+    if (!otherChecked) concernSelect.otherText = '';
+    flow.querySelectorAll('[data-kal-other-concern-field]').forEach((el) => {
+      el.hidden = !otherChecked;
+    });
+    flow.querySelectorAll('[data-kal-other-concern]').forEach((el) => {
+      if (!otherChecked) el.value = '';
     });
     updateConcernContinueButton();
     applyExperimentVisibility();
@@ -2199,9 +2213,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!panel) return;
       panel.innerHTML = '';
       if (byPeriod[period].length === 0) {
+        // Same amber banner as the "slot just booked" message, so an empty
+        // window reads as a notice rather than plain text. The icon is
+        // copied from that banner's own rendered icon.
         const empty = document.createElement('p');
-        empty.className = 'kal-step-doctor-select__list-empty';
-        empty.textContent = 'No slots in this window.';
+        empty.className = 'kal-slot-conflict-banner kal-slot-conflict-banner--empty';
+        const icon = document.createElement('span');
+        icon.className = 'kal-slot-conflict-banner__icon';
+        icon.innerHTML = flow.querySelector('.kal-slot-conflict-banner__icon')?.innerHTML || '';
+        const text = document.createElement('span');
+        text.setAttribute('data-kal-empty-slots-text', '');
+        text.textContent = 'No slots available in this window.';
+        empty.append(icon, text);
         panel.appendChild(empty);
         return;
       }
@@ -3466,9 +3489,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // in the DOM (.kal-concern-row__name) rather than duplicating a
   // key -> label map in JS — Concern Select is the only place those
   // labels are authored (see kal-booking-flow-concern-row.liquid).
+  // "Other" is sent as what the visitor typed under it, not the word "Other".
   const collectSelectedConcernLabels = () =>
     [...concernSelect.selected]
-      .map((key) => flow.querySelector(`[data-kal-concern="${CSS.escape(key)}"] .kal-concern-row__name`)?.textContent?.trim())
+      .map((key) =>
+        key === 'other'
+          ? concernSelect.otherText.trim()
+          : flow.querySelector(`[data-kal-concern="${CSS.escape(key)}"] .kal-concern-row__name`)?.textContent?.trim(),
+      )
       .filter(Boolean);
 
   const showBookingError = (message) => {
@@ -4504,6 +4532,14 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollRegion.addEventListener('scroll', () => updateScrollHintVisibility(scrollRegion, hintButton));
   });
   window.addEventListener('resize', updateAllScrollHints);
+
+  // The "Other" concern text box on Concern Select.
+  document.addEventListener('input', (e) => {
+    const box = e.target.closest('[data-kal-other-concern]');
+    if (!box) return;
+    concernSelect.otherText = box.value;
+    updateConcernContinueButton();
+  });
 
   // Patient Details form fields — delegated the same way as clicks, so this
   // keeps working once a desktop composition duplicates these inputs.
