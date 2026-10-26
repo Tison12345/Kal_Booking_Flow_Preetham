@@ -1305,13 +1305,48 @@ document.addEventListener('DOMContentLoaded', () => {
   // data-kal-other-concern-field), so Patient Details stays the normal form.
   const shouldShowConcernField = () => isExperimentB;
 
-  // "Other" needs a typed concern before the visitor can continue.
+  // "Other" needs a typed concern before the visitor can continue. Checked
+  // when Continue is clicked (the button itself stays enabled, like Patient
+  // Details' Continue), which shows the error under the box.
   const otherConcernIsMissing = () =>
     concernSelect.selected.has('other') && concernSelect.otherText.trim() === '';
 
+  const OTHER_CONCERN_MAX = 200;
+
+  const otherConcernInputs = () => flow.querySelectorAll('[data-kal-other-concern]');
+
+  const showOtherConcernError = () => {
+    flow.querySelectorAll('[data-kal-other-concern-error]').forEach((el) => {
+      el.hidden = false;
+    });
+    otherConcernInputs().forEach((el) => el.classList.add('kal-form-input--error'));
+  };
+
+  const clearOtherConcernError = () => {
+    flow.querySelectorAll('[data-kal-other-concern-error]').forEach((el) => {
+      el.hidden = true;
+    });
+    otherConcernInputs().forEach((el) => el.classList.remove('kal-form-input--error'));
+  };
+
+  // The box grows with what is typed instead of scrolling inside itself.
+  const growOtherConcernInput = (el) => {
+    el.style.height = 'auto';
+    // scrollHeight leaves out the border, which border-box height includes.
+    el.style.height = `${el.scrollHeight + (el.offsetHeight - el.clientHeight)}px`;
+  };
+
+  // Shows "n/200" only once the visitor is close to the limit.
+  const updateOtherConcernCount = () => {
+    const length = concernSelect.otherText.length;
+    flow.querySelectorAll('[data-kal-other-concern-count]').forEach((el) => {
+      el.textContent = length >= OTHER_CONCERN_MAX * 0.8 ? `${length}/${OTHER_CONCERN_MAX}` : '';
+      el.classList.toggle('kal-concern-select__other-count--max', length >= OTHER_CONCERN_MAX);
+    });
+  };
+
   const updateConcernContinueButton = () => {
     const hasSelection = concernSelect.selected.size > 0;
-    const canContinue = hasSelection && !otherConcernIsMissing();
     // Per the updated Figma spec, the footer (not just the button) is
     // absent until at least one concern is picked — a disabled-but-visible
     // button was the old behavior, before this pass.
@@ -1319,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
       footer.hidden = !hasSelection;
     });
     flow.querySelectorAll('[data-kal-concern-continue]').forEach((btn) => {
-      btn.disabled = !canContinue;
+      btn.disabled = !hasSelection;
     });
   };
 
@@ -1339,16 +1374,37 @@ document.addEventListener('DOMContentLoaded', () => {
       row.classList.toggle('kal-concern-row--selected', isSelected);
       row.setAttribute('aria-pressed', String(isSelected));
     });
-    // The "Other" text box shows only while "Other" is checked; unchecking
-    // it throws away what was typed.
+    // The "Other" text box slides open while "Other" is checked; unchecking
+    // it closes it and throws away what was typed. Focus moves into the box
+    // only on the click that opens it, not on every later re-sync.
     const otherChecked = concernSelect.selected.has('other');
+    const wasOpen = flow.querySelector('[data-kal-other-concern-field]')?.classList.contains('kal-concern-select__reveal--open');
     if (!otherChecked) concernSelect.otherText = '';
     flow.querySelectorAll('[data-kal-other-concern-field]').forEach((el) => {
-      el.hidden = !otherChecked;
+      el.classList.toggle('kal-concern-select__reveal--open', otherChecked);
+      el.toggleAttribute('inert', !otherChecked);
     });
-    flow.querySelectorAll('[data-kal-other-concern]').forEach((el) => {
-      if (!otherChecked) el.value = '';
+    flow.querySelectorAll('[data-kal-concern="other"]').forEach((row) => {
+      row.setAttribute('aria-expanded', String(otherChecked));
     });
+    if (!otherChecked) {
+      otherConcernInputs().forEach((el) => {
+        el.value = '';
+        el.style.height = '';
+      });
+      clearOtherConcernError();
+      updateOtherConcernCount();
+    } else if (!wasOpen) {
+      requestAnimationFrame(() => {
+        const box = flow.querySelector('[data-kal-other-concern]');
+        if (!box) return;
+        growOtherConcernInput(box);
+        box.focus({ preventScroll: true });
+        setTimeout(() => {
+          box.closest('[data-kal-other-concern-field]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 200);
+      });
+    }
     updateConcernContinueButton();
     applyExperimentVisibility();
   };
@@ -4288,10 +4344,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // below, handleSlotContinue()) — both must only navigate after a real
     // hold (+appointment, for the former) succeeds, not unconditionally.
     const gotoTrigger = e.target.closest(
-      '[data-kal-goto]:not([data-kal-patient-continue]):not([data-kal-confirm-booking]):not([data-kal-slot-continue])',
+      '[data-kal-goto]:not([data-kal-patient-continue]):not([data-kal-confirm-booking]):not([data-kal-slot-continue]):not([data-kal-concern-continue])',
     );
     if (gotoTrigger) {
       goToStep(gotoTrigger.dataset.kalGoto);
+    }
+
+    // Concern Select's Continue — "Other" needs its text first (own handler,
+    // not the plain data-kal-goto above, for the same reason as Patient
+    // Details' Continue).
+    const concernContinueTrigger = e.target.closest('[data-kal-concern-continue]:not(:disabled)');
+    if (concernContinueTrigger) {
+      if (otherConcernIsMissing()) {
+        showOtherConcernError();
+        flow.querySelector('[data-kal-other-concern]')?.focus();
+      } else {
+        goToStep(concernContinueTrigger.dataset.kalGoto);
+      }
     }
 
     // Slot Picker's Continue — places/replaces the real hold for whatever's
@@ -4538,7 +4607,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const box = e.target.closest('[data-kal-other-concern]');
     if (!box) return;
     concernSelect.otherText = box.value;
-    updateConcernContinueButton();
+    growOtherConcernInput(box);
+    updateOtherConcernCount();
+    if (box.value.trim()) clearOtherConcernError();
   });
 
   // Patient Details form fields — delegated the same way as clicks, so this

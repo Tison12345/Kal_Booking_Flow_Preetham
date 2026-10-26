@@ -2468,9 +2468,66 @@ div.kal-leave-booking-modal__backdrop {
    row 343px wide inside the 393px mobile frame (393 - 2*25 = 343), 2px
    narrower an inset than every other element in this column. Bottom
    padding stays the shared 24px. */
-/* Text box under the list, shown when "Other" is checked. */
+/* Text box under the list. Slides open when "Other" is checked: a one-row
+   grid animating 0fr -> 1fr, so it grows to its real height without a fixed
+   max-height. The clip child hides the content while closed. */
+.kal-concern-select__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.kal-concern-select__reveal--open {
+  grid-template-rows: 1fr;
+}
+
+.kal-concern-select__reveal-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
 .kal-concern-select__other {
   padding: 8px 24px 16px;
+}
+
+/* Same colours as every .kal-form-input (including its tan focus border and
+   red error border); only the height rules change for a growing textarea. */
+.kal-concern-select__other-input {
+  height: auto;
+  min-height: 40px;
+  padding: 8px 12px;
+  line-height: 22px;
+  resize: none;
+  overflow: hidden;
+}
+
+.kal-concern-select__other-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 18px;
+  margin-top: -8px;
+}
+
+.kal-concern-select__other-meta .kal-form-error {
+  margin: 0;
+}
+
+.kal-concern-select__other-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #a8a8a8;
+  white-space: nowrap;
+}
+
+.kal-concern-select__other-count--max {
+  color: var(--kal-booking-flow-color-error);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kal-concern-select__reveal {
+    transition: none;
+  }
 }
 
 .kal-concern-select__list {
