@@ -257,6 +257,10 @@
        that's what position:absolute + this auto scroll were for
        previously, and both got reverted for exactly this reason. */
     overflow-y: hidden;
+    /* overflow-y:hidden alone makes overflow-x compute to auto, so any
+       element a few pixels wider than the dialog showed a stray horizontal
+       scrollbar along the bottom. Nothing here should scroll sideways. */
+    overflow-x: hidden;
   }
 
   .kal-booking-flow__content > [data-kal-step="entry"] {
