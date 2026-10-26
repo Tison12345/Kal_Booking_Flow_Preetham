@@ -81,6 +81,11 @@
   height: 100%;
   max-width: 100%;
   max-height: 100%;
+  /* Overrides the browser's own dialog:modal default (overflow: auto).
+     The dialog itself never scrolls; each step scrolls inside its own
+     region. Without this, anything positioned past the dialog's edge
+     (e.g. the country-code dropdown) gave the whole modal a scrollbar. */
+  overflow: hidden;
   font-family: var(--kal-booking-flow-font-family);
 }
 
@@ -4762,10 +4767,16 @@ div.kal-leave-booking-modal__backdrop {
   border: none;
 }
 
+/* position/top/left are no longer set here — kal-booking-flow.js's
+   setCountryPickerOpen()/positionCountryPanel() apply them as inline
+   styles once the panel is open, since it's reparented to be a direct
+   child of <dialog> at that point (see that function's own comment for
+   why: this step's scrollable form region sits between the panel and
+   the dialog's own transform-established containing block, and would
+   otherwise still clip a plain position:fixed panel left in place).
+   z-index just needs to clear this step's own content/footer (both
+   effectively z-index:1 or less) — 20 already comfortably does that. */
 .kal-country-picker__panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
   z-index: 20;
   width: 240px;
   max-height: 280px;

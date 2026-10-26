@@ -1195,6 +1195,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // with data-kal-step="name". Clicking anything with data-kal-goto="name" (a card,
   // a continue button) or data-kal-back="name" (a back button) switches to that step.
   const goToStep = (stepName) => {
+    // Closes (and un-portals, see setCountryPickerOpen) any country-code
+    // picker still open from the step being left — otherwise it would be
+    // left reparented onto <dialog>, fixed-positioned against a toggle
+    // button that's about to go `hidden`.
+    flow.querySelectorAll('[data-kal-country-picker]').forEach((wrapper) => {
+      setCountryPickerOpen(wrapper, false);
+    });
+
     const steps = flow.querySelectorAll('[data-kal-step]');
     steps.forEach((step) => {
       step.hidden = step.dataset.kalStep !== stepName;
@@ -3025,16 +3033,152 @@ document.addEventListener('DOMContentLoaded', () => {
   // .kal-country-picker instance (both in the DOM at once, only one
   // step ever visible), same "never assumed to be the only one" pattern
   // the facility switcher below already uses for its 3 instances.
+
+  // ROOT CAUSE of the dropdown getting clipped: .kal-country-picker__panel
+  // was `position: absolute` inside .kal-phone-input, which sits inside
+  // this step's own scrollable form region (.kal-step-shell__scroll,
+  // overflow-y: auto) — and at 750px+ the <dialog> itself gets a
+  // `transform` for centering (see .kal-booking-flow's own desktop rule),
+  // which makes the DIALOG the containing block for any position:fixed
+  // descendant too. Once that's true, any overflow-clipping ancestor
+  // sitting BETWEEN the dropdown and the dialog — exactly where
+  // .kal-step-shell__scroll sits — still clips it for painting purposes,
+  // position:fixed or not; only moving the element itself out of that
+  // ancestor's subtree escapes it. Same failure mode already solved once
+  // in this file for the calendar modal and the "Leave booking?" modal
+  // (see kal-booking-flow.liquid's own comments on both) by making them
+  // direct children of <dialog> in the Liquid markup. The country picker
+  // can't do that statically the same way — Patient Details and Therapy
+  // Details each need their own independent instance, toggled
+  // independently — so this does it dynamically instead: on open, the
+  // panel itself (not a clone) is reparented to be a direct child of
+  // <dialog>, fixed-positioned against the toggle button's own
+  // coordinates, and restored to its original spot in the markup on
+  // close — a lightweight portal, scoped to just the one open instance.
+  //
+  // Captured once up front as plain node references, not live DOM
+  // lookups — a JS reference to a node stays valid no matter where that
+  // node currently sits in the DOM, whereas `wrapper.querySelector(...)`
+  // or `optionEl.closest(...)` would silently fail the moment the panel
+  // is reparented out of its wrapper.
+  const countryPickerPanels = new Map(); // wrapper -> panel
+  const countryPickerWrappers = new Map(); // panel -> wrapper
+  flow.querySelectorAll('[data-kal-country-picker]').forEach((wrapper) => {
+    const panel = wrapper.querySelector('[data-kal-country-panel]');
+    if (!panel) return;
+    countryPickerPanels.set(wrapper, panel);
+    countryPickerWrappers.set(panel, wrapper);
+    // An empty marker left in the panel's original spot so close() can
+    // put it back exactly there, instead of just re-appending it (which
+    // would silently reorder it after the phone <input> sibling).
+    const anchor = document.createComment('kal-country-panel-anchor');
+    panel.after(anchor);
+    panel.kalAnchor = anchor;
+  });
+
+  // Computes the panel's fixed-position coordinates against the toggle
+  // button it belongs to, and whether to flip it above the toggle
+  // ("open upward") when there isn't enough room below. Coordinates are
+  // taken relative to <dialog>'s own box (flow.getBoundingClientRect()),
+  // not the raw viewport — correct either way: at 750px+, that's exactly
+  // what position:fixed resolves against once the dialog's transform
+  // makes it the containing block (see the comment above); below 750px
+  // the dialog has no transform, is positioned at the viewport's own
+  // top-left, and fills it, so the dialog's rect and the viewport
+  // coincide and the same math still lands right. Re-run on open, on
+  // window resize, and (the panel's own independent-scrolling
+  // requirement) on scroll of the step's internal form region, which
+  // closes it instead of leaving it drifted from the toggle.
+  const positionCountryPanel = (wrapper, panel) => {
+    const toggle = wrapper.querySelector('[data-kal-country-toggle]');
+    if (!toggle) return;
+    const toggleRect = toggle.getBoundingClientRect();
+    const dialogRect = flow.getBoundingClientRect();
+    const gap = 4;
+    const panelRect = panel.getBoundingClientRect();
+    const panelHeight = panelRect.height || 280; // matches this panel's own CSS max-height
+    const panelWidth = panelRect.width || 240; // matches this panel's own CSS width
+
+    // Room is measured inside the dialog, not the window: on desktop the
+    // dialog sits mid-screen, so the window can have plenty of space below
+    // the toggle while the dialog itself has none.
+    const spaceBelow = dialogRect.bottom - toggleRect.bottom;
+    const spaceAbove = toggleRect.top - dialogRect.top;
+    const openUpward = spaceBelow < panelHeight + gap && spaceAbove > spaceBelow;
+
+    let top = openUpward
+      ? toggleRect.top - dialogRect.top - panelHeight - gap
+      : toggleRect.bottom - dialogRect.top + gap;
+    // Keep the whole panel inside the dialog even if neither side has full room.
+    const maxTop = dialogRect.height - panelHeight - 8;
+    top = Math.min(Math.max(top, 8), Math.max(maxTop, 8));
+
+    let left = toggleRect.left - dialogRect.left;
+    const maxLeft = dialogRect.width - panelWidth - 8;
+    left = Math.min(Math.max(left, 8), Math.max(maxLeft, 8));
+
+    panel.style.position = 'fixed';
+    panel.style.top = `${top}px`;
+    panel.style.left = `${left}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+  };
+
+  // Closes this picker on scroll of its step's own internal scroll
+  // region — a fixed-positioned panel computed once at open time would
+  // otherwise silently drift away from the toggle as the form scrolls
+  // underneath it. Attached/detached per open/close rather than once
+  // globally, since only one picker is ever open at a time.
+  let countryPanelScrollCleanup = null;
+
   const setCountryPickerOpen = (wrapper, open) => {
     if (!wrapper) return;
     const toggle = wrapper.querySelector('[data-kal-country-toggle]');
-    const panel = wrapper.querySelector('[data-kal-country-panel]');
+    const panel = countryPickerPanels.get(wrapper);
     if (toggle) toggle.setAttribute('aria-expanded', String(open));
-    if (panel) panel.hidden = !open;
+    if (!panel) return;
+
+    if (countryPanelScrollCleanup) {
+      countryPanelScrollCleanup();
+      countryPanelScrollCleanup = null;
+    }
+
+    if (open) {
+      flow.appendChild(panel);
+      panel.hidden = false;
+      positionCountryPanel(wrapper, panel);
+
+      const onReposition = () => positionCountryPanel(wrapper, panel);
+      const onScrollClose = () => setCountryPickerOpen(wrapper, false);
+      const scrollRegion = wrapper.closest('.kal-step-shell__scroll') || flow;
+      window.addEventListener('resize', onReposition);
+      scrollRegion.addEventListener('scroll', onScrollClose, { passive: true });
+      countryPanelScrollCleanup = () => {
+        window.removeEventListener('resize', onReposition);
+        scrollRegion.removeEventListener('scroll', onScrollClose);
+      };
+    } else {
+      panel.hidden = true;
+      panel.style.position = '';
+      panel.style.top = '';
+      panel.style.left = '';
+      panel.style.right = '';
+      panel.style.bottom = '';
+      if (panel.kalAnchor && panel.kalAnchor.parentNode) {
+        panel.kalAnchor.parentNode.insertBefore(panel, panel.kalAnchor);
+      }
+    }
   };
 
   const selectCountry = (optionEl) => {
-    const wrapper = optionEl.closest('[data-kal-country-picker]');
+    // `.closest('[data-kal-country-picker]')` alone only finds the wrapper
+    // while the panel is still nested inside it — while open, the panel
+    // (and this option button) has been reparented to <dialog> (see
+    // setCountryPickerOpen above), so this falls back to the cached
+    // panel -> wrapper reference captured before any reparenting ever
+    // happens.
+    const wrapper = optionEl.closest('[data-kal-country-picker]')
+      || countryPickerWrappers.get(optionEl.closest('[data-kal-country-panel]'));
     if (!wrapper) return;
 
     selectedCountry.iso = optionEl.dataset.kalCountryIso;
@@ -3060,7 +3204,12 @@ document.addEventListener('DOMContentLoaded', () => {
       el.textContent = selectedCountry.dial;
     });
 
-    wrapper.querySelectorAll('[data-kal-country-option]').forEach((btn) => {
+    // optionEl's own panel, not wrapper.querySelectorAll(...) — the panel
+    // (and every option inside it) is still reparented onto <dialog> at
+    // this point (closed further down, after this), so it's no longer a
+    // descendant of wrapper and wouldn't be found that way.
+    const optionsPanel = optionEl.closest('[data-kal-country-panel]') || countryPickerPanels.get(wrapper);
+    optionsPanel?.querySelectorAll('[data-kal-country-option]').forEach((btn) => {
       btn.setAttribute('aria-selected', String(btn === optionEl));
     });
 
@@ -3223,12 +3372,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // for — scoped to the active step for the same reason
   // syncPatientDetailsFromDOM() is (Patient Details/Therapy Details share
   // field names across two different, only-one-ever-visible forms).
+  // block: 'nearest', not 'center' — centering unconditionally re-scrolls
+  // even when the field is already fully visible, shoving everything
+  // above it (the summary card, step header) out of view for fields
+  // partway down the form (e.g. Phone). 'nearest' only scrolls the
+  // minimum amount needed to bring an actually-offscreen field into
+  // view, and is a no-op when it's already visible.
   const scrollToFieldError = (fieldName) => {
     const activeStep = flow.querySelector('[data-kal-step]:not([hidden])');
     if (!activeStep) return;
     const errorEl = activeStep.querySelector(`[data-kal-field-error="${fieldName}"]`);
     const target = errorEl?.closest('.kal-form-field') || errorEl;
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
   // Computes every current error and shows them all at once (matching
@@ -4568,8 +4723,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const isOpen = countryToggle.getAttribute('aria-expanded') === 'true';
       setCountryPickerOpen(wrapper, !isOpen);
     } else {
+      // wrapper.contains(e.target) alone misses a click that lands inside
+      // the panel's own padding/background (not on an option button) once
+      // it's open and reparented out of wrapper (see setCountryPickerOpen)
+      // — also checking the panel itself (via the cached wrapper -> panel
+      // map, valid wherever the panel currently sits) is what keeps that
+      // from being treated as an outside click and closing the dropdown
+      // out from under it.
       flow.querySelectorAll('[data-kal-country-picker]').forEach((wrapper) => {
-        if (!wrapper.contains(e.target)) {
+        const panel = countryPickerPanels.get(wrapper);
+        if (!wrapper.contains(e.target) && !(panel && panel.contains(e.target))) {
           setCountryPickerOpen(wrapper, false);
         }
       });
