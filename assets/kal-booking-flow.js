@@ -221,11 +221,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const facility = getStoredFacility();
     if (!facility || !facility.id) return;
 
-    // "Kerala Ayurveda Wellness Center, {facility}" — no address/hours
-    // suffix, matching the static default's own format exactly (see this
-    // element's own liquid comment).
+    // Just the clinic's own name (e.g. "Kerala Ayurveda - Indiranagar") —
+    // it already says Kerala Ayurveda, so no "Wellness Center" prefix.
     flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
-      el.textContent = `Kerala Ayurveda Wellness Center, ${facility.name}`;
+      el.textContent = facility.name;
     });
 
     // Shorter mobile badge — just the name, no address, matching its
@@ -1797,15 +1796,6 @@ document.addEventListener('DOMContentLoaded', () => {
         el.appendChild(img);
       });
     }
-
-    // The real moment this screen is shown — which is also the moment the
-    // request was actually submitted (this step is only ever reached right
-    // after submitTherapyRequest() succeeds), not a hardcoded example time.
-    const now = new Date();
-    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    flow.querySelectorAll('[data-kal-therapy-confirm-timestamp]').forEach((el) => {
-      el.textContent = `Today, ${formatTime12h(nowTime)}`;
-    });
   };
 
   // Theme-editor-sourced lists — must run before the first render of

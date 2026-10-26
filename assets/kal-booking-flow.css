@@ -7395,11 +7395,15 @@ div.kal-leave-booking-modal__backdrop {
   }
 }
 
+/* Heading + subtext under the tick (Figma "Frame 3948"). Mobile: 4px apart
+   and the subtext has its own 24px side inset, so it wraps at 295px. Desktop:
+   16px apart, no inset. */
 .kal-step-therapy-confirmed__intro {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 4px;
-  padding: 0 24px;
+  padding: 0;
 }
 
 .kal-step-therapy-confirmed__intro .kal-step-doctor-select__heading,
@@ -7407,12 +7411,39 @@ div.kal-leave-booking-modal__backdrop {
   text-align: center;
 }
 
-/* This screen's own subtext reads slightly taller than the shared
-   .kal-step-doctor-select__subtext token (140% ≈ 19.6px) — 23px per
-   Figma, scoped here so every other usage of that shared class is
-   untouched. */
+.kal-step-therapy-confirmed__intro .kal-step-doctor-select__heading {
+  font-size: 24px;
+  line-height: 130%;
+  font-weight: 500;
+  color: #191919;
+}
+
 .kal-step-therapy-confirmed__intro .kal-step-doctor-select__subtext {
+  padding: 0 24px;
+  font-size: 14px;
   line-height: 23px;
+  font-weight: 400;
+  color: #4b4b4b;
+}
+
+.kal-step-therapy-confirmed__intro .kal-step-doctor-select__subtext strong {
+  font-weight: 700;
+}
+
+/* The subtext breaks after "within" on mobile (two lines); on desktop it
+   stays on one line. */
+@media screen and (min-width: 750px) {
+  .kal-step-therapy-confirmed__br {
+    display: none;
+  }
+
+  .kal-step-therapy-confirmed__intro {
+    gap: 16px;
+  }
+
+  .kal-step-therapy-confirmed__intro .kal-step-doctor-select__subtext {
+    padding: 0;
+  }
 }
 
 /* flex:1 + justify-content:center — the whole success screen (icon,
@@ -7445,8 +7476,8 @@ div.kal-leave-booking-modal__backdrop {
 }
 
 /* Side inset/max-width now lives once on .kal-step-therapy-confirmed__cards
-   (the shared wrapper around this, .kal-therapy-next-steps, and
-   .kal-confirmation-appointment-card) instead of being duplicated here —
+   (the shared wrapper around this and .kal-confirmation-appointment-card)
+   instead of being duplicated here —
    this just needs its own top/bottom spacing. */
 .kal-therapy-confirmed-actions {
   display: flex;
@@ -7524,355 +7555,44 @@ div.kal-leave-booking-modal__backdrop {
   }
 }
 
-/* Cream hero band (node 539:2222) — same overlap technique as Booking
-   Confirmed's own mint hero (.kal-step-booking-confirmed__hero), just a
-   different tint. */
+/* Hero band (node 539:2222): the tick, heading and subtext, 8px apart at
+   every width. It no longer overlaps the card below, since the "What happens
+   next" card it used to tuck under is gone: the bottom padding is the gap
+   before the visit details card. */
 .kal-step-therapy-confirmed__hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  /* min-height, not height — 300px is the Figma reference size, but a
-     longer subtext string needs more room than that. A hard height here
-     would clip/overflow instead of the hero growing to fit it, same
-     class of bug the Confirmation card's own appointment-card height
-     hit earlier.
-
-     274px, not 300px — trimmed by 26px (the removed "Awaiting callback"
-     badge's own 22px height + the 4px gap that used to sit above it in
-     .kal-step-therapy-confirmed__intro) now that the badge is gone, so
-     this box shrinks by the same amount instead of leaving a blank gap
-     where the badge used to be. */
-  min-height: 260px;
-  padding: 36px 0;
-  /* -20px, not padding-bottom's own 36px — nets a 16px visible gap
-     between the subtext and .kal-step-therapy-confirmed__cards below
-     (36 + -20 = 16), same overlap-trick math as Booking Confirmed's own
-     hero. (Was -56px, which overlapped 20px INTO the subtext text
-     itself instead of leaving a gap below it — drifted from an earlier,
-     already-superseded -48px/-40px tuning pass whose own comment no
-     longer matched this value.) */
-  margin-bottom: -20px;
+  gap: 8px;
+  padding: 36px 0 24px;
   background: #eef3f0;
   box-sizing: border-box;
 }
 
-/* Hero tint removed on mobile only — desktop keeps its #fbf6ee cream
-   background. */
+/* Hero tint removed on mobile only. Desktop keeps the tinted band. */
 @media screen and (max-width: 749px) {
   .kal-step-therapy-confirmed__hero {
     background: none;
   }
 }
 
-/* Desktop-only: icon-to-heading gap is 8px there, not the shared 16px
-   above (margin-bottom's own 16px subtext-to-cards gap, set on the base
-   rule above, is already the same at every width — no separate desktop
-   override needed for that). */
+/* Desktop: the tinted band ends, then a 36px white gap, then the visit
+   details card (Figma). */
 @media screen and (min-width: 750px) {
   .kal-step-therapy-confirmed__hero {
-    gap: 8px;
-    margin-bottom: -56px;
-  }
-}
-
-/* "What happens next" (node 539:2222) — fixed 3-step timeline card
-   replacing the old "Consultation Details" list on this screen. Own
-   dedicated .kal-therapy-next-steps__* classes throughout (list/item/
-   circle/text/label/state/divider), not Concern Select's shared "Your
-   Progress" stepper (.kal-concern-select__stepper*) — per explicit
-   instruction, this fixed 3-item timeline shouldn't reuse that sidebar
-   component's markup/CSS even though the two used to look identical; see
-   this step's own liquid comment. Values below are taken straight from
-   this card's own Figma dev-mode export (mobile + desktop), not ported
-   from the sidebar stepper's. */
-/* Side inset/max-width lives once on .kal-step-therapy-confirmed__cards
-   (the shared wrapper around this, the visit details card, and the
-   actions row) instead of being duplicated here. */
-.kal-therapy-next-steps {
-  min-height: 134px;
-  padding: 12px 8px;
-  border: 1px solid var(--kal-booking-flow-color-border);
-  border-radius: 16px;
-  background: var(--kal-booking-flow-color-white);
-  box-sizing: border-box;
-}
-
-/* 16px 24px, not the mobile 12px 8px above — per the desktop export's
-   608px-wide card (width/height there: 608x134, matching this card's own
-   desktop max-width at .kal-step-therapy-confirmed__cards). */
-@media screen and (min-width: 750px) {
-  .kal-therapy-next-steps {
-    padding: 16px 24px;
-  }
-}
-
-.kal-therapy-next-steps__label {
-  font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-bold);
-  /* 150%, per this card's own export (21px for the 14px font) — without
-     it this inherits the theme's looser default line-height instead. */
-  line-height: 150%;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  /* #6e6e6e per this card's own export, not the shared
-     --kal-booking-flow-color-text-muted (#646464) other labels use —
-     close, but a genuine one-off here. */
-  color: #6e6e6e;
-  /* 16px, matching the card's own export gap between this label and the
-     step row below it (was 12px). */
-  margin: 0 0 16px;
-}
-
-/* 12px, not the mobile 16px above — the desktop export's card uses a
-   tighter label-to-list gap (flex gap:12 there) than the mobile one. */
-@media screen and (min-width: 750px) {
-  .kal-therapy-next-steps__label {
-    margin-bottom: 12px;
-  }
-}
-
-/* The 3 steps run left to right with a horizontal connector through
-   the circles — "Ordered List" per this card's own export. */
-.kal-therapy-next-steps__list {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* "Item" per this card's own export — circle + text stacked and
-   centered, each step taking an equal share of the row's width. */
-.kal-therapy-next-steps__item {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-/* "Background+Border" per this card's own export — 26x26 circle, same
-   size/shape at every state (completed/current/upcoming), unlike the
-   sidebar stepper's 28x28 default. Resting/upcoming border color
-   (#E6E3DE) per that export; completed/current override it below.
-   z-index:1 keeps it above the divider (see __divider below), which
-   passes directly through its vertical center. */
-.kal-therapy-next-steps__circle {
-  position: relative;
-  z-index: 1;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid #e6e3de;
-  background: var(--kal-booking-flow-color-white);
-  color: var(--kal-booking-flow-color-text-muted);
-}
-
-.kal-therapy-next-steps__circle svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Completed — filled dark-green circle, white checkmark. */
-.kal-therapy-next-steps__item--completed .kal-therapy-next-steps__circle {
-  border-color: #1f4a3d;
-  background: #1f4a3d;
-  color: var(--kal-booking-flow-color-white);
-}
-
-/* Current — tan ring + cream fill + cream focus halo, per this card's
-   own export (#C8B08C border, #F6F0E7 fill, #B5935E icon color — the
-   phone icon's own original stroke color — and a #FBF6EE halo), not the
-   sidebar stepper's green ring/mint halo. */
-.kal-therapy-next-steps__item--current .kal-therapy-next-steps__circle {
-  border-color: #c8b08c;
-  background: var(--kal-booking-flow-color-highlight-tint);
-  color: #b5935e;
-  box-shadow: 0 0 0 4px #fbf6ee;
-}
-
-.kal-therapy-next-steps__text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  text-align: center;
-  line-height: 1;
-}
-
-/* "Request sent"/"Care team calls you"/"Session confirmed" — 16px at
-   every state (not the sidebar stepper's 15px), regular weight
-   throughout (this card's own export never bolds/medium-weights any of
-   the three, unlike the sidebar stepper's --current/--completed
-   treatment). Color is upcoming/resting's own #646464 by default;
-   completed and current override it below. */
-.kal-therapy-next-steps__item-label {
-  font-size: 16px;
-  font-weight: var(--kal-booking-flow-font-weight-regular);
-  /* 120% mobile, 100% desktop (see override below) — per the two
-     exports. */
-  line-height: 120%;
-  color: var(--kal-booking-flow-color-text-muted);
-}
-
-@media screen and (min-width: 750px) {
-  .kal-therapy-next-steps__item-label {
-    line-height: 100%;
-  }
-}
-
-/* "Request sent" reads dull/muted here (#6e6e6e per this card's own
-   export), not a bold dark heading the way a completed step would read
-   elsewhere in this flow — only the filled circle communicates "done"
-   on this card. */
-.kal-therapy-next-steps__item--completed .kal-therapy-next-steps__item-label {
-  color: #6e6e6e;
-}
-
-/* "Care team calls you" reads as the darkest/most prominent label
-   (#191919 per this card's own export) — the only one of the three that
-   isn't some flavor of grey. */
-.kal-therapy-next-steps__item--current .kal-therapy-next-steps__item-label {
-  color: var(--kal-booking-flow-color-heading);
-}
-
-.kal-therapy-next-steps__state {
-  font-size: 12px;
-  line-height: 100%;
-  color: var(--kal-booking-flow-color-text-muted);
-}
-
-/* "Within 24 hours" — amber (#955609 per this card's own export), same
-   family as the current step's own tan/cream circle above. */
-.kal-therapy-next-steps__item--current .kal-therapy-next-steps__state {
-  color: var(--kal-booking-flow-color-warning);
-}
-
-/* Mobile vs desktop text split for this card (per the two exports): the
-   mobile export shows only the label, wrapped to two lines, with no
-   timestamp/duration/note line under it; the desktop export shows that
-   state line ("Today, 4:12 PM" / "Within 24 hours" / "Details on
-   WhatsApp") and keeps each label on one line. The third step's own
-   label text differs between the two exports too ("Session
-   confirmation" on mobile vs "Session confirmed" on desktop), hence the
-   two separate --mobile/--desktop label spans in the liquid markup
-   (same pattern as this flow's other __footer--mobile/__footer--desktop
-   element pairs) rather than one span whose text can't vary by width. */
-.kal-therapy-next-steps__state {
-  display: none;
-}
-
-.kal-therapy-next-steps__label--desktop {
-  display: none;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-therapy-next-steps__state {
-    display: block;
-  }
-
-  .kal-therapy-next-steps__label--mobile {
-    display: none;
-  }
-
-  .kal-therapy-next-steps__label--desktop {
-    display: block;
-  }
-}
-
-/* Two fully independent dividers — divider-one (between step 1/
-   "completed" and step 2/"current") and divider-two (between step 2 and
-   step 3/"upcoming") — deliberately not sharing one base class the way
-   an earlier pass had them, per explicit instruction.
-   Mobile (base rule, per this card's own mobile export): a fixed-length
-   30px segment ("Horizontal Divider" inside a 30 Hug x 25.5 Hug frame)
-   centered on the boundary between this step and the next — left:100%
-   is this step's own right edge, which (since each circle is centered
-   in its own equal-width item) is exactly the midpoint between this
-   circle and the next one; translateX(-50%) centers the fixed 30px
-   segment on that point. top:14px centers it on the 26px circle.
-   Desktop (750px+ override): the 3px-gap instruction is desktop-only —
-   mobile keeps the fixed 30px segment above untouched. 16px = 13px
-   circle radius (half of the 26px circle) + 3px gap, on both ends. left
-   is THIS step's own circle-right-edge (50% + 13px) pushed out another
-   3px; right is the mirror of that for the NEXT circle's left edge
-   (150% - 13px - 3px = 150% - 16px, i.e. 50% - 16px past this step's own
-   right edge — right is measured inward from the right edge, so a
-   negative base value here means "extend past it"). top:13px re-centers
-   the stroke on the circle at desktop's own slightly different layout. */
-.kal-therapy-next-steps__divider-one {
-  position: absolute;
-  top: 14px;
-  left: 100%;
-  transform: translateX(-50%);
-  width: 30px;
-  height: 1.5px;
-  /* Always the completed→current segment on this fixed 3-item card, so
-     always dark green — no state modifier class needed. */
-  background: #1f4a3d;
-  z-index: 0;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-therapy-next-steps__divider-one {
-    top: 13px;
-    left: calc(50% + 16px);
-    right: calc(16px - 47%);
-    transform: none;
-    width: auto;
-  }
-}
-
-/* Same mobile/desktop split as divider-one above (own separate rule,
-   not shared with it), but always the current→upcoming segment on this
-   fixed card, so always resting grey (#E5E5E5 per this card's own
-   export) — step 2 is never itself "completed" here. */
-.kal-therapy-next-steps__divider-two {
-  position: absolute;
-  top: 14px;
-  left: 100%;
-  transform: translateX(-50%);
-  width: 30px;
-  height: 1.5px;
-  background: var(--kal-booking-flow-color-border-faint);
-  z-index: 0;
-}
-
-@media screen and (min-width: 750px) {
-  .kal-therapy-next-steps__divider-two {
-    top: 13px;
-    left: calc(53% + 16px);
-    right: calc(16px - 50%);
-    transform: none;
-    width: auto;
+    margin-bottom: 36px;
   }
 }
 
 /* Visit details card (node 539:2222) — this is the exact same
    .kal-confirmation-appointment-card the Confirmation step's own card
-   uses (photo/eyebrow/name header + icon+label rows), just given its own
-   top margin here since it sits right below "What happens next" inside
-   .kal-step-therapy-confirmed__cards (which has no gap of its own — see
-   this step's own liquid comment on why it's plain block-flow, not a
-   flex column). Side inset/max-width now lives once on that wrapper
-   instead of being duplicated here. */
+   uses (photo/eyebrow/name header + icon+label rows), now the first item
+   inside .kal-step-therapy-confirmed__cards, which is plain block-flow, not
+   a flex column. The gap above it comes from the hero's bottom padding.
+   Side inset/max-width lives once on that wrapper. The 24px gap below it,
+   before the Shop Products row, is on the actions row itself. */
 .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-  margin: 24px 0 0;
-}
-
-/* 16px, not the shared 24px above — desktop only, per Figma. */
-@media screen and (min-width: 750px) {
-  .kal-step-therapy-confirmed .kal-confirmation-appointment-card {
-    margin-top: 16px;
-  }
+  margin: 0;
 }
 
 /* hidden must win over the display rules above when a doctor has no pay-now discount configured */

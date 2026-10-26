@@ -16,16 +16,9 @@
   - New "Awaiting callback" pill under the subtext (tan border/text, white
     fill) — replaces this pass's lack of any status indicator here.
   - The old "Consultation Details" list (Reference No./Patient Name/
-    Therapy/Payment) is GONE, replaced by a "What happens next" card: a
-    3-step vertical timeline (Request sent → Care team calls you →
-    Session confirmed), the first step shown completed (filled green
-    circle + checkmark, today's timestamp), the second as the current/
-    next step (tan-bordered circle + phone icon), the third plain/
-    upcoming (grey circle + calendar icon) — same visual language as
-    Concern Select's "Your Progress" stepper, but its own dedicated
-    classes (.kal-therapy-next-steps__*) since this is a fixed 3-item
-    timeline of what happens after submitting, not a 5-step flow
-    tracker, and needs its own current_step-less markup.
+    Therapy/Payment) is GONE. There is no "What happens next" timeline
+    card either (it was removed per the latest design): the hero is
+    followed directly by the visit details card.
   - Two action buttons below the card, "Shop Products" and
     "Get directions" — unchanged from before this pass.
   - Header is just a close button, right-aligned — no back button, no
@@ -38,15 +31,8 @@
   screen (the list it styled is gone), but stays defined for Booking
   Confirmed's own Video Consult-era usage elsewhere.
 
-  The second/third timeline steps' copy ("Within 24 hours", "Details on
-  WhatsApp") are fixed, not tied to any real backend state — there's no
-  actual callback scheduling or WhatsApp send behind them, they're just
-  what happens next per the design. The first step's timestamp IS real
-  (data-kal-therapy-confirm-timestamp, set by renderTherapyConfirmedSummary()
-  in kal-booking-flow.js to the actual moment this screen is shown, which
-  is also the moment the request was actually submitted). The "Visit
-  details card" below reuses data-kal-confirm-name for Patient, same hook
-  the rest of this flow already populates.
+  The "Visit details card" below reuses data-kal-confirm-name for Patient,
+  same hook the rest of this flow already populates.
 
   "Shop Products"/"Get directions" have no click handlers — decorative
   per this build's scope, same as several other action-shaped buttons
@@ -65,7 +51,7 @@
         <!-- ICON: location-pin (not received yet) -->
       </span>
       <span class="kal-step-entry__location-text">
-        Kerala Ayurveda Wellness Center, Indiranagar
+        Kerala Ayurveda - Indiranagar
       </span>
     </div>
   </div>
@@ -105,86 +91,18 @@
 
           <div class="kal-step-therapy-confirmed__intro">
             <h2 class="kal-step-doctor-select__heading">Request received</h2>
-            <p class="kal-step-doctor-select__subtext">Our care team will call you within 24 hours to fix a session time.</p>
+            <p class="kal-step-doctor-select__subtext">Our care team will call you within<br class="kal-step-therapy-confirmed__br"> <strong>24 hours</strong> to fix a session time.</p>
           </div>
         </div>
 
         {%- comment -%}
-          "What happens next" (node 539:2222) — replaces the old
-          "Consultation Details" list (Reference No./Patient Name/Therapy/
-          Payment) entirely. Fixed 3-step timeline, not tied to any real
-          backend state — "Request sent"/timestamp is the only step that's
-          actually true right now (this screen only shows once the request
-          has been submitted), the other two are what happens next per the
-          export, same static-mockup treatment as this flow's other
-          decorative status content.
-        {%- endcomment -%}
-        {%- comment -%}
-          Own dedicated .kal-therapy-next-steps__* classes, not Concern
-          Select's shared "Your Progress" stepper (.kal-concern-select__stepper*,
-          kal-booking-flow-step-progress.liquid) — see the comment right
-          above the markup below for why. Unlike that 5-step flow tracker,
-          this is a fixed 3-item list with no current_step param and no
-          state that ever changes once rendered (this screen only shows
-          after the request is already submitted), so the --completed/
-          --current modifiers are just hardcoded per item instead of
-          computed from a loop.
-        {%- endcomment -%}
-        {%- comment -%}
-          Shared wrapper for the "What happens next" card, the visit
-          details card, and the Shop Products/Get directions row — one
-          width/inset (margin 0 25px mobile, max-width:640px + auto
-          desktop) applied here instead of duplicated on all three,
-          which is what kept them from lining up in the first place.
-        {%- endcomment -%}
-        {%- comment -%}
-          Own dedicated classes (.kal-therapy-next-steps__*), not the
-          shared .kal-concern-select__stepper* ("Your Progress") component
-          — per explicit instruction, this fixed 3-item timeline shouldn't
-          reuse that sidebar stepper's markup/CSS even though it used to
-          look identical, since the two are conceptually different
-          (a 5-step flow tracker vs. a fixed "what happens after
-          submitting" list) and any future change to one was at risk of
-          silently affecting the other. Sized/positioned straight from
-          this card's own Figma export (mobile + desktop dev-mode CSS),
-          not ported from the sidebar stepper's values.
+          Shared wrapper for the visit details card and the Shop Products/
+          Get directions row — one width/inset (margin 0 25px mobile,
+          max-width:640px + auto desktop) applied here instead of
+          duplicated on both. The "What happens next" timeline card that
+          used to sit above them was removed per the latest design.
         {%- endcomment -%}
         <div class="kal-step-therapy-confirmed__cards">
-        <div class="kal-therapy-next-steps">
-          <p class="kal-therapy-next-steps__label">What happens next</p>
-          <ol class="kal-therapy-next-steps__list">
-            <li class="kal-therapy-next-steps__item kal-therapy-next-steps__item--completed">
-              <span class="kal-therapy-next-steps__circle">
-                {%- render 'kal-booking-icons', icon_name: 'check' -%}
-              </span>
-              <span class="kal-therapy-next-steps__text">
-                <span class="kal-therapy-next-steps__item-label">Request sent</span>
-                <span class="kal-therapy-next-steps__state" data-kal-therapy-confirm-timestamp>Today</span>
-              </span>
-              <span class="kal-therapy-next-steps__divider-one" aria-hidden="true"></span>
-            </li>
-            <li class="kal-therapy-next-steps__item kal-therapy-next-steps__item--current">
-              <span class="kal-therapy-next-steps__circle">
-                {%- render 'kal-booking-icons', icon_name: 'phone' -%}
-              </span>
-              <span class="kal-therapy-next-steps__text">
-                <span class="kal-therapy-next-steps__item-label">Care team calls you</span>
-                <span class="kal-therapy-next-steps__state">Within 24 hours</span>
-              </span>
-              <span class="kal-therapy-next-steps__divider-two" aria-hidden="true"></span>
-            </li>
-            <li class="kal-therapy-next-steps__item">
-              <span class="kal-therapy-next-steps__circle">
-                {%- render 'kal-booking-icons', icon_name: 'calendar-days' -%}
-              </span>
-              <span class="kal-therapy-next-steps__text">
-                <span class="kal-therapy-next-steps__item-label kal-therapy-next-steps__label--mobile">Session confirmation</span>
-                <span class="kal-therapy-next-steps__item-label kal-therapy-next-steps__label--desktop">Session confirmed</span>
-                <span class="kal-therapy-next-steps__state">Details on WhatsApp</span>
-              </span>
-            </li>
-          </ol>
-        </div>
 
         {%- comment -%}
           Visit details card (node 539:2222) — now the exact same
