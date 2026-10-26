@@ -71,6 +71,44 @@
 {% endstyle %}
 {{ 'kal-booking-flow.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'kal-booking-flow.js' | asset_url }}" defer></script>
+{%- comment -%}
+  Razorpay-hosted Checkout loader (Test Mode and live both use this same
+  script -- which mode runs is controlled entirely by which key id the
+  backend hands back from POST payments/orders, never by anything here).
+  Loaded from Razorpay's own CDN rather than vendored, same as this file's
+  other external resources (fonts) are self-hosted but this one specific
+  script isn't -- flag if the team wants it vendored instead. Deferred, same
+  as kal-booking-flow.js above, since it's only needed once a visitor
+  reaches Confirmation and picks an online-payment option.
+{%- endcomment -%}
+<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+
+{%- comment -%}
+  Clinics and doctors from Shopify (shop.metaobjects.clinic / .doctor), as JSON
+  for kal-booking-flow.js. No request to the CMS is needed to show them.
+{%- endcomment -%}
+{%- render 'kal-shopify-catalog' -%}
+
+{%- comment -%}
+  The empty doctor card the booking flow clones for every doctor (Doctor
+  Select, and the Consult button's direct entry). It carries the card markup
+  and icons only; kal-booking-flow.js fills in everything from the Shopify
+  Doctor entry and the server's price. Nothing about a doctor is typed here.
+  The one placeholder tag only makes the tags container render so the script
+  has somewhere to put the real ones.
+{%- endcomment -%}
+<div class="kal-doctor-card-template" hidden>
+  {%- render 'kal-booking-flow-doctor-card',
+    name: '',
+    degree: '',
+    languages: '',
+    experience: '',
+    tags: 'x',
+    next_slot: '',
+    price: '',
+    photo_url: ''
+  -%}
+</div>
 
 <dialog
   id="kal-booking-flow"
@@ -159,6 +197,39 @@
       </div>
       <div class="kal-calendar-modal__grid" data-kal-calendar-grid></div>
       <button type="button" class="kal-calendar-modal__close" data-kal-close-calendar>Done</button>
+    </div>
+  </div>
+
+  {%- comment -%}
+    "Leave booking?" confirmation — shown instead of closing immediately
+    when data-kal-close is clicked while a slot hold is active (see
+    kal-booking-flow.js: the X used to call closeFlow() directly, which
+    never released slotPicker.holdId, so the hold sat alive server-side —
+    blocking that slot for every other visitor — until it expired on its
+    own instead of right away). "Leave booking" is the one path that
+    actually releases it before closing; "Continue booking" and this
+    card's own corner close button both just dismiss the card and leave
+    the flow exactly as it was. The backdrop itself does NOT dismiss on
+    click, per explicit instruction — same "explicit button only" rule
+    as the main booking-flow dialog (see that element's own close-button
+    comment above): this is a real "are you sure" interruption, not a
+    lightweight popover that should be easy to brush off accidentally.
+    Direct child of <dialog>, not nested inside #kal-booking-flow-content
+    — same containing-block/overflow-clipping reasoning as the calendar
+    modal above.
+  {%- endcomment -%}
+  <div class="kal-leave-booking-modal" data-kal-leave-booking-modal hidden>
+    <div class="kal-leave-booking-modal__backdrop"></div>
+    <div class="kal-leave-booking-modal__panel">
+      <button type="button" class="kal-leave-booking-modal__close" data-kal-leave-booking-dismiss aria-label="Close">
+        {%- render 'kal-booking-icons', icon_name: 'close' -%}
+      </button>
+      <p class="kal-leave-booking-modal__title">Leave booking?</p>
+      <p class="kal-leave-booking-modal__body">If you leave now, your booking progress will be lost. Do you want to continue booking?</p>
+      <div class="kal-leave-booking-modal__actions">
+        <button type="button" class="kal-leave-booking-modal__continue" data-kal-leave-booking-dismiss>Continue booking</button>
+        <button type="button" class="kal-leave-booking-modal__leave" data-kal-leave-booking-confirm>Leave booking</button>
+      </div>
     </div>
   </div>
 

@@ -104,6 +104,38 @@
         </div>
       </div>
 
+      {%- comment -%}
+        Real hold-placement/replace failure (handleSlotContinue() in
+        kal-booking-flow.js, on a lost race) — the "that slot was just
+        booked" banner. Sits between the day strip and the Morning/
+        Afternoon/Evening tabs, same spot at both mobile and desktop (see
+        kal-booking-flow.css's min-width:750px override on
+        .kal-slot-conflict-banner for the desktop-only margin adjustment) —
+        not inline with the footer buttons like a field-validation error.
+        This is a standalone amber info banner, not a form error, so it
+        gets its own kal-slot-conflict-banner component (see
+        kal-booking-flow.css) rather than reusing the shared
+        .kal-form-error look that Patient Details' field errors and the
+        Confirmation/Therapy Details booking-failure banners still use as-
+        is. ONE instance only, unlike those other steps' separate mobile-
+        footer + desktop-grid-sibling pair (that split exists so a banner
+        meant for the desktop footer row doesn't also render inside the
+        mobile panel) — this banner was never in the footer to begin with,
+        so there's nothing to duplicate; a second, desktop-positioned copy
+        was tried here too and showed both at once at desktop width,
+        since the shared .kal-step-shell--progress-panel >
+        [data-kal-booking-error] hide/show rule only ever covers DIRECT
+        children of the panel, and this one deliberately isn't. Removed.
+        data-kal-booking-error/data-kal-booking-error-text are unchanged —
+        showBookingError()/clearBookingError() in the JS target every
+        element carrying those attributes generically, regardless of which
+        visual class wraps them.
+      {%- endcomment -%}
+      <p class="kal-slot-conflict-banner" data-kal-booking-error hidden>
+        <span class="kal-slot-conflict-banner__icon">{%- render 'kal-booking-icons', icon_name: 'info' -%}</span>
+        <span data-kal-booking-error-text></span>
+      </p>
+
       <div class="kal-slot-tabs">
         <div class="kal-slot-tabs__bar">
           <button type="button" class="kal-slot-tab kal-slot-tab--active" data-kal-slot-tab="morning">
@@ -152,16 +184,6 @@
     </div>
 
     <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--mobile">
-      {%- comment -%}
-        Real hold-placement failure (the availability/holds call
-        handleSlotSelection() in kal-booking-flow.js fires the instant a
-        slot chip is clicked) — same .kal-form-error/data-kal-booking-error
-        pattern Confirmation's own booking-failure banner uses.
-      {%- endcomment -%}
-      <p class="kal-form-error" data-kal-booking-error hidden>
-        <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
-        <span data-kal-booking-error-text></span>
-      </p>
       <button type="button" class="kal-step-doctor-select__continue" data-kal-goto="patient-details" data-kal-slot-continue disabled>
         Continue
       </button>
@@ -173,16 +195,15 @@
     Desktop-only full-width footer bar, same pattern as Concern Select/
     Doctor Select's (see their own liquid comments) — help text + Back
     (to Doctor Select)/Continue split across the shared 300px/1fr grid
-    columns. Continue is disabled until a slot is actually clicked AND its
-    hold confirmed by the CMS (data-kal-slot-continue, toggled by
-    updateSlotContinueButton() in kal-booking-flow.js) — no slot is
-    pre-selected on this step anymore, same disabled-until-chosen pattern
-    as Doctor Select's own Continue.
+    columns. Continue is disabled until a slot is actually picked
+    (data-kal-slot-continue, toggled by updateSlotContinueButton() in
+    kal-booking-flow.js) — no slot is pre-selected on this step anymore,
+    same disabled-until-chosen pattern as Doctor Select's own Continue.
+    Clicking it (handleSlotContinue() in the JS) only then places/replaces
+    the real hold and navigates on to Patient Details once that succeeds —
+    picking a chip itself never holds anything, see that function's own
+    comment for why.
   {%- endcomment -%}
-  <p class="kal-form-error" data-kal-booking-error hidden>
-    <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
-    <span data-kal-booking-error-text></span>
-  </p>
   <div class="kal-step-shell__footer kal-concern-select__footer kal-concern-select__footer--desktop">
     <div class="kal-concern-select__footer-help kal-step-entry__help">
       <span class="kal-icon kal-icon--help">

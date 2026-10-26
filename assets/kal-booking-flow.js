@@ -6,15 +6,110 @@ document.addEventListener('DOMContentLoaded', () => {
   const whatsappNumber = flow.dataset.whatsappNumber || '';
 
   const openFlow = () => {
+    // Every reopen lands back on Entry (see the three goToStep('entry')
+    // call sites right after openFlow()), so the mode toggle must reset
+    // alongside it. Without this, a prior session that switched to Video
+    // Consult on Doctor Select left slotPicker.mode/the header icon stuck
+    // on "online" — applyStoredFacility() below only overwrites the
+    // header's TEXT back to the real facility name, never its icon, so
+    // the badge showed the real clinic name next to the monitor icon
+    // instead of the location pin.
+    setOnlineHeaderState(false);
+    slotPicker.mode = 'in-clinic';
     applyStoredFacility();
     flow.showModal();
     document.body.style.overflow = 'hidden';
+    // Nothing was ever picked on "Find a Clinic" (e.g. flow opened
+    // directly) — kick off resolving the real default facility now
+    // (fire-and-forget) and re-apply once it lands, so the displayed name
+    // catches up to whatever facility every API call is actually using,
+    // instead of leaving the placeholder "Indiranagar" text on screen.
+    if (!getStoredFacility()) {
+      void getCurrentFacility().then(() => applyStoredFacility());
+    }
   };
 
   const closeFlow = () => {
     flow.close();
     document.body.style.overflow = '';
   };
+
+  // "Leave booking?" confirmation — see its own comment in
+  // kal-booking-flow.liquid for why this exists (closing used to drop an
+  // active hold on the floor instead of releasing it). Defined here,
+  // ahead of the click delegation further below that opens/dismisses it.
+  const leaveBookingModal = flow.querySelector('[data-kal-leave-booking-modal]');
+  const openLeaveBookingModal = () => {
+    if (leaveBookingModal) leaveBookingModal.hidden = false;
+  };
+  const closeLeaveBookingModal = () => {
+    if (leaveBookingModal) leaveBookingModal.hidden = true;
+  };
+  const confirmLeaveBooking = () => {
+    if (slotPicker.holdId) {
+      // A paid order's slot is booked by the server from the payment, so the
+      // hold is left alone: releasing it would hand that slot to someone else.
+      const paidHold = Boolean(paidOrder) && paidOrder.holdId === slotPicker.holdId;
+      if (!paidHold) void releaseSlotHoldViaPartnerApi(slotPicker.holdId);
+      slotPicker.holdId = null;
+      slotPicker.heldSlot = null;
+      slotPicker.holdContext = null;
+    }
+    closeLeaveBookingModal();
+    closeFlow();
+  };
+
+  // While a payment is being taken or its booking confirmed, the popup cannot
+  // be closed: the close buttons are disabled and Esc does nothing.
+  let closeBlocked = false;
+  const setCloseBlocked = (blocked) => {
+    closeBlocked = blocked;
+    flow.querySelectorAll('[data-kal-close]').forEach((btn) => {
+      btn.disabled = blocked;
+      btn.setAttribute('aria-disabled', String(blocked));
+    });
+  };
+
+  // The one way a visitor asks to leave, shared by the close button and the
+  // Esc key so both behave the same: ask first when a slot is held (the
+  // confirmation releases it), otherwise just close.
+  const requestClose = () => {
+    if (closeBlocked) return;
+    if (slotPicker.holdId) {
+      openLeaveBookingModal();
+    } else {
+      closeFlow();
+    }
+  };
+
+  // Esc must not close the dialog behind our back: that skipped closeFlow()
+  // (the page stayed unable to scroll) and the leave confirmation. Esc on the
+  // confirmation itself just dismisses it. Listened for on the document, as
+  // the key press goes to whatever has focus (often the page body, not the
+  // dialog), and preventDefault on keydown is what stops the browser closing
+  // the dialog, including on a repeated Esc.
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key !== 'Escape' || !flow.open) return;
+      e.preventDefault();
+      if (leaveBookingModal && !leaveBookingModal.hidden) {
+        closeLeaveBookingModal();
+        return;
+      }
+      requestClose();
+    },
+    true,
+  );
+  flow.addEventListener('cancel', (e) => e.preventDefault());
+
+  // Backstop: however the dialog ends up closed, the page must scroll again.
+  // Not while Razorpay Checkout has it closed on purpose (see
+  // checkoutSuspended): the page stays locked under Checkout.
+  let checkoutSuspended = false;
+  flow.addEventListener('close', () => {
+    if (!checkoutSuspended) document.body.style.overflow = '';
+  });
 
   // ----------------------------------------------------------------------
   // BOOKING EXPERIMENT — two separate real-site CTAs open this same popup
@@ -72,6 +167,38 @@ document.addEventListener('DOMContentLoaded', () => {
   // ----------------------------------------------------------------------
   const FACILITY_STORAGE_KEY = 'kalSelectedFacility';
 
+  // Identifies this browser across requests so the backend can tell "the
+  // same visitor is switching their own hold" apart from "a different
+  // visitor is trying to exclude someone else's hold" — every Shopify
+  // visitor otherwise shares one Partner API account, so the backend has
+  // no other way to tell them apart. Server-issued and signed (see
+  // PartnerVisitorSessionService on the backend), not a bare client-
+  // generated value — this file never invents one, only stores and
+  // resends whatever the backend mints/refreshes via the
+  // X-Kal-Visitor-Session response header on availability/holds calls (see
+  // postToPartnerApi below). See SHOPIFY_HOLD_SWITCHING_PLAN.md.
+  const VISITOR_SESSION_STORAGE_KEY = 'kalVisitorSession';
+
+  const getStoredVisitorSessionToken = () => {
+    try {
+      return localStorage.getItem(VISITOR_SESSION_STORAGE_KEY);
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const storeVisitorSessionToken = (token) => {
+    try {
+      localStorage.setItem(VISITOR_SESSION_STORAGE_KEY, token);
+    } catch (err) {
+      // localStorage unavailable (private browsing, storage full, etc.) —
+      // the flow still works, just without same-visitor hold-switching
+      // (every switch request lands with no token, server mints fresh ones
+      // every time, which behaves exactly like having no prior hold to
+      // exclude).
+    }
+  };
+
   const getStoredFacility = () => {
     try {
       const raw = localStorage.getItem(FACILITY_STORAGE_KEY);
@@ -94,11 +221,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const facility = getStoredFacility();
     if (!facility || !facility.id) return;
 
-    // "Kerala Ayurveda Wellness Center, {facility}" — no address/hours
-    // suffix, matching the static default's own format exactly (see this
-    // element's own liquid comment).
+    // Just the clinic's own name (e.g. "Kerala Ayurveda - Indiranagar") —
+    // it already says Kerala Ayurveda, so no "Wellness Center" prefix.
     flow.querySelectorAll('.kal-step-entry__location-text').forEach((el) => {
-      el.textContent = `Kerala Ayurveda Wellness Center, ${facility.name}`;
+      el.textContent = facility.name;
     });
 
     // Shorter mobile badge — just the name, no address, matching its
@@ -109,36 +235,178 @@ document.addEventListener('DOMContentLoaded', () => {
 
   };
 
-  const getCurrentFacility = () => getStoredFacility() || { id: 'cfe4e29a-7697-4b1d-970c-dc8c11628b10', name: 'Indiranagar' };
+  // The clinics and doctors come from Shopify, not from the CMS: the theme
+  // renders shop.metaobjects.clinic and shop.metaobjects.doctor into the page
+  // as JSON (snippets/kal-shopify-catalog.liquid) and this reads it back.
+  // A clinic's id is its facility_id field (the CMS clinic id), a doctor's id
+  // is doctor_id (the CMS staff id), so the later booking calls still use real
+  // CMS ids. No request is made to load either list.
+  let shopifyCatalogCache = null;
 
-  // Ensures every doctor name shown anywhere in the flow reads "Dr. X" —
-  // some theme-editor-authored doctor_profile blocks already type the
-  // "Dr." prefix themselves (schema default: "Dr. Neethu Jayachandran"),
-  // but the real partner API's own `name` field (used by
-  // buildFallbackDoctorCard() for unconfigured doctors) never includes
-  // it. Rather than fixing this at every individual display site, it's
-  // applied once at each place a doctor name first enters the DOM (see
-  // applyDoctorNamePrefix() below) so every downstream read (dataset) is
-  // already correct. Case-insensitive, and tolerant of "Dr"/"Dr." with
-  // or without a trailing space, so an already-correct name is never
-  // double-prefixed.
-  const formatDoctorName = (name) => {
-    if (!name) return name;
-    const trimmed = name.trim();
-    return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
+  const getShopifyCatalog = () => {
+    if (shopifyCatalogCache) return shopifyCatalogCache;
+    let parsed = null;
+    try {
+      const el = document.getElementById('kal-shopify-catalog');
+      parsed = el ? JSON.parse(el.textContent) : null;
+    } catch (err) {
+      console.error('[kal-booking-flow] Could not read the Shopify catalog:', err);
+    }
+    shopifyCatalogCache = {
+      currency: (parsed && parsed.currency) || 'INR',
+      clinics: parsed && Array.isArray(parsed.clinics) ? parsed.clinics : [],
+      doctors: parsed && Array.isArray(parsed.doctors) ? parsed.doctors : [],
+    };
+    return shopifyCatalogCache;
   };
 
-  // Normalizes a real doctor card cloned from sections/kal-doctor-cards.
-  // liquid's hidden source blocks — those are theme-editor-authored, so
-  // unlike buildFallbackDoctorCard() (which controls the raw API name
-  // directly), this has to fix both the dataset AND the already-rendered
-  // .kal-doctor-card__name text in case the editor typed the name
-  // without "Dr." themselves.
-  const applyDoctorNamePrefix = (card) => {
-    const formatted = formatDoctorName(card.dataset.kalDoctorName);
-    card.dataset.kalDoctorName = formatted;
-    const nameEl = card.querySelector('.kal-doctor-card__name');
-    if (nameEl) nameEl.textContent = formatted;
+  // The doctors Shopify offers at one clinic: the Doctor entries whose
+  // "clinics" field includes it, shaped for renderDoctorList(). Which modes
+  // are offered comes from the doctor's consultation product variants for that
+  // clinic (one variant per clinic and mode), and so do the prices: the
+  // variant's own price. When no variant is available the card has no price
+  // and both modes stay selectable (the server still decides what can be paid
+  // for, from the same variant price).
+  const getCatalogDoctorsForFacility = (facilityId) => {
+    const catalog = getShopifyCatalog();
+    const modeOf = (row) => String(row.mode || '').trim().toLowerCase();
+    return catalog.doctors
+      .filter(
+        (doctor) =>
+          doctor && doctor.id && doctor.name && Array.isArray(doctor.clinicIds) && doctor.clinicIds.indexOf(facilityId) !== -1,
+      )
+      .map((doctor) => {
+        const rows = (doctor.pricing || []).filter((row) => row.facilityId === facilityId);
+        const inClinic = rows.find((row) => modeOf(row) === 'in-clinic') || null;
+        const online = rows.find((row) => modeOf(row) === 'online') || null;
+        const money = (row) => (row ? { amountPaise: row.pricePaise, currency: catalog.currency } : null);
+        const discount = inClinic ? Number(inClinic.payNowDiscountPercent) || 0 : 0;
+        return {
+          id: doctor.id,
+          name: doctor.name,
+          designation: doctor.qualification || null,
+          profile: {
+            name: doctor.name,
+            qualification: doctor.qualification || null,
+            specialization: Array.isArray(doctor.specialization) ? doctor.specialization : [],
+            experience: doctor.experience || null,
+            languages: Array.isArray(doctor.languages) ? doctor.languages : [],
+            photoUrl: doctor.photoUrl || null,
+          },
+          supportsOnline: rows.length ? Boolean(online) : true,
+          supportsOffline: rows.length ? Boolean(inClinic) : true,
+          inClinicPrice: money(inClinic),
+          onlinePrice: money(online),
+          payNowDiscountPercent: discount,
+          // The same rounding the server uses for the amount it charges.
+          inClinicPayNowPrice:
+            inClinic && discount > 0
+              ? {
+                  amountPaise: Math.round((inClinic.pricePaise * (100 - discount)) / 100),
+                  currency: catalog.currency,
+                }
+              : null,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  };
+
+  let facilityOptionsCache = null;
+
+  const loadFacilityOptions = () => {
+    if (!facilityOptionsCache) {
+      facilityOptionsCache = getShopifyCatalog()
+        .clinics.filter((clinic) => clinic && clinic.id && clinic.name)
+        .map((clinic) => ({
+          id: clinic.id,
+          name: clinic.name,
+          addressLine1: clinic.address || clinic.city || null,
+          addressLine2: null,
+          city: null,
+          state: null,
+          timings: clinic.timings || null,
+        }));
+    }
+    return Promise.resolve(facilityOptionsCache);
+  };
+
+  // Renders the "Find a Clinic" page's list from the Shopify Clinic entries
+  // (the catalog rendered into the page) — a no-op on any other page, since the
+  // querySelector just finds nothing. Each card's data-facility-id is that
+  // entry's facility_id, read directly off it — never re-derived by matching
+  // against a name afterwards, so renaming a clinic in Shopify can never send
+  // a booking to the wrong clinic.
+  const renderClinicList = async () => {
+    const list = document.querySelector('[data-kal-clinic-list]');
+    if (!list) return;
+
+    const options = await loadFacilityOptions();
+    list.innerHTML = '';
+
+    if (options.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'kal-clinic-list__empty';
+      empty.textContent = 'No clinics available right now. Please check back shortly.';
+      list.appendChild(empty);
+      return;
+    }
+
+    options.forEach((facility) => {
+      const address = [facility.addressLine1, facility.addressLine2, facility.city, facility.state]
+        .filter(Boolean)
+        .join(', ');
+
+      const item = document.createElement('li');
+      item.className = 'kal-clinic-list__item';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'kal-clinic-list__name';
+      button.setAttribute('data-kal-select-facility', '');
+      button.dataset.facilityId = facility.id;
+      button.dataset.locationName = facility.name;
+      button.textContent = facility.name;
+      item.appendChild(button);
+
+      if (address) {
+        const addressEl = document.createElement('p');
+        addressEl.className = 'kal-clinic-list__address';
+        addressEl.textContent = address;
+        item.appendChild(addressEl);
+      }
+
+      list.appendChild(item);
+    });
+  };
+
+  void renderClinicList();
+
+  // No more hardcoded facility UUID. If the visitor reached this flow
+  // without ever picking a clinic on the "Find a Clinic" page (e.g. opened
+  // directly), this resolves to the first facility this account's Partner
+  // API key is actually scoped to — a real backend value, not a guessed
+  // one. For an account scoped to a single clinic (the common case) that's
+  // unambiguous; for a multi-facility account "first in whatever order the
+  // backend returns" isn't a deliberate clinic choice, so the clinic list
+  // page remains the real entry point for those.
+  let defaultFacilityPromise = null;
+
+  const getCurrentFacility = async () => {
+    const stored = getStoredFacility();
+    if (stored && stored.id) return stored;
+    if (!defaultFacilityPromise) {
+      // Persisted once resolved, not just returned — so applyStoredFacility()
+      // (openFlow() below) picks up the real name instead of leaving the
+      // placeholder "Indiranagar" text on screen while every actual API
+      // call is already scoped to whatever the real default turned out to
+      // be.
+      defaultFacilityPromise = loadFacilityOptions().then((options) => {
+        const fallback = options[0] || null;
+        if (fallback) storeFacility(fallback);
+        return fallback;
+      });
+    }
+    return defaultFacilityPromise;
   };
 
   // Doctor Select's own click handler (selectDoctorCard, above) already
@@ -159,6 +427,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const getSelectedDoctorPrice = () => {
     const card = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
     return card ? card.dataset.kalDoctorPrice : null;
+  };
+
+  const getSelectedDoctorPayNow = () => {
+    const card = flow.querySelector('.kal-doctor-card.kal-doctor-card--selected');
+    return {
+      price: card ? card.dataset.kalDoctorPayNowPrice || null : null,
+      percent: card ? card.dataset.kalDoctorPayNowPercent || null : null,
+    };
   };
 
   // Doctor Select's Continue is disabled until a card is actually
@@ -184,28 +460,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // was already there — every one of these steps is only reachable once
   // Continue has been enabled, which itself requires a selection to exist,
   // so in practice name/price are always applied by the time they're seen.
-  // Confirmation's Payment Method section (two In-Clinic cards: "Pay now"
-  // 10% off / "Pay at clinic" full price, plus Video Consult's single fee
-  // card) used to show hardcoded ₹450/₹495 regardless of which doctor was
-  // actually selected — real price in, fake price shown. Derives both
-  // real figures from the same price string getSelectedDoctorPrice()
-  // already provides (e.g. "₹500"), so whatever the doctor_profile block
-  // says is what the visitor sees here too. Payment itself still isn't
-  // wired to Razorpay (blocked on requirements, see
-  // RAZORPAY_PAYMENT_REQUIREMENTS.md) — this only fixes what price is
-  // displayed, not what (if anything) actually gets charged.
+  // Confirmation's Payment Method section (two In-Clinic cards: "Pay now" and
+  // "Pay at clinic", plus Video Consult's single fee card) shows the selected
+  // doctor's variant price (see applyDoctorCardPrice), the same price the
+  // server charges.
   const applyRealConsultationPricing = (priceText) => {
     const numeric = priceText ? parseInt(priceText.replace(/[^\d]/g, ''), 10) : NaN;
     if (!Number.isFinite(numeric) || numeric <= 0) return;
     const formatRupees = (value) => `₹${Math.round(value).toLocaleString('en-IN')}`;
-    const discounted = formatRupees(numeric * 0.9);
     const full = formatRupees(numeric);
+    // The discounted "Pay now" price and its percentage come from the doctor's
+    // Shopify variant (see applyDoctorCardPrice) — never
+    // computed here. No discount configured: Pay now simply shows the full
+    // price, with no strike-through and no "Save N%" pill.
+    const payNow = getSelectedDoctorPayNow();
+    const hasDiscount = Boolean(payNow.price);
 
     flow.querySelectorAll('[data-kal-payment-price-now]').forEach((el) => {
-      el.textContent = discounted;
+      el.textContent = hasDiscount ? payNow.price : full;
     });
     flow.querySelectorAll('[data-kal-payment-price-now-strike]').forEach((el) => {
       el.textContent = full;
+      el.hidden = !hasDiscount;
+    });
+    flow.querySelectorAll('[data-kal-payment-save-badge]').forEach((el) => {
+      el.textContent = hasDiscount ? `Save ${payNow.percent}%` : '';
+      el.hidden = !hasDiscount;
     });
     flow.querySelectorAll('[data-kal-payment-price-clinic]').forEach((el) => {
       el.textContent = full;
@@ -290,17 +570,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----------------------------------------------------------------------
-  // DOCTOR SELECT — re-wired to the real backend (see this step's own
-  // liquid comment for the full history/reasoning). loadDoctorsForFacility()
-  // calls GET /api/shopify/public/doctors (the web app's BFF proxy, which
-  // holds the partner API key) for the facility stored via FACILITY
-  // SELECTION above, and renders one card per doctor it gets back:
-  //   - a real match, cloned from sections/kal-doctor-cards.liquid's
-  //     hidden blocks (matched by doctor_id) — the exact same visual
-  //     component, so nothing to keep in sync by hand
-  //   - or a minimal fallback card, if that doctor_id has no block
-  //     configured yet — a real, bookable doctor should never just
-  //     disappear because marketing hasn't entered their card yet
+  // DOCTOR SELECT — one card per Doctor entry in Shopify offered at the chosen
+  // clinic (see getCatalogDoctorsForFacility()). The details on a card come
+  // from that entry, its price from the server's Shopify price, and only its
+  // next slot from the CMS schedule; nothing about a doctor is typed in the
+  // theme.
   // ----------------------------------------------------------------------
   // selectedDoctorId is the LIVE value every other part of this file reads
   // (fetchSlotsForDate, placeHoldForSlot, submitBooking, the Continue
@@ -340,26 +614,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // Select's own list/click flow at all — Experiment B's direct-entry
   // "Consult" CTA already knows exactly which doctor opened it (see
   // BOOKING EXPERIMENT above), so there's no list to click a card in.
-  // Clones that doctor's real card from sections/kal-doctor-cards.liquid's
-  // hidden source (same lookup loadDoctorsForFacility() uses) into Doctor
-  // Select's own (unseen, for B) list and marks it selected, so
+  // Builds that doctor's card exactly the way the Doctor Select list does
+  // (same Shopify catalog entry, same card builder, same variant price) and
+  // marks it selected in Doctor Select's own (unseen, for B) list, so
   // getSelectedDoctorName/PhotoUrl/Price() — which all just read whatever
   // .kal-doctor-card--selected exists inside the flow — and everything
   // downstream that depends on them (applySelectedDoctorToCards(),
   // booking submission's selectedDoctorId) work completely unchanged.
-  // Returns false (and does nothing) if this doctor has no card configured
-  // yet — same "never silently disappear" principle as the real list.
-  const selectDoctorById = (doctorId) => {
+  // Resolves false (and does nothing) if Shopify does not offer this doctor
+  // at the current clinic — same "never silently disappear" principle as the
+  // real list.
+  const selectDoctorById = async (doctorId) => {
     const list = flow.querySelector('[data-kal-doctor-list]');
-    const source = document.querySelector(
-      `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctorId)}"] .kal-doctor-card`,
-    );
-    if (!list || !source) return false;
-    const card = source.cloneNode(true);
+    const facility = await getCurrentFacility();
+    const doctor =
+      list && facility && facility.id ? getCatalogDoctorsForFacility(facility.id).find((item) => item.id === doctorId) : null;
+    if (!doctor) return false;
+    const card = buildProfileDoctorCard(doctor);
     card.dataset.doctorId = doctorId;
-    applyDoctorNamePrefix(card);
     card.classList.add('kal-doctor-card--selected');
     applyDoctorCardConcernBadges(card);
+    applyDoctorCardPrice(card, doctor);
     list.innerHTML = '';
     list.appendChild(card);
     if (selectedDoctorId !== doctorId) clearDayAvailabilityCache();
@@ -369,10 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   };
 
-  // Fisher-Yates — used below to randomize which position a doctor's
-  // concern-matched tag lands in, so it doesn't always render in the same
-  // spot (wherever it happens to sit in the theme editor's comma-
-  // separated list).
+  // Fisher-Yates, used to pick and order the concern badges on a doctor card.
   const shuffleArray = (arr) => {
     for (let i = arr.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -381,123 +653,334 @@ document.addEventListener('DOMContentLoaded', () => {
     return arr;
   };
 
-  // Every doctor card shows at least this many specialty badges —
-  // sections/kal-doctor-cards.liquid's schema asks editors to author at
-  // least this many tags per doctor so there's always enough to pad with
-  // below.
-  const MIN_DOCTOR_CARD_TAGS = 4;
+  // Every doctor card shows exactly this many concern badges.
+  const DOCTOR_CARD_TAG_COUNT = 4;
 
-  // Explicit instruction: every concern the visitor picked on Concern
-  // Select becomes its own highlighted badge on EVERY doctor card — not
-  // just a doctor whose own authored tags happen to already mention it
-  // ("if a user clicks gut health then all the cards should have the gut
-  // health badge"). The doctor's own tags (sections/kal-doctor-cards.liquid)
-  // are only used as filler, padding the card up to MIN_DOCTOR_CARD_TAGS
-  // total when fewer than that many concerns are selected. All badges —
-  // concern ones and filler ones alike — are then shuffled together so
-  // the highlighted concern badge(s) don't always land first ("i dont
-  // want all to be in the first so we will shuffle it"). If 4+ concerns
-  // are selected, they alone already satisfy the minimum and no filler is
-  // added ("if 4 concerns are selected all the cards will have the 4
-  // concern and the concern as badge but shuffled"). No-op for a card
-  // with no .kal-doctor-card__tags at all (the minimal fallback card for
-  // a doctor with no configured profile block — nothing to pad from, and
-  // out of scope for this feature). When nothing's selected (Experiment B
-  // skips Concern Select entirely), this just reduces to "show the
-  // doctor's own tags, shuffled" with nothing highlighted.
-  // Keyed by `${doctorId}|${sorted selected concern labels}` -> the
-  // shuffled badge text order last used for that doctor + selection.
-  // Doctor Select gets fully rebuilt from scratch every time it's
-  // (re-)reached (mode toggle, Back/Continue, "Change Clinic" — see
-  // goToStep's own comment), which otherwise meant every revisit
-  // reshuffled every card's badges even when nothing about the selection
-  // had changed — looked like the badges were randomly changing every
-  // time you looked at the same doctor. The point of shuffling is "don't
-  // always put the matched concern(s) first," not "look different every
-  // time," so the order is cached and reused for as long as the doctor
-  // and the selected concerns stay the same; a genuinely different
-  // concern selection gets its own fresh shuffle.
-  const doctorCardBadgeOrderCache = new Map();
+  // Badges on a doctor card are always concerns taken from Concern Select,
+  // whose options are authored in the theme editor (sections/kal-concern-
+  // options.liquid); nothing is listed again in this file or in Liquid, the
+  // labels are read from the rendered rows. Exactly DOCTOR_CARD_TAG_COUNT
+  // badges are shown, picked at random:
+  //   - the concerns the visitor selected come first: if they selected more
+  //     than the limit (4 or 5 or more), a random 4 of them are shown;
+  //   - if they selected fewer, the rest are filled with other concerns from
+  //     the same editor list, again at random;
+  //   - the final badges are shuffled so a selected concern isn't always first.
+  // The doctor's own tags are not used. The result is remembered per doctor
+  // and selection (below) so reopening the step doesn't reshuffle the same
+  // card; a different selection, or a different doctor, gets its own shuffle.
+  // No-op for a card with no .kal-doctor-card__tags container.
+  const doctorCardBadgeCache = new Map();
+
+  // Normalizes a badge label for dedup comparison only (display text is
+  // untouched), so "Skin & Hair" and "Skin, Hair" count as the same concern.
+  const normalizeBadgeKey = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+  // Every concern the editor has configured, read from the rendered Concern
+  // Select rows — except "Other" (concern_key "other", see sections/
+  // kal-concern-options.liquid), which is a catch-all for "none of these
+  // fit", not a real specialty. It makes sense as a Concern Select
+  // checkbox and the trigger for Patient Details' free-text field (see
+  // shouldShowConcernField()), but not as a doctor-card badge — a doctor
+  // doesn't specialize in "Other".
+  const collectAllConcernLabels = () =>
+    [...flow.querySelectorAll('[data-kal-concern]')]
+      .filter((row) => row.dataset.kalConcern !== 'other')
+      .map((row) => row.querySelector('.kal-concern-row__name')?.textContent?.trim())
+      .filter(Boolean);
+
+  const uniqueByKey = (labels) => {
+    const seen = new Set();
+    return labels.filter((label) => {
+      const key = normalizeBadgeKey(label);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   const applyDoctorCardConcernBadges = (card) => {
     const tagsContainer = card.querySelector('.kal-doctor-card__tags');
     if (!tagsContainer) return;
 
-    const ownTagTexts = Array.from(tagsContainer.children).map((el) => el.textContent.trim());
-    const selectedLabels = collectSelectedConcernLabels();
+    // Same "Other" exclusion as collectAllConcernLabels() above, by key
+    // (not by matching display text) — if the visitor checked "Other" on
+    // Concern Select, it still gets sent to the backend as part of
+    // `concerns` (submitBooking calls collectSelectedConcernLabels()
+    // directly, unfiltered), just never shown as a doctor-card badge.
+    const selected = uniqueByKey(
+      [...concernSelect.selected]
+        .filter((key) => key !== 'other')
+        .map((key) => flow.querySelector(`[data-kal-concern="${CSS.escape(key)}"] .kal-concern-row__name`)?.textContent?.trim())
+        .filter(Boolean),
+    );
+    const selectedKeys = new Set(selected.map(normalizeBadgeKey));
+    const others = uniqueByKey(collectAllConcernLabels()).filter((label) => !selectedKeys.has(normalizeBadgeKey(label)));
 
-    const seenLower = new Set();
-    const badges = []; // { text, selected }
-
-    selectedLabels.forEach((label) => {
-      const key = label.toLowerCase();
-      if (seenLower.has(key)) return; // collectSelectedConcernLabels() shouldn't duplicate, but don't rely on that
-      seenLower.add(key);
-      badges.push({ text: label, selected: true });
-    });
-
-    ownTagTexts.forEach((text) => {
-      if (badges.length >= MIN_DOCTOR_CARD_TAGS) return;
-      const key = text.toLowerCase();
-      if (seenLower.has(key)) return; // already shown as a selected-concern badge above
-      seenLower.add(key);
-      badges.push({ text, selected: false });
-    });
-
-    const cacheKey = `${card.dataset.doctorId || ''}|${[...seenLower].sort().join(',')}`;
-    const cachedOrder = doctorCardBadgeOrderCache.get(cacheKey);
-    if (cachedOrder) {
-      badges.sort((a, b) => cachedOrder.indexOf(a.text.toLowerCase()) - cachedOrder.indexOf(b.text.toLowerCase()));
-    } else {
+    const cacheKey = `${card.dataset.doctorId || ''}|${[...selectedKeys].sort().join(',')}|${others.length}`;
+    let badges = doctorCardBadgeCache.get(cacheKey);
+    if (!badges) {
+      badges = shuffleArray([...selected]).slice(0, DOCTOR_CARD_TAG_COUNT);
+      if (badges.length < DOCTOR_CARD_TAG_COUNT) {
+        badges = badges.concat(shuffleArray([...others]).slice(0, DOCTOR_CARD_TAG_COUNT - badges.length));
+      }
       shuffleArray(badges);
-      doctorCardBadgeOrderCache.set(cacheKey, badges.map((b) => b.text.toLowerCase()));
+      doctorCardBadgeCache.set(cacheKey, badges);
     }
 
-    // Explicit instruction: no visual distinction between a concern badge
-    // and a filler one — every badge renders with the plain
-    // .kal-doctor-card__tag look, "selected" above is only used to decide
-    // what goes on the card and dedupe against, not how it's styled.
     tagsContainer.innerHTML = '';
-    badges.forEach(({ text }) => {
+    tagsContainer.hidden = badges.length === 0;
+    badges.forEach((text) => {
       const tagEl = document.createElement('span');
       tagEl.className = 'kal-doctor-card__tag';
       tagEl.textContent = text;
+      // Full label stays available as a tooltip even once the CSS
+      // ellipsis-truncates its on-card text (see .kal-doctor-card__tag).
+      tagEl.title = text;
       tagsContainer.appendChild(tagEl);
     });
   };
 
-  const buildFallbackDoctorCard = (doctor) => {
-    const name = formatDoctorName(doctor.name);
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'kal-doctor-card';
-    card.dataset.doctorId = doctor.id;
-    card.dataset.kalDoctorName = name;
+  // Puts a text value after the icon in one of the card's meta rows (the icon
+  // span stays), or hides the row when there is nothing to show.
+  const setDoctorCardRowText = (row, text) => {
+    if (!row) return;
+    Array.from(row.childNodes)
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    if (text) row.appendChild(document.createTextNode(` ${text}`));
+    row.hidden = !text;
+  };
 
-    const nameEl = document.createElement('span');
-    nameEl.className = 'kal-doctor-card__name';
-    nameEl.textContent = name;
-    card.appendChild(nameEl);
+  // Fills a card from the doctor's Shopify profile (the Doctor entry linked to
+  // their consultation product), so the card shows exactly what is set there:
+  // the name is used as written (no "Dr." added), degree = qualification,
+  // tags = specialization, languages joined with a dot.
+  const applyDoctorProfile = (card, profile) => {
+    card.dataset.kalDoctorName = profile.name;
+    const nameEl = card.querySelector('.kal-doctor-card__name');
+    if (nameEl) nameEl.textContent = profile.name;
 
-    if (doctor.designation) {
-      const metaEl = document.createElement('span');
-      metaEl.className = 'kal-doctor-card__meta-row';
-      metaEl.textContent = doctor.designation;
-      card.appendChild(metaEl);
+    const rows = card.querySelectorAll('.kal-doctor-card__meta-row');
+    const experience = profile.experience
+      ? /^\d+(\.\d+)?$/.test(profile.experience)
+        ? `${profile.experience} yrs experience`
+        : profile.experience
+      : '';
+    // Same document order as the card snippet: degree, experience, languages.
+    setDoctorCardRowText(rows[0], profile.qualification || '');
+    setDoctorCardRowText(rows[1], experience);
+    setDoctorCardRowText(rows[2], (profile.languages || []).join(' · '));
+
+    card.dataset.kalDoctorPhotoUrl = profile.photoUrl || '';
+    const photoEl = card.querySelector('.kal-doctor-card__photo');
+    if (photoEl && profile.photoUrl) {
+      photoEl.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = profile.photoUrl;
+      img.alt = profile.name;
+      img.loading = 'lazy';
+      photoEl.appendChild(img);
     }
 
+    const tagsEl = card.querySelector('.kal-doctor-card__tags');
+    if (tagsEl) {
+      tagsEl.innerHTML = '';
+      (profile.specialization || []).forEach((text) => {
+        const tag = document.createElement('span');
+        tag.className = 'kal-doctor-card__tag';
+        tag.textContent = text;
+        tagsEl.appendChild(tag);
+      });
+    }
+  };
+
+  // The card markup is the empty template rendered sitewide with the booking
+  // flow (snippets/kal-booking-flow.liquid); this fills it from the Doctor entry.
+  const buildProfileDoctorCard = (doctor) => {
+    const card = document.querySelector('.kal-doctor-card-template .kal-doctor-card').cloneNode(true);
+    card.classList.remove('kal-doctor-card--selected');
+    applyDoctorProfile(card, doctor.profile);
     return card;
   };
 
-  // Keyed by facility id, same pattern as therapyDoctorCache below (which
-  // hits this exact endpoint too) — revisiting Doctor Select after going
-  // forward and back (e.g. Slot Picker's own Back button) re-runs
-  // goToStep('doctor-select') -> loadDoctorsForFacility() unconditionally,
-  // so without this every such revisit refetched and fully re-rendered an
-  // identical list the visitor had already seen.
-  let doctorListCache = null; // { facilityId, doctors }
+  // Replaces the card's placeholder "Next slot" text with
+  // the doctor's REAL next available slot: the earliest bookable slot for
+  // the CURRENT consultation mode, searched across the same horizon the
+  // Slot Picker's own calendar covers, straight from the same availability
+  // pipeline the Slot Picker itself uses (resolveNextSlotCard() on the
+  // partner API side, which is mode-aware exactly the way Slot Picker's
+  // own slot fetch is). nextSlotToday is null when the doctor has nothing
+  // bookable anywhere in that horizon under the current mode — shown as
+  // "No upcoming slots" rather than hiding the line, so the card never
+  // looks broken/blank.
+  const applyDoctorCardNextSlot = (card, nextSlotToday) => {
+    const el = card.querySelector('.kal-doctor-card__next-slot');
+    if (!el) return;
+    el.textContent = '';
+    el.hidden = false;
+    if (!nextSlotToday) {
+      el.textContent = 'No upcoming slots';
+      return;
+    }
+    el.append(`Next slot - `);
+    const strong = document.createElement('strong');
+    strong.textContent = `${nextSlotToday.label}, ${formatTime12h(nextSlotToday.time)}`;
+    el.appendChild(strong);
+  };
 
-  const renderDoctorList = (list, doctors) => {
+  // The price on a doctor card, and every price derived from it further on
+  // (the appointment card, the payment options and their "Pay now" figure), is
+  // the doctor's variant price from the Shopify catalog rendered into the page.
+  // The server charges from the very same variant price. Sets BOTH the visible
+  // .kal-doctor-card__price text AND data-kal-doctor-price (read downstream via
+  // getSelectedDoctorPrice()), so every later step stays in sync. null (no
+  // variant for this clinic and mode) shows an honest "Pricing unavailable".
+  const formatRupeesFromPaise = (amountPaise) => {
+    const rupees = amountPaise / 100;
+    const whole = Number.isInteger(rupees);
+    return `₹${rupees.toLocaleString('en-IN', whole ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const applyDoctorCardPrice = (card, doctor) => {
+    const priceForMode = slotPicker.mode === 'video' ? doctor.onlinePrice : doctor.inClinicPrice;
+    const el = card.querySelector('.kal-doctor-card__price');
+    const text = priceForMode ? formatRupeesFromPaise(priceForMode.amountPaise) : 'Pricing unavailable';
+    if (el) el.textContent = text;
+    card.dataset.kalDoctorPrice = priceForMode ? text : '';
+    // The "Pay now" figure for an In-Clinic visit — empty when this doctor has
+    // no discount configured in Shopify or the visitor is on Video Consult,
+    // which is never discounted.
+    const payNow = slotPicker.mode === 'video' ? null : doctor.inClinicPayNowPrice;
+    card.dataset.kalDoctorPayNowPrice = payNow ? formatRupeesFromPaise(payNow.amountPaise) : '';
+    card.dataset.kalDoctorPayNowPercent = payNow ? String(doctor.payNowDiscountPercent) : '';
+  };
+
+  // Keyed by `${facilityId}:${mode}` — one entry per facility+mode pair, so
+  // In-Clinic and Video Consult each keep their own cached doctor list and
+  // switching the toggle back and forth no longer re-fetches an identical
+  // list every time (the "Next slot" badge is mode-specific — see
+  // applyDoctorCardNextSlot above — so an In-Clinic entry must never be
+  // reused to render Video Consult or vice versa; a separate entry per mode
+  // is what makes that safe). Each entry carries fetchedAt so it can expire
+  // after DOCTOR_LIST_CACHE_TTL_MS instead of being trusted forever —
+  // nextSlotToday reflects real-time availability, so an unbounded cache
+  // could show a slot that's since been booked by someone else.
+  const DOCTOR_LIST_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+  const doctorListCache = new Map(); // key -> { doctors, fetchedAt }
+  // A toggle fired twice in quick succession before the first fetch for
+  // that facility+mode resolves (e.g. a fast double click) would otherwise
+  // start a second, redundant request for data the first one is already
+  // fetching. Sharing the in-flight Promise for that key means the second
+  // call just awaits the same response instead of firing its own.
+  const doctorListInFlight = new Map(); // key -> Promise<doctors[]>
+  // Bumped every time a NEW doctor-list fetch actually starts (facility or
+  // mode genuinely changed) — same pattern as slotHoldRequestSequence
+  // elsewhere in this file. A fetch whose requestId no longer matches by
+  // the time it resolves belongs to a facility/mode selection the visitor
+  // has since moved on from, so its result is silently dropped instead of
+  // overwriting whatever's already on screen for the CURRENT selection.
+  let doctorListRequestSequence = 0;
+
+  // "Next slot" is the one part of a doctor card that needs the CMS schedule,
+  // so it is loaded separately after the cards are already on screen: ONE
+  // request asks for every card's doctor at once. Until the answer arrives
+  // each card shows a quiet "Checking availability…" line; a slow or failed
+  // lookup never holds the cards back. Answers are remembered briefly per
+  // clinic, mode and doctor.
+  const NEXT_SLOT_CACHE_TTL_MS = 2 * 60 * 1000;
+  const nextSlotCache = new Map(); // `${facilityId}:${mode}:${doctorId}` -> { slot, fetchedAt }
+
+  const applyDoctorCardNextSlotLoading = (card) => {
+    const el = card.querySelector('.kal-doctor-card__next-slot');
+    if (!el) return;
+    el.hidden = false;
+    el.classList.add('kal-doctor-card__next-slot--loading');
+    el.textContent = 'Checking availability…';
+  };
+
+  // Fetches the next slot of every doctor not already remembered, in one
+  // request, and remembers each answer.
+  const fetchDoctorsNextSlots = async (facilityId, mode, doctorIds) => {
+    const missing = doctorIds.filter((id) => {
+      const cached = nextSlotCache.get(`${facilityId}:${mode}:${id}`);
+      return !(cached && Date.now() - cached.fetchedAt < NEXT_SLOT_CACHE_TTL_MS);
+    });
+    if (missing.length) {
+      const response = await fetch(
+        `${apiBaseUrl}/api/shopify/public/doctors/next-slots?facilityId=${encodeURIComponent(facilityId)}&doctorIds=${missing.map(encodeURIComponent).join(',')}&mode=${encodeURIComponent(mode)}`,
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const rows = Array.isArray(data?.data?.nextSlots) ? data.data.nextSlots : [];
+      missing.forEach((id) => {
+        const row = rows.find((item) => item.doctorId === id);
+        nextSlotCache.set(`${facilityId}:${mode}:${id}`, { slot: row ? row.nextSlot ?? null : null, fetchedAt: Date.now() });
+      });
+    }
+    return doctorIds.map((id) => nextSlotCache.get(`${facilityId}:${mode}:${id}`).slot);
+  };
+
+  // Starts the single next-slot request for all cards and fills each card in
+  // when it arrives. An answer is applied only if that card is still on screen
+  // for the same clinic, mode and doctor it was requested for.
+  const loadDoctorCardNextSlots = (list, doctors, facilityId, mode) => {
+    const cardFor = (doctor) => {
+      const key = `${facilityId}:${mode}:${doctor.id}`;
+      const card = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
+      return card && card.isConnected && card.dataset.kalNextSlotKey === key ? card : null;
+    };
+    doctors.forEach((doctor) => {
+      const initialCard = list.querySelector(`[data-doctor-id="${CSS.escape(doctor.id)}"]`);
+      if (initialCard) initialCard.dataset.kalNextSlotKey = `${facilityId}:${mode}:${doctor.id}`;
+    });
+
+    fetchDoctorsNextSlots(facilityId, mode, doctors.map((doctor) => doctor.id))
+      .then((slots) => {
+        doctors.forEach((doctor, index) => {
+          const card = cardFor(doctor);
+          if (!card) return;
+          card.querySelector('.kal-doctor-card__next-slot')?.classList.remove('kal-doctor-card__next-slot--loading');
+          applyDoctorCardNextSlot(card, slots[index]);
+        });
+      })
+      .catch((err) => {
+        console.error('[kal-booking-flow] Failed to load next slots:', err);
+        doctors.forEach((doctor) => {
+          const card = cardFor(doctor);
+          const el = card && card.querySelector('.kal-doctor-card__next-slot');
+          if (!el) return;
+          el.classList.remove('kal-doctor-card__next-slot--loading');
+          el.textContent = 'Availability unavailable';
+        });
+      });
+  };
+
+  const renderDoctorList = (list, allDoctors, facilityId, mode) => {
+    // Hide doctors who don't take the mode currently on screen — the API
+    // returns supportsOnline/supportsOffline per doctor (derived from the
+    // same slotType schedule-window data that already drives availability
+    // filtering), so an incompatible doctor never gets picked in the first
+    // place instead of only surfacing as an empty Slot Picker a step later.
+    const doctors = allDoctors.filter((doctor) =>
+      slotPicker.mode === 'video' ? doctor.supportsOnline : doctor.supportsOffline,
+    );
+
+    if (doctors.length === 0) {
+      list.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'kal-step-doctor-select__list-empty';
+      p.textContent =
+        slotPicker.mode === 'video'
+          ? 'No doctors available for video consultation at this clinic.'
+          : 'No doctors available for in-clinic consultation at this clinic.';
+      list.appendChild(p);
+      if (selectedDoctorId !== null) clearDayAvailabilityCache();
+      selectedDoctorId = null;
+      updateDoctorSelectContinueButton();
+      return;
+    }
+
     // lastDoctorSelection only counts as "still active" if it was made
     // under the mode currently on screen — a pick made under the other
     // mode is deliberately forgotten the instant a new one is made (see
@@ -516,16 +999,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     list.innerHTML = '';
     doctors.forEach((doctor) => {
-      const source = document.querySelector(
-        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
-      );
-      const card = source ? source.cloneNode(true) : buildFallbackDoctorCard(doctor);
+      const card = buildProfileDoctorCard(doctor);
       card.dataset.doctorId = doctor.id;
-      if (source) applyDoctorNamePrefix(card);
       card.classList.toggle('kal-doctor-card--selected', doctor.id === nextSelectedId);
       applyDoctorCardConcernBadges(card);
+      // The next slot is filled in afterwards (loadDoctorCardNextSlots below);
+      // until then the card says it is checking.
+      applyDoctorCardNextSlotLoading(card);
+      applyDoctorCardPrice(card, doctor);
       list.appendChild(card);
     });
+    loadDoctorCardNextSlots(list, doctors, facilityId, mode);
 
     // Only the LIVE value is touched here — lastDoctorSelection (the real
     // memory) is deliberately left alone so it survives a round trip
@@ -556,48 +1040,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // getCurrentFacility() (not getStoredFacility()) so the default clinic
     // still loads real doctors when the flow is opened directly, bypassing
     // "Find a Clinic" — same fallback applyStoredFacility() relies on.
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     if (!facility || !facility.id) {
-      doctorListCache = null;
+      doctorListCache.clear();
+      doctorListInFlight.clear();
+      doctorListRequestSequence += 1; // any in-flight fetch is now stale
       setEmptyState('Pick a clinic first to see available doctors.');
       return;
     }
 
-    if (doctorListCache && doctorListCache.facilityId === facility.id) {
-      renderDoctorList(list, doctorListCache.doctors);
-      return;
-    }
+    const mode = slotPicker.mode === 'video' ? 'online' : 'offline';
 
-    if (!apiBaseUrl) {
-      console.error('[kal-booking-flow] Missing data-api-base-url on #kal-booking-flow — cannot load doctors.');
-      setEmptyState('Unable to load doctors right now.');
-      return;
-    }
-
-    setEmptyState('Loading doctors…');
-
-    let doctors;
-    try {
-      const response = await fetch(
-        `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}`,
-      );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      doctors = Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
-    } catch (err) {
-      console.error('[kal-booking-flow] Failed to load doctors:', err);
-      setEmptyState('Unable to load doctors right now.');
-      return;
-    }
-
+    // The doctors come from the Shopify catalog already on the page, so there is
+    // no request here and nothing to wait for; only each card's next slot is
+    // fetched afterwards (loadDoctorCardNextSlots).
+    doctorListRequestSequence += 1;
+    const doctors = getCatalogDoctorsForFacility(facility.id);
     if (doctors.length === 0) {
-      doctorListCache = null;
       setEmptyState('No doctors available at this clinic yet.');
       return;
     }
-
-    doctorListCache = { facilityId: facility.id, doctors };
-    renderDoctorList(list, doctors);
+    renderDoctorList(list, doctors, facility.id, mode);
   };
 
   // Therapy Details' appointment card — shows the real in-clinic doctor
@@ -606,17 +1069,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // instead of being a vague promise. Therapy has no Doctor Select step
   // (no choice to make — staff assign the therapist, but the doctor who
   // does the initial consult is just whoever's in-clinic at that
-  // facility), so this just takes the facility's first returned doctor,
-  // same /doctors endpoint loadDoctorsForFacility() already uses. Degree/
-  // experience aren't part of the API response (same partner-API
-  // limitation noted in kal-booking-flow-doctor-card.liquid's own
-  // comment) — they're read back off that doctor's real card markup in
-  // sections/kal-doctor-cards.liquid's hidden source blocks, the exact
-  // same lookup loadDoctorsForFacility()/selectDoctorById() use. If the
-  // facility has no doctors (or the one doctor has no profile block
-  // configured), the photo/name/degree row just stays hidden and the
-  // card quietly falls back to its old text-only description line —
-  // never shows stale/wrong doctor info.
+  // facility), so this takes the first doctor Shopify offers at that
+  // facility and shows what is set on that Doctor entry. If the facility has
+  // no doctors, the photo/name/degree row just stays hidden and the card
+  // quietly falls back to its old text-only description line — never shows
+  // stale/wrong doctor info.
   //
   // Split into a cached fetch (fetchTherapyDoctorData, below) and a DOM-
   // apply step (applyTherapyDoctorCard) so the network call can start as
@@ -629,46 +1086,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // instantly instead of visibly popping in after a delay.
   let therapyDoctorCache = null; // { facilityId, promise }
 
-  const fetchTherapyDoctorData = () => {
-    const facility = getCurrentFacility();
-    if (!facility || !facility.id || !apiBaseUrl) return Promise.resolve(null);
+  const fetchTherapyDoctorData = async () => {
+    const facility = await getCurrentFacility();
+    if (!facility || !facility.id || !apiBaseUrl) return null;
 
     if (therapyDoctorCache && therapyDoctorCache.facilityId === facility.id) {
       return therapyDoctorCache.promise;
     }
 
     const promise = (async () => {
-      let doctors;
-      try {
-        const response = await fetch(
-          `${apiBaseUrl}/api/shopify/public/doctors?facilityId=${encodeURIComponent(facility.id)}`,
-        );
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        doctors = Array.isArray(data?.data?.doctors) ? data.data.doctors : [];
-      } catch (err) {
-        console.error('[kal-booking-flow] Failed to load therapy doctor:', err);
-        return null;
-      }
+      const doctors = getCatalogDoctorsForFacility(facility.id);
       if (doctors.length === 0) return null;
 
-      const doctor = doctors[0];
-      const source = document.querySelector(
-        `.kal-doctor-card-source[data-doctor-id="${CSS.escape(doctor.id)}"] .kal-doctor-card`,
-      );
-
-      const name = formatDoctorName(source ? source.dataset.kalDoctorName : doctor.name);
+      // The doctor's Shopify entry is the source.
+      const { profile } = doctors[0];
+      const name = profile.name;
       if (!name) return null;
 
-      const photoUrl = source ? source.dataset.kalDoctorPhotoUrl : '';
-      // Document order inside kal-booking-flow-doctor-card.liquid's
-      // .kal-doctor-card__info is always degree, then experience, then
-      // languages — read by position rather than a dedicated data
-      // attribute, since degree/experience only exist as rendered text
-      // in that markup, not as their own data-* hooks.
-      const metaRows = source ? source.querySelectorAll('.kal-doctor-card__meta-row') : [];
-      const degree = metaRows[0] ? metaRows[0].textContent.trim() : (doctor.designation || '');
-      const experience = metaRows[1] ? metaRows[1].textContent.trim() : '';
+      const photoUrl = profile.photoUrl || '';
+      const degree = profile.qualification || '';
+      const experience = profile.experience
+        ? /^\d+(\.\d+)?$/.test(profile.experience)
+          ? `${profile.experience} yrs experience`
+          : profile.experience
+        : '';
 
       return { name, photoUrl, degree, experience };
     })();
@@ -794,7 +1235,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (stepName === 'slot-picker') {
       refreshDayStrip();
-      refreshSlotsForSelectedDate();
+      // Reaching this step is not always "start over": Back from Patient
+      // Details (after Continue already confirmed a hold) lands here too,
+      // and that hold is still genuinely active server-side — wiping it
+      // and showing nothing selected, forcing a re-pick of a slot the
+      // visitor already has, was the actual bug report this is fixing.
+      // Only preserve it when doctor/mode genuinely haven't changed since
+      // it was placed (see slotPicker.holdContext's own comment) — picking
+      // a different doctor or consult mode further back and returning here
+      // must still fall through to a real reset, since the hold would
+      // otherwise be wrong for what's now on screen.
+      const canPreserveHold =
+        Boolean(slotPicker.holdId) &&
+        slotPicker.holdContext?.doctorId === selectedDoctorId &&
+        slotPicker.holdContext?.mode === slotPicker.mode;
+      // Re-sync the UI selection back to whatever's actually held before
+      // this one-time refresh renders the grid — selectedSlot can only
+      // have drifted from heldSlot by browsing other chips on THIS same
+      // screen load without pressing Continue again, which never survives
+      // a real navigation away and back (leaving always requires a
+      // successful Continue, which re-syncs the two itself). Explicit here
+      // anyway so the invariant doesn't depend on that reasoning holding
+      // forever as this file changes.
+      if (canPreserveHold) slotPicker.selectedSlot = slotPicker.heldSlot;
+      refreshSlotsForSelectedDate({ preserveHold: canPreserveHold });
     }
 
     // Prefetch starts here (step 1), not on arrival at step 2 — see
@@ -829,6 +1293,55 @@ document.addEventListener('DOMContentLoaded', () => {
   // rather than a single string.
   const concernSelect = {
     selected: new Set(),
+    // What the visitor typed in the box under "Other" (only meaningful
+    // while "Other" is checked).
+    otherText: '',
+  };
+
+  // Patient Details' free-text Concern field (data-kal-concern-field) is for
+  // Experiment B only (see that field's own liquid comment). Experiment A's
+  // "Other" row has its own text box on Concern Select instead (see
+  // data-kal-other-concern-field), so Patient Details stays the normal form.
+  const shouldShowConcernField = () => isExperimentB;
+
+  // "Other" needs a typed concern before the visitor can continue. Checked
+  // when Continue is clicked (the button itself stays enabled, like Patient
+  // Details' Continue), which shows the error under the box.
+  const otherConcernIsMissing = () =>
+    concernSelect.selected.has('other') && concernSelect.otherText.trim() === '';
+
+  const OTHER_CONCERN_MAX = 200;
+
+  const otherConcernInputs = () => flow.querySelectorAll('[data-kal-other-concern]');
+
+  const showOtherConcernError = () => {
+    flow.querySelectorAll('[data-kal-other-concern-error]').forEach((el) => {
+      el.hidden = false;
+    });
+    otherConcernInputs().forEach((el) => el.classList.add('kal-form-input--error'));
+  };
+
+  const clearOtherConcernError = () => {
+    flow.querySelectorAll('[data-kal-other-concern-error]').forEach((el) => {
+      el.hidden = true;
+    });
+    otherConcernInputs().forEach((el) => el.classList.remove('kal-form-input--error'));
+  };
+
+  // The box grows with what is typed instead of scrolling inside itself.
+  const growOtherConcernInput = (el) => {
+    el.style.height = 'auto';
+    // scrollHeight leaves out the border, which border-box height includes.
+    el.style.height = `${el.scrollHeight + (el.offsetHeight - el.clientHeight)}px`;
+  };
+
+  // Shows "n/200" only once the visitor is close to the limit.
+  const updateOtherConcernCount = () => {
+    const length = concernSelect.otherText.length;
+    flow.querySelectorAll('[data-kal-other-concern-count]').forEach((el) => {
+      el.textContent = length >= OTHER_CONCERN_MAX * 0.8 ? `${length}/${OTHER_CONCERN_MAX}` : '';
+      el.classList.toggle('kal-concern-select__other-count--max', length >= OTHER_CONCERN_MAX);
+    });
   };
 
   const updateConcernContinueButton = () => {
@@ -850,18 +1363,63 @@ document.addEventListener('DOMContentLoaded', () => {
   // display anywhere; that chip-summary pattern belongs to the therapy
   // flow's own "Selected therapies" list (kal-booking-flow-step-therapy-slot.liquid),
   // not this consultation flow.
+  // Makes the rows and the Continue footer show exactly what is in
+  // concernSelect.selected. Every change to that set must end here, or the
+  // screen and the selection drift apart (Continue active with nothing
+  // really selected).
+  const syncConcernSelectionUi = () => {
+    flow.querySelectorAll('[data-kal-concern]').forEach((row) => {
+      const isSelected = concernSelect.selected.has(row.dataset.kalConcern);
+      row.classList.toggle('kal-concern-row--selected', isSelected);
+      row.setAttribute('aria-pressed', String(isSelected));
+    });
+    // The "Other" text box slides open while "Other" is checked; unchecking
+    // it closes it and throws away what was typed. Focus moves into the box
+    // only on the click that opens it, not on every later re-sync.
+    const otherChecked = concernSelect.selected.has('other');
+    const wasOpen = flow.querySelector('[data-kal-other-concern-field]')?.classList.contains('kal-concern-select__reveal--open');
+    if (!otherChecked) concernSelect.otherText = '';
+    flow.querySelectorAll('[data-kal-other-concern-field]').forEach((el) => {
+      el.classList.toggle('kal-concern-select__reveal--open', otherChecked);
+      el.toggleAttribute('inert', !otherChecked);
+    });
+    flow.querySelectorAll('[data-kal-concern="other"]').forEach((row) => {
+      row.setAttribute('aria-expanded', String(otherChecked));
+    });
+    if (!otherChecked) {
+      otherConcernInputs().forEach((el) => {
+        el.value = '';
+        el.style.height = '';
+      });
+      clearOtherConcernError();
+      updateOtherConcernCount();
+    } else if (!wasOpen) {
+      requestAnimationFrame(() => {
+        const box = flow.querySelector('[data-kal-other-concern]');
+        if (!box) return;
+        growOtherConcernInput(box);
+        box.focus({ preventScroll: true });
+        setTimeout(() => {
+          box.closest('[data-kal-other-concern-field]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 200);
+      });
+    }
+    updateConcernContinueButton();
+    applyExperimentVisibility();
+  };
+
   const toggleConcern = (concern) => {
     if (concernSelect.selected.has(concern)) {
       concernSelect.selected.delete(concern);
     } else {
       concernSelect.selected.add(concern);
     }
-    flow.querySelectorAll('[data-kal-concern]').forEach((row) => {
-      const isSelected = concernSelect.selected.has(row.dataset.kalConcern);
-      row.classList.toggle('kal-concern-row--selected', isSelected);
-      row.setAttribute('aria-pressed', String(isSelected));
-    });
-    updateConcernContinueButton();
+    syncConcernSelectionUi();
+  };
+
+  const clearConcernSelection = () => {
+    concernSelect.selected.clear();
+    syncConcernSelectionUi();
   };
 
   // Populates Concern Select's list from sections/kal-concern-options.liquid's
@@ -1238,15 +1796,6 @@ document.addEventListener('DOMContentLoaded', () => {
         el.appendChild(img);
       });
     }
-
-    // The real moment this screen is shown — which is also the moment the
-    // request was actually submitted (this step is only ever reached right
-    // after submitTherapyRequest() succeeds), not a hardcoded example time.
-    const now = new Date();
-    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    flow.querySelectorAll('[data-kal-therapy-confirm-timestamp]').forEach((el) => {
-      el.textContent = `Today, ${formatTime12h(nowTime)}`;
-    });
   };
 
   // Theme-editor-sourced lists — must run before the first render of
@@ -1256,6 +1805,12 @@ document.addEventListener('DOMContentLoaded', () => {
   loadConcernOptions();
   loadTherapyCategoryOptions();
   loadTherapyOptions();
+
+  // Warms facilityOptionsCache ahead of time — fire-and-forget, so the
+  // "Find a Clinic" page's click handler and getCurrentFacility()'s own
+  // fallback usually find it already resolved instead of waiting on a
+  // fresh request.
+  void loadFacilityOptions();
 
   renderTherapyDropdownList();
   renderTherapySelectedChips();
@@ -1321,26 +1876,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // selectedSlot starts null — the real slot grid hasn't loaded yet when
   // the flow first opens; renderConfirmationSummary() already falls back
-  // to an em dash until a real slot is fetched and picked. holdId mirrors
-  // the CMS staff-side booking wizard's own holdId state (appointment-
-  // booking-wizard.tsx) — a real CMS slot hold now exists as soon as a
-  // slot is clicked here too, not just at final payment (see
-  // handleSlotSelection() below) — null until that hold call succeeds.
+  // to an em dash until a real slot is fetched and picked. Unlike the CMS
+  // staff-side booking wizard (which holds the instant a slot is clicked),
+  // selectedSlot here is purely a UI selection — clicking a chip
+  // (selectSlotLocally()) never calls the backend, so selectedSlot can
+  // change freely while browsing without creating/replacing any real hold.
+  // holdId/heldSlot only change in handleSlotContinue() below, at the
+  // single moment the visitor actually commits — explicit decision:
+  // holding on every click let browsing visitors fight over slots they
+  // never intended to book.
   const slotPicker = {
     mode: 'in-clinic', // mirrors the toggle's default active button (Doctor Select's In-Clinic, per the updated Figma spec)
     selectedDate: new Date(),
     selectedSlot: null,
     holdId: null,
+    // The exact slot {start_time, end_time} holdId was actually placed
+    // for — distinct from selectedSlot, which can drift ahead of it while
+    // the visitor browses other chips before pressing Continue again.
+    // handleSlotContinue() compares the two to decide whether a fresh
+    // hold/replace is even needed, and goToStep('slot-picker') re-syncs
+    // selectedSlot back to this on arrival so the grid highlights what's
+    // actually held, not whatever was last clicked.
+    heldSlot: null,
+    // Which doctor/mode holdId was actually placed under — set alongside
+    // holdId everywhere it's assigned a real value, cleared alongside it
+    // everywhere it's nulled. Lets goToStep('slot-picker') (see below) tell
+    // "the visitor just went Back/Continue, nothing about their booking
+    // changed" apart from "they went back further and picked a different
+    // doctor or mode" — only the former should preserve the hold; the
+    // latter must still fall through to a real reset, since the hold would
+    // otherwise be silently wrong for what's now on screen.
+    holdContext: null,
     calendarMonth: new Date(),
   };
 
   // Guards against a slower earlier hold request resolving after a faster
-  // later one (e.g. the visitor clicks two different slots quickly) —
-  // same pattern as the CMS wizard's holdRequestSequence ref. Only the
-  // response matching the most recent click is allowed to write into
-  // slotPicker.
+  // later one (e.g. a quick Back-then-Continue-again double click) — same
+  // pattern as the CMS wizard's holdRequestSequence ref. Only the response
+  // matching the most recent Continue click is allowed to write into
+  // slotPicker. placingSlotHold is true only for that same brief window
+  // (see updateSlotContinueButton() above and handleSlotContinue() below) —
+  // there's deliberately no background polling here (removed: it added
+  // load on every open slot-picker tab for a grid that, now that holding
+  // is deferred to Continue, only actually needs to be fresh at the moment
+  // of commitment — see handleSlotContinue()'s own refresh-on-conflict).
   let slotHoldRequestSequence = 0;
+  // Numbers every slot-grid request so only the newest one may draw: a slow
+  // answer for a date the visitor has already left must never overwrite the
+  // grid of the date they are on. The older request is also cancelled.
+  let slotsRequestSequence = 0;
+  let slotsAbortController = null;
+  // Slot grids looked at recently, per doctor, mode and date, so going back to
+  // a date within SLOTS_CACHE_TTL_MS needs no request. Emptied whenever a hold
+  // is placed or released, since that changes what the grids show.
+  const SLOTS_CACHE_TTL_MS = 30 * 1000;
+  const slotsCache = new Map(); // `${doctorId}:${mode}:${isoDate}` -> { slots, fetchedAt }
+  // The grid currently on screen (or being loaded), so picking the date that
+  // is already showing does nothing instead of asking again.
+  let slotGridKey = null;
+  const slotsKeyFor = (date) => `${selectedDoctorId}:${slotPicker.mode}:${toIsoDate(date)}`;
   let placingSlotHold = false;
+
+  // Same re-entrancy guard pattern as placingSlotHold above, but for the
+  // async Razorpay order-creation + Checkout + verification sequence
+  // (collectPayment() below) — true only for that brief window so a
+  // double-click on "Proceed to Payment" can't open two Checkout modals or
+  // fire two orders for the same hold.
+  let placingPayment = false;
+  // The Razorpay order a visitor has already paid for, for slotPicker.holdId,
+  // kept until that booking is confirmed. If confirming it fails or times out
+  // after they have paid, a retry keeps waiting for this same order instead of
+  // opening Checkout again -- the only way to avoid charging them twice.
+  let paidOrder = null; // { holdId, razorpayOrderId }
 
   // Keyed by ISO date ("YYYY-MM-DD") -> the day-summaries endpoint's
   // per-day summary object ({ availableSlots, totalSlots, ... }). Shared
@@ -1349,7 +1956,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // changes (see clearDayAvailabilityCache below), since availability is
   // specific to that pair.
   let dayAvailabilityCache = new Map();
-  const clearDayAvailabilityCache = () => { dayAvailabilityCache = new Map(); };
+  // When each cached day arrived. A day's summary is reused for this long and
+  // then fetched again, so a day that fills up while the popup stays open is
+  // not shown as free for the whole visit.
+  const DAY_AVAILABILITY_TTL_MS = 2 * 60 * 1000;
+  let dayAvailabilityFetchedAt = new Map();
+  const clearDayAvailabilityCache = () => {
+    dayAvailabilityCache = new Map();
+    dayAvailabilityFetchedAt = new Map();
+  };
+  const hasFreshDaySummary = (isoDate) =>
+    dayAvailabilityCache.has(isoDate) && Date.now() - (dayAvailabilityFetchedAt.get(isoDate) ?? 0) < DAY_AVAILABILITY_TTL_MS;
 
   const toIsoDate = (date) => {
     const d = startOfDay(date);
@@ -1395,7 +2012,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // chunk-level caller already retries automatically next time it's
   // asked to load the same still-missing offsets.
   const fetchDaySummaries = async (startDate, endDate) => {
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId) return false;
     try {
       const response = await fetch(
@@ -1414,6 +2031,7 @@ document.addEventListener('DOMContentLoaded', () => {
       summaries.forEach((entry) => {
         if (entry?.date) {
           dayAvailabilityCache.set(entry.date, entry.summary);
+          dayAvailabilityFetchedAt.set(entry.date, Date.now());
           dayAvailabilityFetchFailedDates.delete(entry.date);
         }
       });
@@ -1441,9 +2059,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Fetches the real slot grid for one date. Returns null on error/missing
   // doctor so callers can show an explicit "unable to load" state rather
-  // than silently rendering an empty grid.
-  const fetchSlotsForDate = async (date) => {
-    const facility = getCurrentFacility();
+  // than silently rendering an empty grid. Returns undefined when the request
+  // was cancelled because a newer one replaced it (nothing to show or report).
+  const fetchSlotsForDate = async (date, signal) => {
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId) return null;
     try {
       const response = await fetch(
@@ -1453,50 +2072,66 @@ document.addEventListener('DOMContentLoaded', () => {
           `&date=${encodeURIComponent(toIsoDate(date))}` +
           `&durationMinutes=${CONSULT_DURATION_MINUTES}` +
           `&mode=${slotPicker.mode === 'video' ? 'online' : 'offline'}`,
+        { signal },
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return Array.isArray(data?.data?.slots) ? data.data.slots : [];
     } catch (err) {
+      if (err && err.name === 'AbortError') return undefined;
       console.error('[kal-booking-flow] Failed to load slots:', err);
       return null;
     }
   };
 
   // Classifies a "HH:MM" start time into the same three tabs the static
-  // markup already had — no spec beyond matching the existing panels'
-  // own example boundaries (morning ends before noon, evening starts at
-  // 4 PM).
+  // markup already had. Boundaries match the CMS staff wizard's own
+  // morning/afternoon/evening split exactly (appointment-date-time-
+  // picker.tsx: morning < 12, afternoon 12-16:59, evening >= 17) — this
+  // used to cut afternoon/evening at 4 PM instead of 5 PM, showing a slot
+  // in a different tab here than it would in CMS for the same time.
   const periodForTime = (time) => {
     const hour = parseInt(time.slice(0, 2), 10);
     if (hour < 12) return 'morning';
-    if (hour < 16) return 'afternoon';
+    if (hour < 17) return 'afternoon';
     return 'evening';
   };
 
-  // Slot Picker's Continue is disabled until a slot is actually clicked
-  // AND its hold has actually been confirmed by the CMS (data-kal-slot-
-  // continue) — same disabled-until-chosen pattern as Doctor Select's
-  // updateDoctorSelectContinueButton() above, but gated on holdId rather
-  // than selectedSlot: selectedSlot is set optimistically the instant a
-  // chip is clicked (see handleSlotSelection()), before the hold call
-  // has resolved, so Continue must wait for the real confirmation.
-  // Re-checked on every render pass (resets to disabled) and every
-  // slot-chip click/hold response.
+  // Slot Picker's Continue is disabled until a slot is actually picked —
+  // picking a chip (selectSlotLocally()) is now a pure UI selection with no
+  // backend call at all (explicit decision: holding on every click let
+  // browsing visitors fight over slots they never intended to book, and
+  // this file no longer polls the grid in the background either — see
+  // handleSlotContinue() below for where the real hold is placed instead,
+  // only at the moment of commitment). Also gated on !placingSlotHold,
+  // which is now only ever true for the short window of Continue's own
+  // hold-placement request — this both blocks a double-submit on Continue
+  // itself and (via the slot-chip click handler's own placingSlotHold
+  // guard) freezes the grid against further picks while that request is
+  // in flight, so a hold can never land for a slot other than the one
+  // Continue was actually clicked for.
   const updateSlotContinueButton = () => {
-    const hasConfirmedHold = Boolean(slotPicker.holdId);
+    const hasSelection = Boolean(slotPicker.selectedSlot) && !placingSlotHold;
     flow.querySelectorAll('[data-kal-slot-continue]').forEach((btn) => {
-      btn.disabled = !hasConfirmedHold;
+      btn.disabled = !hasSelection;
     });
   };
 
-  const buildSlotChip = (slot, isActive) => {
+  const buildSlotChip = (slot, isActive, isOwnHold) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `kal-slot-chip${isActive ? ' kal-slot-chip--active' : ''}`;
     btn.dataset.kalSlotStart = slot.time;
     btn.dataset.kalSlotEnd = slot.endTime;
-    if (!slot.available) btn.disabled = true;
+    // The visitor's own hold (and every other 15-minute candidate it
+    // overlaps, e.g. a 45-minute hold at 09:00 also covers 09:15/09:30 —
+    // see renderSlotPanels's ownHeldSlots handling) comes back from the API
+    // with available:false too. isOwnHold (slot.holdId matches this
+    // visitor's own holdId), not just isActive, must keep the chip enabled
+    // — otherwise every candidate except the exact one clicked reads as
+    // struck-through/dead and the visitor has no way to switch within their
+    // own hold's range, even though doing so is a perfectly normal replace.
+    if (!slot.available && !isOwnHold) btn.disabled = true;
     btn.textContent = formatTime12h(slot.time);
     return btn;
   };
@@ -1507,32 +2142,115 @@ document.addEventListener('DOMContentLoaded', () => {
   // highlighted or recorded as selectedSlot; explicit instruction, since
   // the old auto-selected-first-slot default made it look like a time was
   // already chosen before the visitor had picked anything.
-  const renderSlotPanels = (slots) => {
-    // Only available slots are shown at all — a struck-through, disabled
-    // chip for an already-booked time isn't useful to a visitor choosing
-    // when to come in, it's just noise (and clutter on mobile). The API
-    // still returns unavailable ones (staff-side views need them), this
-    // just filters them out before they ever reach the grid.
-    const availableSlots = slots.filter((slot) => slot.available);
+  // preserveHold: true keeps whatever slotPicker.holdId/heldSlot already is
+  // instead of resetting it — for a refresh that is NOT a real date/
+  // doctor/facility/mode change (arriving/returning at Slot Picker with a
+  // still-valid hold, and the same-date conflict-recovery refresh in
+  // handleSlotContinue's catch block). An actual change still always resets
+  // (see the two refreshSlotsForSelectedDate
+  // call sites below that don't pass this), same as the CMS wizard's
+  // holdSelectionInputs effect. Without this distinction, ANY re-render —
+  // including one that only exists to recover from a conflict on the SAME
+  // date — silently released a hold that was still perfectly valid, since
+  // this function couldn't tell the two cases apart (see
+  // SHOPIFY_HOLD_SWITCHING_PLAN.md's rapid-switch RCA).
+  const renderSlotPanels = (slots, { preserveHold = false, revealBlockedBy = null } = {}) => {
+    // Only available slots are shown at all by default — a struck-through,
+    // disabled chip for an already-booked time isn't useful to a visitor
+    // browsing when to come in, it's just noise (and clutter on mobile).
+    // revealBlockedBy ({ attemptedTime }) punches a narrow, precise hole in
+    // that for one case: the conflict-recovery refresh in
+    // handleSlotContinue's catch block, right after a Continue attempt just
+    // lost a race. Every slot the API returns already carries the real
+    // holdId/appointmentId of whatever occupies it (same field this file
+    // already reads for isOwnHold matching) — so instead of guessing a time
+    // window or diffing against stale render history (both tried and both
+    // wrong: time-window math swept in unrelated pre-existing unavailable
+    // slots that merely happened to overlap; diffing against the last
+    // render went stale the moment a SECOND conflict followed a first one,
+    // since slots already unavailable from the earlier conflict no longer
+    // registered as "newly" lost — reported live, see SHOPIFY_HOLD_
+    // SWITCHING_PLAN.md), this looks up whatever hold/appointment actually
+    // occupies attemptedTime in THIS fresh fetch, then reveals every other
+    // slot sharing that exact same id. That's the real, current, precise
+    // set of candidates blocked by the one specific thing that just beat
+    // this visitor to it — nothing unrelated gets swept in, and it's
+    // self-correcting on every fetch rather than depending on history.
+    // Any other still-unavailable slot stays hidden exactly like it always
+    // does. buildSlotChip already disables any slot.available:false chip
+    // it's handed (except the visitor's own held one, via isOwnHold) — the
+    // only thing hiding the rest was this filter never letting them reach
+    // it.
+    const blockingSlot = revealBlockedBy && slots.find((slot) => slot.time === revealBlockedBy.attemptedTime);
+    const blockingHoldId = blockingSlot && !blockingSlot.available ? blockingSlot.holdId : null;
+    const blockingAppointmentId = blockingSlot && !blockingSlot.available ? blockingSlot.appointmentId : null;
+    const isBlockedBySameConflict = (slot) =>
+      (blockingHoldId && slot.holdId === blockingHoldId) ||
+      (blockingAppointmentId && slot.appointmentId === blockingAppointmentId);
+    let availableSlots = slots.filter((slot) => slot.available || isBlockedBySameConflict(slot));
+
+    // A slot the visitor is actively holding comes back from the API as
+    // available:false too — the endpoint has no notion of "unavailable
+    // because of MY OWN hold" vs. anyone else's, it just reports whether
+    // the time is free. Without this, the arrival-at-Slot-Picker refresh
+    // (goToStep('slot-picker') preserving a hold placed earlier) or the
+    // same-date conflict-recovery refresh (handleSlotContinue's catch
+    // block) would silently drop the visitor's own held chip from the grid
+    // the moment the server echoes it back as held, reading as if the
+    // selection was lost even though the hold is still genuinely active.
+    // slot.holdId on the API response (same AppointmentSlotRecord shape
+    // the CMS wizard's Active View uses) is how we tell "it's mine" apart
+    // from "someone/something else has it" — compare against the hold ID
+    // THIS visitor actually holds, never against selectedSlot/time alone.
+    // IMPORTANT: a hold's duration can span several 15-minute grid candidates
+    // (e.g. a 45-minute hold at 08:15 also overlaps — and so also carries
+    // the same holdId on — the 07:45/08:00/08:30/08:45 candidates). All of
+    // them need to come back into the grid, not just the one actually
+    // clicked: those overlapping candidates are only unavailable because of
+    // THIS visitor's own hold, so they must stay switchable (clicking one
+    // just updates the local selection — see selectSlotLocally() — the
+    // actual replace only happens next time Continue is pressed) instead of
+    // silently disappearing. The exact held time is still tracked
+    // separately (slotPicker.heldSlot) so only that one renders as the
+    // active chip — see isActive below.
+    if (preserveHold && slotPicker.holdId) {
+      const alreadyIncludedTimes = new Set(availableSlots.map((slot) => slot.time));
+      const ownHeldSlots = slots.filter(
+        (slot) => slot.holdId === slotPicker.holdId && !alreadyIncludedTimes.has(slot.time)
+      );
+      if (ownHeldSlots.length) {
+        // Re-sort after inserting — the API returns slots time-ordered
+        // already, but splicing the held ones back in at the end would
+        // otherwise put them after later times within the same period.
+        availableSlots = [...availableSlots, ...ownHeldSlots].sort((a, b) => a.time.localeCompare(b.time));
+      }
+    }
 
     const byPeriod = { morning: [], afternoon: [], evening: [] };
     availableSlots.forEach((slot) => {
       byPeriod[periodForTime(slot.time)].push(slot);
     });
 
-    // Re-rendering this grid (date change, or landing on this step at all —
-    // see goToStep('slot-picker')) always starts from no selection and no
-    // hold, same as the CMS wizard's own releaseActiveHold() firing
-    // whenever date/doctor/facility/mode change (appointment-booking-
-    // wizard.tsx's holdSelectionInputs effect) — any hold that was active
-    // for the previous slot/date is explicitly released here too now (see
-    // releaseSlotHoldViaPartnerApi() below), not just abandoned to expire.
-    const staleHoldId = slotPicker.holdId;
-    slotPicker.selectedSlot = null;
-    slotPicker.holdId = null;
-    slotHoldRequestSequence += 1;
-    if (staleHoldId) void releaseSlotHoldViaPartnerApi(staleHoldId);
-    updateSlotContinueButton();
+    if (!preserveHold) {
+      // Re-rendering this grid for a real date/doctor/facility/mode change
+      // starts from no selection and no hold, same as the CMS wizard's own
+      // releaseActiveHold() firing whenever those inputs change
+      // (appointment-booking-wizard.tsx's holdSelectionInputs effect) — any
+      // hold that was active for the previous slot/date is explicitly
+      // released here too now (see releaseSlotHoldViaPartnerApi() below),
+      // not just abandoned to expire. Landing on this step at all no
+      // longer unconditionally lands here — see goToStep('slot-picker'),
+      // which now preserves a still-valid hold across Back/Continue
+      // instead of always discarding it.
+      const staleHoldId = slotPicker.holdId;
+      slotPicker.selectedSlot = null;
+      slotPicker.holdId = null;
+      slotPicker.heldSlot = null;
+      slotPicker.holdContext = null;
+      slotHoldRequestSequence += 1;
+      if (staleHoldId) void releaseSlotHoldViaPartnerApi(staleHoldId);
+      updateSlotContinueButton();
+    }
 
     const firstAvailable = availableSlots[0] || null;
 
@@ -1541,18 +2259,47 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!panel) return;
       panel.innerHTML = '';
       if (byPeriod[period].length === 0) {
+        // Same amber banner as the "slot just booked" message, so an empty
+        // window reads as a notice rather than plain text. The icon is
+        // copied from that banner's own rendered icon.
         const empty = document.createElement('p');
-        empty.className = 'kal-step-doctor-select__list-empty';
-        empty.textContent = 'No slots in this window.';
+        empty.className = 'kal-slot-conflict-banner kal-slot-conflict-banner--empty';
+        const icon = document.createElement('span');
+        icon.className = 'kal-slot-conflict-banner__icon';
+        icon.innerHTML = flow.querySelector('.kal-slot-conflict-banner__icon')?.innerHTML || '';
+        const text = document.createElement('span');
+        text.setAttribute('data-kal-empty-slots-text', '');
+        text.textContent = 'No slots available in this window.';
+        empty.append(icon, text);
         panel.appendChild(empty);
         return;
       }
       byPeriod[period].forEach((slot) => {
-        panel.appendChild(buildSlotChip(slot, false));
+        // Active highlight tracks heldSlot, not selectedSlot — this render
+        // only ever runs with preserveHold true right after the caller has
+        // synced selectedSlot back to heldSlot anyway (goToStep /
+        // handleSlotContinue's conflict fallback), but reading heldSlot
+        // directly here doesn't depend on that still being true everywhere
+        // this function is ever called from in the future.
+        const isActive =
+          preserveHold && Boolean(slotPicker.heldSlot) && slot.time === slotPicker.heldSlot.start_time;
+        const isOwnHold = preserveHold && Boolean(slotPicker.holdId) && slot.holdId === slotPicker.holdId;
+        panel.appendChild(buildSlotChip(slot, isActive, isOwnHold));
       });
     });
 
-    if (firstAvailable) {
+    // A preserveHold render stays on whichever tab is already showing —
+    // only an actual reset (new date/doctor/mode, no hold to preserve at
+    // all) should jump the visitor to the first available period. This
+    // used to also require slotPicker.selectedSlot to be set, which broke
+    // the conflict-recovery case: a visitor's FIRST-EVER Continue attempt
+    // (no successful hold placed yet) that loses a race to someone else
+    // has no selectedSlot to restore, so that extra check jumped them all
+    // the way to Morning even if they'd been looking at Evening the whole
+    // time — only the hold-restore part of "preserve" should be
+    // conditional on actually having something to restore; staying on the
+    // current tab should not be.
+    if (firstAvailable && !preserveHold) {
       setSlotTab(periodForTime(firstAvailable.time));
     }
   };
@@ -1570,20 +2317,76 @@ document.addEventListener('DOMContentLoaded', () => {
   // changes (day-strip click or calendar pick). Shows a loading state in
   // all three panels while the fetch is in flight so switching dates
   // doesn't leave the previous date's (now-stale) slots on screen.
-  const refreshSlotsForSelectedDate = async () => {
-    ['morning', 'afternoon', 'evening'].forEach((period) => {
-      const panel = flow.querySelector(`.kal-slot-grid[data-kal-slot-panel="${period}"]`);
-      if (panel) setDoctorListEmptyState(panel, 'Loading slots…');
-    });
-    const slots = await fetchSlotsForDate(slotPicker.selectedDate);
-    if (slots === null) {
+  //
+  // useCache: a date the visitor looked at in the last SLOTS_CACHE_TTL_MS is
+  // shown straight from memory (browsing back and forth between dates). Only
+  // date picks ask for this: arrival at Slot Picker and conflict recovery
+  // always want what the server says right now, and the hold itself re-checks
+  // the slot when the visitor presses Continue anyway.
+  const refreshSlotsForSelectedDate = async ({
+    preserveHold = false,
+    revealBlockedBy = null,
+    useCache = false,
+  } = {}) => {
+    const key = slotsKeyFor(slotPicker.selectedDate);
+    if (useCache && !preserveHold && !revealBlockedBy) {
+      const cached = slotsCache.get(key);
+      if (cached && Date.now() - cached.fetchedAt < SLOTS_CACHE_TTL_MS) {
+        // Nothing else may draw over this: drop any request still in flight.
+        slotsRequestSequence += 1;
+        slotsAbortController?.abort();
+        slotGridKey = key;
+        renderSlotPanels(cached.slots, { preserveHold, revealBlockedBy });
+        return;
+      }
+    }
+    slotGridKey = key;
+    // A preserving refresh (arrival at Slot Picker with a still-valid hold,
+    // or same-date conflict recovery) must not blank the grid to "Loading
+    // slots…" first — the visitor's current selection/hold is still valid
+    // and still on screen; same as the CMS wizard's react-query refetch
+    // keeping previous data visible instead of flashing a loading state.
+    if (!preserveHold) {
       ['morning', 'afternoon', 'evening'].forEach((period) => {
         const panel = flow.querySelector(`.kal-slot-grid[data-kal-slot-panel="${period}"]`);
-        if (panel) setDoctorListEmptyState(panel, 'Unable to load slots right now.');
+        if (panel) setDoctorListEmptyState(panel, 'Loading slots…');
       });
+    }
+    // Only the newest request may draw (see slotsRequestSequence): cancel the
+    // previous one, and drop this answer if another request has started since
+    // or the visitor has moved to another date, doctor or mode meanwhile.
+    slotsRequestSequence += 1;
+    const requestId = slotsRequestSequence;
+    slotsAbortController?.abort();
+    slotsAbortController = new AbortController();
+    const requested = {
+      date: toIsoDate(slotPicker.selectedDate),
+      doctorId: selectedDoctorId,
+      mode: slotPicker.mode,
+    };
+    const slots = await fetchSlotsForDate(slotPicker.selectedDate, slotsAbortController.signal);
+    if (
+      slots === undefined ||
+      requestId !== slotsRequestSequence ||
+      requested.date !== toIsoDate(slotPicker.selectedDate) ||
+      requested.doctorId !== selectedDoctorId ||
+      requested.mode !== slotPicker.mode
+    ) {
       return;
     }
-    renderSlotPanels(slots);
+    if (slots === null) {
+      // Not shown, so clicking this date again must try again.
+      slotGridKey = null;
+      if (!preserveHold) {
+        ['morning', 'afternoon', 'evening'].forEach((period) => {
+          const panel = flow.querySelector(`.kal-slot-grid[data-kal-slot-panel="${period}"]`);
+          if (panel) setDoctorListEmptyState(panel, 'Unable to load slots right now.');
+        });
+      }
+      return;
+    }
+    slotsCache.set(key, { slots, fetchedAt: Date.now() });
+    renderSlotPanels(slots, { preserveHold, revealBlockedBy });
   };
 
   // The strip now spans every bookable day (today through +90, the same
@@ -1665,28 +2468,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
   };
 
-  // Eagerly fetching the whole CALENDAR_MAX_FUTURE_DAYS range (or even
-  // DAY_SUMMARY_FETCH_MAX_DAYS) up front turned out to be impractically
-  // slow against the real day-summaries endpoint — a 60-day request
-  // measured at 73.8s live (server logs: 9 sequential batches of
-  // DAY_SUMMARY_CONCURRENCY=7 dates each, every date individually paying
-  // a near-constant ~3.9s tax that server-side timing logs attribute to
-  // Redis lock/cache acquisition retrying against the account's exhausted
-  // Upstash quota — a pre-existing infra issue, not something this chunk
-  // size can fix). An earlier 1-day-vs-7-day timing test looked flat and
-  // suggested a fixed per-request floor, which is what the previous
-  // (wrong) "front-load the max" choice here was based on — that
-  // assumption breaks down once the range spans more than one backend
-  // batch. So the chunk size is kept at exactly one batch
-  // (DAY_SUMMARY_CONCURRENCY) to bound each request to the backend's own
-  // one-batch latency rather than multiplying it by however many batches
-  // a larger chunk would need. Still slow under the current Redis
-  // exhaustion, but bounded instead of taking 70s+ or longer. This
-  // doesn't block or slow down actually picking a time either way:
-  // today's own slot grid loads through the separate, already-existing
-  // refreshSlotsForSelectedDate() call regardless of how much of the
-  // day-strip's badges have finished loading.
-  const DAY_STRIP_CHUNK_DAYS = 7;
+  // The server now reads a doctor's schedule once for the whole range and
+  // works out each day in memory, so a long range costs about the same as a
+  // short one (measured: 7 days ~0.8s, 60 days ~0.8s). The strip is therefore
+  // loaded in the largest pieces the endpoint accepts: days 0-59 on arrival,
+  // days 60-90 in one more request once the visitor scrolls near them -- 2
+  // requests instead of 13. Picking today's time does not wait for the badges:
+  // the slot grid loads through refreshSlotsForSelectedDate() on its own.
+  const DAY_STRIP_CHUNK_DAYS = DAY_SUMMARY_FETCH_MAX_DAYS;
   const DAY_STRIP_INITIAL_FETCH_DAYS = DAY_STRIP_CHUNK_DAYS;
 
   // refreshDayStrip() can legitimately run more than once concurrently —
@@ -1812,7 +2601,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const run = async () => {
         let needsFetch = false;
         for (let offset = chunkStartOffset; offset <= chunkEndOffset; offset += 1) {
-          if (!dayAvailabilityCache.has(toIsoDate(addDays(today, offset)))) {
+          if (!hasFreshDaySummary(toIsoDate(addDays(today, offset)))) {
             needsFetch = true;
             break;
           }
@@ -2005,7 +2794,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const rangeEnd = addDays(todayStart(), CALENDAR_MAX_FUTURE_DAYS);
     const clampedEnd = monthEnd > rangeEnd ? rangeEnd : monthEnd;
     if (rangeStart > clampedEnd) return;
-    await fetchDaySummaries(rangeStart, clampedEnd);
+    // The strip (or an earlier look at this month) has often loaded these days
+    // already: only ask the server when some day is missing or too old.
+    let allFresh = true;
+    for (let day = new Date(rangeStart); day <= clampedEnd; day.setDate(day.getDate() + 1)) {
+      if (!hasFreshDaySummary(toIsoDate(day))) {
+        allFresh = false;
+        break;
+      }
+    }
+    if (!allFresh) await fetchDaySummaries(rangeStart, clampedEnd);
     renderCalendarMonth();
   };
 
@@ -2119,6 +2917,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // date must show it as a real, selected, visible chip, not just change
   // a text label with nothing visibly selected behind it.
   const applyCalendarDateSelection = (date) => {
+    // Picking the date that is already showing (or loading) changes nothing:
+    // no new slot request. The rest below still runs, so a strip chunk that
+    // failed to load for this date is retried.
+    const alreadyShowing = isSameDate(date, slotPicker.selectedDate) && slotGridKey === slotsKeyFor(date);
     slotPicker.selectedDate = date;
 
     // Every date already has a real chip in the strip (see
@@ -2133,7 +2935,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = flow.querySelector('.kal-slot-section__label');
     if (label) label.textContent = 'Choose a Slot';
 
-    refreshSlotsForSelectedDate();
+    if (!alreadyShowing) refreshSlotsForSelectedDate({ useCache: true });
 
     // The picked date (and the rest of its DAY_STRIP_CHUNK_DAYS chunk)
     // may fall beyond whatever the strip has loaded so far — e.g. a
@@ -2301,15 +3103,26 @@ document.addEventListener('DOMContentLoaded', () => {
     setCountryPickerOpen(wrapper, false);
   };
 
-  // Only flags a number as invalid when it's short of the selected
-  // country's required digit count — per explicit instruction, the max
-  // digit count (already enforced by the input's own maxLength/
-  // sanitizePhoneDigits capping what can be typed) and the start-digit
-  // rule (also already enforced while typing) don't need a second,
-  // redundant validation error here on top of that.
+  // Checks the number against the selected country's digit count (min AND max)
+  // and start-digit rule. Typing is already restricted (maxLength /
+  // sanitizePhoneDigits), but that does not cover a number typed under one
+  // country and then kept after switching to another (10 digits typed for
+  // India, then Singapore selected), so the full rule is checked here too, when
+  // Continue is pressed.
   const isValidPhone = (value) => {
     const digits = value.replace(/\D/g, '');
-    return digits.length >= selectedCountry.min;
+    if (digits.length < selectedCountry.min || digits.length > selectedCountry.max) return false;
+    const rule = selectedCountry.start;
+    return !rule || rule.every((allowed, index) => allowed.includes(digits[index]));
+  };
+
+  // What the visitor is told when their number does not fit the selected country.
+  const phoneInvalidMessage = () => {
+    const count =
+      selectedCountry.min === selectedCountry.max
+        ? `${selectedCountry.min}-digit`
+        : `${selectedCountry.min} to ${selectedCountry.max} digit`;
+    return `Enter a valid ${count} mobile number`;
   };
 
   const isValidEmail = (value) => {
@@ -2377,6 +3190,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  // Shown under the phone field when the server says this number is already
+  // linked to two or more patients (see checkPhoneIsBookable below).
+  const PHONE_NOT_BOOKABLE_MESSAGE =
+    'This number is linked to multiple patients. Please use a different number.';
+
+  // Asks the server, when Continue is pressed on Patient Details, whether the
+  // number can be used for an online booking -- so a refusal shows right
+  // there, before the visitor goes on to pay. Resolves true when it can. If
+  // the check itself cannot be answered (network, server), it resolves true
+  // and lets the visitor carry on: Proceed to payment checks the number again
+  // before any money is taken, so nothing is lost by not blocking here.
+  let checkingPhone = false;
+  const checkPhoneIsBookable = async () => {
+    try {
+      const result = await postToPartnerApi(
+        'patients/phone-check',
+        // The name lets a number shared by two patients still be used by one of them.
+        { patientPhone: buildPatientPhone(), patientName: (patientDetails.name || '').trim() || undefined },
+        generateIdempotencyKey(),
+      );
+      return result.canBook !== false;
+    } catch (err) {
+      console.warn('[kal-booking-flow] Could not check the phone number, continuing:', err);
+      return true;
+    }
+  };
+
   // Scrolls the currently visible step's own scroll region so the first
   // invalid field's error is actually in view, rather than just showing
   // a red message somewhere off-screen the visitor has to go hunting
@@ -2420,7 +3260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const phoneDigitsTrimmed = patientDetails.phone.replace(/\D/g, '');
     if (!isValidPhone(patientDetails.phone)) {
-      showFieldError('phone', phoneDigitsTrimmed === '' ? 'Enter phone number' : 'Enter a valid phone number');
+      showFieldError('phone', phoneDigitsTrimmed === '' ? 'Enter phone number' : phoneInvalidMessage());
       allValid = false;
       firstInvalidField = firstInvalidField || 'phone';
     } else {
@@ -2436,7 +3276,7 @@ document.addEventListener('DOMContentLoaded', () => {
       clearFieldError('email');
     }
 
-    if (isExperimentB) {
+    if (shouldShowConcernField()) {
       if (patientDetails.concern.trim() === '') {
         showFieldError('concern', 'Please tell us your concern.');
         allValid = false;
@@ -2451,17 +3291,21 @@ document.addEventListener('DOMContentLoaded', () => {
     return allValid;
   };
 
-  // Shows/hides Patient Details' Concern field per isExperimentB (see
-  // BOOKING EXPERIMENT above) and keeps its state harmless when hidden —
-  // cleared value + cleared error, so switching from B back to A (e.g. the
-  // visitor closes the flow and reopens it via the other CTA) never leaves
-  // a stale concern value sitting in patientDetails or an error showing on
-  // a field they can no longer see.
+  // Shows/hides Patient Details' Concern field per shouldShowConcernField()
+  // (Experiment B always, Experiment A once "Other" is checked — see that
+  // helper's own comment) and keeps its state harmless when hidden —
+  // cleared value + cleared error, so leaving the field hidden again (B
+  // reopened as A, or "Other" unchecked back on Concern Select) never
+  // leaves a stale concern value sitting in patientDetails or an error
+  // showing on a field they can no longer see. Also re-run from
+  // toggleConcern() itself, not just the experiment-open call sites, so
+  // checking/unchecking "Other" updates this live.
   const applyExperimentVisibility = () => {
+    const showConcernField = shouldShowConcernField();
     flow.querySelectorAll('[data-kal-concern-field]').forEach((el) => {
-      el.hidden = !isExperimentB;
+      el.hidden = !showConcernField;
     });
-    if (!isExperimentB) {
+    if (!showConcernField) {
       patientDetails.concern = '';
       flow.querySelectorAll('[data-kal-field="concern"]').forEach((el) => {
         el.value = '';
@@ -2653,6 +3497,35 @@ document.addEventListener('DOMContentLoaded', () => {
     return `kal-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   };
 
+  // Payment-operation idempotency keys, scoped ONLY to the two payment calls
+  // inside collectPayment() below (payments/orders).
+  // Every other generateIdempotencyKey() call site in this file (hold
+  // placement, hold release, appointment submit, therapy request) is
+  // untouched — those are out of scope for this fix.
+  //
+  // A fresh key on every call (plain generateIdempotencyKey()) defeats the
+  // backend's idempotency replay/conflict-guard: retries and concurrent
+  // duplicate submissions of the SAME logical attempt (same hold, same
+  // operation) need to send the SAME key so the backend actually recognizes
+  // them as the same attempt. Keyed off `${holdId}:${operation}` so a
+  // genuinely new hold (new booking attempt) still gets a new key, and
+  // in-memory only is sufficient — no persistence across a hard refresh is
+  // required.
+  const paymentIdempotencyKeys = new Map();
+
+  // `discriminator` (the request body) makes an edited retry for the same hold
+  // a different request with its own key: the backend rejects reusing a key
+  // with a different body.
+  const getPaymentIdempotencyKey = (holdId, operation, discriminator = '') => {
+    const cacheKey = `${holdId}:${operation}:${discriminator}`;
+    let key = paymentIdempotencyKeys.get(cacheKey);
+    if (!key) {
+      key = generateIdempotencyKey();
+      paymentIdempotencyKeys.set(cacheKey, key);
+    }
+    return key;
+  };
+
   // Stored format matches the CMS's own parseStoredPhone() convention
   // (packages/validation/src/phone.schema.ts) — dial code immediately
   // followed by the digits, e.g. "+919876543210".
@@ -2662,15 +3535,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // in the DOM (.kal-concern-row__name) rather than duplicating a
   // key -> label map in JS — Concern Select is the only place those
   // labels are authored (see kal-booking-flow-concern-row.liquid).
+  // "Other" is sent as what the visitor typed under it, not the word "Other".
   const collectSelectedConcernLabels = () =>
     [...concernSelect.selected]
-      .map((key) => flow.querySelector(`[data-kal-concern="${CSS.escape(key)}"] .kal-concern-row__name`)?.textContent?.trim())
+      .map((key) =>
+        key === 'other'
+          ? concernSelect.otherText.trim()
+          : flow.querySelector(`[data-kal-concern="${CSS.escape(key)}"] .kal-concern-row__name`)?.textContent?.trim(),
+      )
       .filter(Boolean);
 
   const showBookingError = (message) => {
     flow.querySelectorAll('[data-kal-booking-error]').forEach((el) => {
       const textEl = el.querySelector('[data-kal-booking-error-text]');
       if (textEl) textEl.textContent = message;
+      el.classList.remove('kal-form-error--progress');
       el.hidden = false;
     });
   };
@@ -2697,36 +3576,196 @@ document.addEventListener('DOMContentLoaded', () => {
   // this file uses. `idempotencyKey` is forwarded by the proxy as the
   // Idempotency-Key header the partner API requires on writes.
   const postToPartnerApi = async (path, body, idempotencyKey) => {
+    const headers = { 'content-type': 'application/json', 'idempotency-key': idempotencyKey };
+    const visitorSessionToken = getStoredVisitorSessionToken();
+    if (visitorSessionToken) headers['x-kal-visitor-session'] = visitorSessionToken;
     const response = await fetch(`${apiBaseUrl}/api/shopify/public/${path}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'idempotency-key': idempotencyKey },
+      headers,
       body: JSON.stringify(body),
     });
+    // Only availability/holds ever actually sends this back (freshly
+    // minted, or just re-confirmed) — harmless no-op read on every other
+    // endpoint, which never sets it.
+    const refreshedToken = response.headers.get('x-kal-visitor-session');
+    if (refreshedToken) storeVisitorSessionToken(refreshedToken);
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.success) {
       const message = data?.message || `HTTP ${response.status}`;
-      throw new Error(message);
+      const error = new Error(message);
+      // Some failures carry a machine-readable code in data.data.code (e.g.
+      // the backend's SLOT_LOST_PAYMENT_CAPTURED response -- see
+      // collectPayment()/submitBooking() below) that callers need to
+      // branch on instead of matching the human message text. Attached as a
+      // plain extra property so every existing catch (err) handler in this
+      // file -- which only ever reads err.message -- keeps working exactly
+      // as before.
+      error.code = data?.data?.code || null;
+      throw error;
+    }
+    return data.data;
+  };
+
+  const getFromPartnerApi = async (path) => {
+    const response = await fetch(`${apiBaseUrl}/api/shopify/public/${path}`);
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.message || `HTTP ${response.status}`);
     }
     return data.data;
   };
 
   // ----------------------------------------------------------------------
-  // SLOT HOLD ON CLICK — same hold-the-instant-you-click-and-release-on-
-  // supersede behavior as the CMS staff-side booking wizard's own
-  // handleSlotSelection()/placeHoldForSlot()/releaseActiveHold()
-  // (apps/web/src/features/appointments/components/appointment-booking-
-  // wizard.tsx), rather than this flow's previous design of only ever
-  // calling availability/holds once, at final "Proceed to Payment". The
-  // partner API now has its own release endpoint too (POST availability/
-  // holds/:holdId/release, added alongside this — see
-  // releaseSlotHoldViaPartnerApi() below), reusing the exact same
-  // AppointmentsService.releaseSlotHold() the staff wizard's DELETE
-  // appointments/slot-holds/:holdId already calls — no new release logic
-  // on the CMS side, just a partner-authenticated route onto it.
+  // RAZORPAY PAYMENT — the amount is never sent from here; the server prices
+  // it from Shopify. POST payments/orders sends the booking details (kept
+  // server-side, not in Razorpay) and creates/reopens a Razorpay order for the
+  // already-placed hold; Razorpay's own Checkout modal collects card/UPI/
+  // netbanking details. Nothing here ever creates the appointment for an
+  // online payment: Razorpay tells our server the order is paid (webhook) and
+  // the server books it. The page only waits, by polling the order's status
+  // (waitForPaidBooking), and only a "confirmed" answer means it counted.
   // ----------------------------------------------------------------------
 
-  const placeHoldForSlot = async (slot) => {
-    const facility = getCurrentFacility();
+  // Resolves with the Razorpay order id once the visitor has paid, or rejects
+  // with a plain Error (message shown via showBookingError, same as every
+  // other booking failure) if they close Checkout without paying. A failed
+  // attempt alone doesn't end it: Checkout stays open for a retry.
+  const collectPayment = (details) => new Promise((resolve, reject) => {
+    if (!window.Razorpay) {
+      reject(new Error('Payment is temporarily unavailable. Please try again in a moment.'));
+      return;
+    }
+    // Razorpay's modal.ondismiss fires not only on a manual close, but
+    // also a moment AFTER a successful payment (the widget's own closing
+    // counts as a "dismiss" from its point of view) — without this guard,
+    // a successful handler() could resolve, start the real booking, and
+    // then a couple seconds later ondismiss still fires, calling
+    // flow.showModal() on an already-open <dialog> (invalid state) and
+    // trying to reject an already-settled promise. Once the real outcome
+    // is decided (success or a close without paying), `settled`
+    // makes every later callback here a no-op instead of re-running any
+    // of this dialog/reject logic.
+    let settled = false;
+    // Reason from the most recent failed attempt inside this Checkout, shown
+    // only if the visitor closes Checkout without a successful payment.
+    let lastPaymentFailure = null;
+    const settle = (fn) => {
+      if (settled) return;
+      settled = true;
+      fn();
+    };
+    postToPartnerApi(
+      'payments/orders',
+      details,
+      getPaymentIdempotencyKey(slotPicker.holdId, 'payment-order', JSON.stringify(details)),
+    )
+      .then((order) => {
+        const rzp = new window.Razorpay({
+          key: order.razorpayKeyId,
+          amount: order.amount,
+          currency: order.currency,
+          order_id: order.razorpayOrderId,
+          name: 'Kerala Ayurveda',
+          description: 'Consultation booking',
+          // Convenience only (fewer fields to type, and the Razorpay
+          // Dashboard record shows who paid) -- never used as booking data.
+          prefill: {
+            name: patientDetails.name.trim(),
+            contact: buildPatientPhone(),
+          },
+          // The server's own Checkout window (it sizes the slot hold from
+          // the same number), so Checkout can't outlive the hold's runway.
+          timeout: order.checkoutTimeoutSeconds,
+          handler: (response) => {
+            // Razorpay doesn't call handler() until AFTER its own
+            // "Payment Successful" screen finishes its ~3s auto-redirect
+            // and closes itself — our dialog was closed (flow.close()
+            // below) for that whole time, so the Shopify storefront was
+            // visible underneath until something reopened it. Reopening
+            // HERE, synchronously, the instant handler() fires — not
+            // after the verify API call below resolves — closes that gap:
+            // the storefront is never visible, because our dialog is back
+            // the moment Razorpay's is gone, regardless of how long
+            // verification takes. Safe to call unconditionally; handler()
+            // only ever fires once per Checkout session.
+            checkoutSuspended = false;
+            flow.showModal();
+            // Nothing from Checkout's callback is sent to the server as proof:
+            // the server learns the payment happened from Razorpay itself
+            // (webhook), so only the order id is needed, to ask how it went.
+            settle(() => resolve(response.razorpay_order_id || order.razorpayOrderId));
+          },
+          modal: {
+            // Visitor closed Checkout without paying — the hold is left
+            // exactly as it was (same "let them retry without losing their
+            // slot" behavior as every other recoverable failure in this
+            // flow), so this is just a plain retry-friendly message, not a
+            // navigation away from Confirmation. Checkout has definitely
+            // closed by the time this fires, so this is also the right
+            // moment to bring our own dialog back — guarded by both
+            // `!flow.open` (handler() above may have already reopened it)
+            // and `settle()` (so a late ondismiss firing after a real
+            // success/failure was already handled above is just ignored).
+            ondismiss: () => {
+              settle(() => {
+                checkoutSuspended = false;
+                if (!flow.open) flow.showModal();
+                reject(new Error(lastPaymentFailure || 'Payment was not completed. Please try again.'));
+              });
+            },
+          },
+        });
+        rzp.on('payment.failed', (resp) => {
+          // A failed attempt is NOT the final outcome: Checkout's own UI
+          // stays open and lets the visitor retry with another method, and
+          // a retry can still succeed. Rejecting here (as this used to)
+          // settled the promise, released the hold, and made handler()
+          // ignore the later successful retry -- money captured, no
+          // booking. So only remember the reason; the outcome is decided
+          // by handler() (paid) or ondismiss (closed without paying), and
+          // ondismiss shows this reason if there was one.
+          lastPaymentFailure = resp?.error?.description || null;
+        });
+        // Native <dialog> content renders in the browser's "top layer",
+        // which sits above EVERYTHING outside that layer regardless of
+        // z-index — including Razorpay's own checkout widget (a plain
+        // fixed-position overlay, not a top-layer element). Closing our
+        // dialog here (not removing anything from the DOM, just exiting
+        // the top layer) is what lets Checkout actually render on top;
+        // every exit path above (success/dismiss/failure-then-dismiss)
+        // calls flow.showModal() to bring Confirmation back once
+        // Checkout is done with the screen.
+        checkoutSuspended = true;
+        flow.close();
+        rzp.open();
+      })
+      .catch((err) => reject(err));
+  });
+
+  // ----------------------------------------------------------------------
+  // SLOT HOLD ON CONTINUE — deliberately NOT the CMS staff wizard's
+  // hold-the-instant-you-click pattern. On the public Shopify storefront,
+  // every visitor is anonymous and many of them are just browsing —
+  // holding on every click meant a visitor who never intended to book
+  // could still force real holds (and real releases) against the advisory
+  // lock for every slot they glanced at, fighting other visitors over
+  // slots nobody was actually committing to. The real hold now only gets
+  // placed once, at the moment the visitor actually presses Continue (see
+  // handleSlotContinue() below) — picking a chip beforehand
+  // (selectSlotLocally()) is a pure UI selection with no backend call.
+  // This also removes the need for background polling (see
+  // slotHoldRequestSequence's own comment above): the grid only has to be
+  // fresh at that one commit moment, not continuously.
+  // The partner API still has its own release endpoint (POST
+  // availability/holds/:holdId/release — see releaseSlotHoldViaPartnerApi()
+  // below), reusing the exact same AppointmentsService.releaseSlotHold()
+  // the staff wizard's DELETE appointments/slot-holds/:holdId already
+  // calls — no new release logic on the CMS side, just a
+  // partner-authenticated route onto it.
+  // ----------------------------------------------------------------------
+
+  const placeHoldForSlot = async (slot, replacingHoldId) => {
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId) {
       throw new Error('Missing clinic or doctor selection. Please go back and pick again.');
     }
@@ -2740,9 +3779,16 @@ document.addEventListener('DOMContentLoaded', () => {
         appointmentTime: slot.start_time,
         durationMinutes: CONSULT_DURATION_MINUTES,
         mode,
+        // The hold this request is switching away from, if any — lets the
+        // backend exclude it from the conflict check when it's genuinely
+        // this same visitor's own still-active hold (proven server-side via
+        // the visitor-session header postToPartnerApi already sends, not by
+        // this field alone). See SHOPIFY_HOLD_SWITCHING_PLAN.md.
+        replacingHoldId: replacingHoldId || undefined,
       },
       generateIdempotencyKey(),
     );
+    slotsCache.clear();
     return hold.holdId;
   };
 
@@ -2753,6 +3799,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // worker, exactly as every hold already did before this existed. Never
   // thrown to the caller — callers fire this with `void` and move on.
   const releaseSlotHoldViaPartnerApi = async (holdId) => {
+    slotsCache.clear();
     try {
       await postToPartnerApi(`availability/holds/${holdId}/release`, {}, generateIdempotencyKey());
     } catch (err) {
@@ -2760,59 +3807,126 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Mirrors the CMS wizard's handleSlotSelection(): reflects the click
-  // immediately (selectedSlot + active chip), places the real hold, and
-  // only then enables Continue (see updateSlotContinueButton(), gated on
-  // holdId not selectedSlot). slotHoldRequestSequence guards against a
-  // slower earlier click's response landing after a faster later one's —
-  // same pattern as the CMS wizard's holdRequestSequence ref. Two release
-  // cases, same as the CMS wizard: if this click's own hold resolves
-  // after an even-newer click already won, release the one THIS call just
-  // placed (it's the stale one now); otherwise adopt it and release
-  // whatever hold was active before this click, if any.
-  const handleSlotSelection = async (slotChipTrigger) => {
+  // Pure local selection — no backend call. Updates selectedSlot (the
+  // visitor's current UI pick) and the active chip highlight only; holdId/
+  // heldSlot are untouched here and only ever change in
+  // handleSlotContinue() below. Guarded against firing while a Continue
+  // click's own hold request is in flight (placingSlotHold) — that window
+  // is now brief and rare (only right after pressing Continue), but a
+  // chip clicked mid-flight must not silently redirect where that
+  // in-flight hold ends up landing relative to what's now on screen.
+  const selectSlotLocally = (slotChipTrigger) => {
+    if (placingSlotHold) return;
     const slot = {
       start_time: slotChipTrigger.dataset.kalSlotStart,
       end_time: slotChipTrigger.dataset.kalSlotEnd,
     };
+    if (slotPicker.selectedSlot?.start_time === slot.start_time) return;
 
-    if (placingSlotHold && slotPicker.selectedSlot?.start_time === slot.start_time) return;
-    if (slotPicker.holdId && slotPicker.selectedSlot?.start_time === slot.start_time) return;
-
-    const previousHoldId = slotPicker.holdId;
-    const requestId = ++slotHoldRequestSequence;
     clearBookingError();
     slotPicker.selectedSlot = slot;
-    slotPicker.holdId = null;
     flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
       chip.classList.toggle('kal-slot-chip--active', chip.dataset.kalSlotStart === slot.start_time);
     });
     updateSlotContinueButton();
+  };
+
+  // Slot Picker's real Continue handler (data-kal-slot-continue — excluded
+  // from the generic data-kal-goto delegation below, same precedent as
+  // data-kal-patient-continue/data-kal-confirm-booking, since this must
+  // only navigate after a real hold succeeds, not unconditionally).
+  // Places/replaces the hold for whatever's currently selected, same
+  // release-on-supersede behavior the old click-time version had, just
+  // moved to fire once here instead of on every chip click.
+  const handleSlotContinue = async () => {
+    if (placingSlotHold) return;
+    const slot = slotPicker.selectedSlot;
+    if (!slot) return;
+
+    // Already holding exactly this slot — e.g. the visitor came back via
+    // Back without changing their pick (goToStep('slot-picker') already
+    // re-synced selectedSlot to heldSlot in that case). Nothing to place
+    // or replace; just proceed.
+    if (
+      slotPicker.holdId &&
+      slotPicker.heldSlot?.start_time === slot.start_time &&
+      slotPicker.holdContext?.doctorId === selectedDoctorId &&
+      slotPicker.holdContext?.mode === slotPicker.mode
+    ) {
+      goToStep('patient-details');
+      return;
+    }
+
+    const previousHoldId = slotPicker.holdId;
+    const previousHeldSlot = slotPicker.heldSlot;
+    const requestId = ++slotHoldRequestSequence;
+    clearBookingError();
     placingSlotHold = true;
+    updateSlotContinueButton();
 
     try {
-      const holdId = await placeHoldForSlot(slot);
+      const holdId = await placeHoldForSlot(slot, previousHoldId);
       if (requestId !== slotHoldRequestSequence) {
-        // A newer click already took over while this hold was in flight —
-        // this one is now orphaned, release it rather than leave it.
+        // A newer Continue click already took over while this one was in
+        // flight — this hold is now orphaned, release it rather than leave it.
         void releaseSlotHoldViaPartnerApi(holdId);
         return;
       }
       slotPicker.holdId = holdId;
+      slotPicker.heldSlot = slot;
+      // facility isn't tracked here — nothing in this flow lets a visitor
+      // change clinic once Slot Picker is reachable (it's fixed by
+      // whichever card/CTA opened the modal), so doctor + mode are the only
+      // inputs that can actually change out from under a still-active hold.
+      slotPicker.holdContext = { doctorId: selectedDoctorId, mode: slotPicker.mode };
       if (previousHoldId && previousHoldId !== holdId) {
         void releaseSlotHoldViaPartnerApi(previousHoldId);
       }
+      goToStep('patient-details');
     } catch (err) {
       if (requestId === slotHoldRequestSequence) {
-        slotPicker.selectedSlot = null;
+        // Someone else took this slot (or another conflict happened) in the
+        // time since the grid was last fetched (there's no background
+        // polling now — see SLOT HOLD ON CONTINUE above). Fall back to
+        // whatever's actually still held, if anything, rather than leaving
+        // the visitor on a dead selection with no obvious next step.
+        // previousHoldId/previousHeldSlot were never touched above, so if
+        // still valid they restore a fully consistent state.
+        slotPicker.selectedSlot = previousHeldSlot;
         flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
-          chip.classList.remove('kal-slot-chip--active');
+          chip.classList.toggle(
+            'kal-slot-chip--active',
+            Boolean(previousHeldSlot) && chip.dataset.kalSlotStart === previousHeldSlot.start_time,
+          );
         });
-        showBookingError(
-          err instanceof Error && err.message && !err.message.startsWith('HTTP')
-            ? err.message
-            : 'Unable to reserve that slot right now. Please try another.',
-        );
+        // Always this fixed copy, never the server's raw message (e.g.
+        // "The selected slot is unavailable") — explicit text from the
+        // Figma spec for this banner, not something that should drift
+        // depending on which backend message happened to come back.
+        showBookingError('That slot was just booked. Please choose another time.');
+        // Re-fetch once, revealing every other slot blocked by the exact
+        // same hold/appointment that just blocked this attempt (see
+        // renderSlotPanels's revealBlockedBy param — it looks up
+        // slot.start_time's real holdId/appointmentId in the fresh fetch
+        // itself, no history or time-math needed). Left showing (no
+        // auto-clear) until the visitor actually picks a different slot —
+        // see clearBookingError() in selectSlotLocally() above.
+        // preserveHold:true always (same as the old click-time version):
+        // when there IS a still-valid prior hold, this is a same-date
+        // recovery that must not wipe it; when there wasn't one (first-ever
+        // Continue attempt), holdId is still null, so renderSlotPanels's
+        // own preserveHold-gated branches both no-op correctly on their own
+        // — nothing to reinject, nothing to reset that wasn't already reset
+        // above. Deliberately NOT awaited — a full (non-preserving) refresh
+        // would bump slotHoldRequestSequence itself (see renderSlotPanels),
+        // which would make this requestId stop matching before the finally
+        // block below gets to run; this path always uses preserveHold:true
+        // so that never happens, but staying fire-and-forget keeps that
+        // invariant from being load-bearing.
+        void refreshSlotsForSelectedDate({
+          preserveHold: true,
+          revealBlockedBy: { attemptedTime: slot.start_time },
+        });
       }
     } finally {
       if (requestId === slotHoldRequestSequence) {
@@ -2820,6 +3934,50 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSlotContinueButton();
       }
     }
+  };
+
+  // Check often at first, when the booking usually lands within a few seconds,
+  // then ease off so a slow confirmation does not hammer the server.
+  const PAID_BOOKING_FAST_POLL_INTERVAL_MS = 500;
+  const PAID_BOOKING_FAST_POLL_WINDOW_MS = 5 * 1000;
+  const PAID_BOOKING_POLL_INTERVAL_MS = 1500;
+  // How long to wait for the server to finish booking a paid order before
+  // telling the visitor it is still being confirmed. Razorpay normally tells
+  // the server within seconds; the booking itself then takes several more.
+  const PAID_BOOKING_WAIT_MS = 90 * 1000;
+
+  // Polls the paid order's status until the server has booked it. Resolves
+  // with the appointment summary; rejects with an Error carrying the server's
+  // code when the booking could not be completed (the payment was still
+  // received), or BOOKING_CONFIRMATION_PENDING when it is just taking long.
+  // A single failed poll (network blip, rate limit) is not the end: keep going.
+  const waitForPaidBooking = async (razorpayOrderId) => {
+    const startedAt = Date.now();
+    const deadline = startedAt + PAID_BOOKING_WAIT_MS;
+    while (Date.now() < deadline) {
+      try {
+        const status = await getFromPartnerApi(`payments/orders/${encodeURIComponent(razorpayOrderId)}/status`);
+        if (status.status === 'confirmed') return status.appointment;
+        if (status.status === 'failed') {
+          const error = new Error(status.message);
+          error.code = status.code;
+          throw error;
+        }
+      } catch (err) {
+        if (err && err.code) throw err;
+        console.error('[kal-booking-flow] Booking status check failed, will retry:', err);
+      }
+      const interval =
+        Date.now() - startedAt < PAID_BOOKING_FAST_POLL_WINDOW_MS
+          ? PAID_BOOKING_FAST_POLL_INTERVAL_MS
+          : PAID_BOOKING_POLL_INTERVAL_MS;
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
+    const pending = new Error(
+      'Your payment was received and we are still confirming your booking. Please wait a moment and try again. Do not pay again.',
+    );
+    pending.code = 'BOOKING_CONFIRMATION_PENDING';
+    throw pending;
   };
 
   // Set once createAppointment succeeds — nothing in this build reads it
@@ -2831,7 +3989,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBooking = async () => {
     clearBookingError();
 
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId || !slotPicker.selectedSlot || !slotPicker.holdId) {
       showBookingError('Missing clinic, doctor, or slot selection. Please go back and pick again.');
       return;
@@ -2845,48 +4003,127 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    setBookingButtonsBusy(true);
-    try {
-      const mode = slotPicker.mode === 'video' ? 'online' : 'offline';
-      const appointmentDate = toIsoDate(slotPicker.selectedDate);
-      const appointmentTime = slotPicker.selectedSlot.start_time;
+    // Read fresh at submit time -- there's no stored JS variable for the
+    // selected payment card, only the CSS class setPaymentMethod() toggles.
+    // Video Consult's fee card (kal-payment-fee-card) is a non-interactive
+    // info card with no data-kal-payment-method of its own, so it never
+    // matches this selector -- video's online-payment requirement comes
+    // entirely from slotPicker.mode below, never from reading this card.
+    const selectedPaymentMethod = flow.querySelector('[data-kal-payment-method].kal-payment-option--selected')
+      ?.dataset.kalPaymentMethod;
+    const requiresOnlinePayment = selectedPaymentMethod === 'pay-now' || slotPicker.mode === 'video';
 
-      // The hold was already placed the instant the slot was clicked (see
-      // handleSlotSelection() above) — reused here rather than placing a
-      // second one, matching the CMS wizard's own one-hold-per-selection
-      // model instead of this flow's previous hold-right-before-booking.
+    setBookingButtonsBusy(true);
+    // Paying online: the popup stays open until the booking is confirmed (or
+    // the wait gives up), so the visitor cannot release the slot they paid for.
+    // Only the call that blocked it unblocks it, so a repeated click cannot.
+    const blockedClose = requiresOnlinePayment && !closeBlocked;
+    if (blockedClose) setCloseBlocked(true);
+    try {
+      // The hold was already placed when Continue was pressed on Slot
+      // Picker (see handleSlotContinue() above) — reused here rather than
+      // placing a second one.
       const concerns = collectSelectedConcernLabels();
-      const appointment = await postToPartnerApi(
-        'appointments',
-        {
-          holdId: slotPicker.holdId,
-          facilityId: facility.id,
-          doctorStaffId: selectedDoctorId,
-          appointmentDate,
-          appointmentTime,
-          durationMinutes: CONSULT_DURATION_MINUTES,
-          mode,
-          patientName: patientDetails.name.trim(),
-          patientPhone: buildPatientPhone(),
-          patientGender: patientDetails.gender || null,
-          patientEmail: patientDetails.email.trim() || null,
-          concerns: concerns.length ? concerns : undefined,
-          notes: isExperimentB && patientDetails.concern.trim() ? patientDetails.concern.trim() : null,
-        },
-        generateIdempotencyKey(),
-      );
+      const details = {
+        holdId: slotPicker.holdId,
+        facilityId: facility.id,
+        doctorStaffId: selectedDoctorId,
+        appointmentDate: toIsoDate(slotPicker.selectedDate),
+        appointmentTime: slotPicker.selectedSlot.start_time,
+        durationMinutes: CONSULT_DURATION_MINUTES,
+        mode: slotPicker.mode === 'video' ? 'online' : 'offline',
+        patientName: patientDetails.name.trim(),
+        patientPhone: buildPatientPhone(),
+        patientGender: patientDetails.gender || null,
+        patientEmail: patientDetails.email.trim() || null,
+        concerns: concerns.length ? concerns : undefined,
+        notes: shouldShowConcernField() && patientDetails.concern.trim() ? patientDetails.concern.trim() : null,
+      };
+
+      let appointment;
+      if (requiresOnlinePayment) {
+        // Pay online: the details go to the server with the order, Checkout
+        // takes the payment, and the server books it when Razorpay reports
+        // the order paid. This page never creates the appointment, it waits.
+        if (!(paidOrder && paidOrder.holdId === slotPicker.holdId)) {
+          if (placingPayment) return;
+          placingPayment = true;
+          try {
+            const razorpayOrderId = await collectPayment(details);
+            paidOrder = { holdId: slotPicker.holdId, razorpayOrderId };
+          } finally {
+            placingPayment = false;
+          }
+        }
+        appointment = await waitForPaidBooking(paidOrder.razorpayOrderId);
+      } else {
+        // Pay at clinic: nothing to pay, the appointment is created right here.
+        appointment = await postToPartnerApi('appointments', details, generateIdempotencyKey());
+      }
 
       lastBookingResult = appointment;
+      paidOrder = null;
+      // The hold is now a real, confirmed appointment server-side — not
+      // "still open" anymore. Without clearing it here, data-kal-close's
+      // handler (if (slotPicker.holdId) openLeaveBookingModal()) kept
+      // showing the "Leave booking? Your progress will be lost"
+      // confirmation even on THIS success screen, where there's no
+      // progress left to lose; worse, clicking its "Leave booking"
+      // button would then try to release a hold that's already been
+      // consumed into the booking it just made. Mirrors the cleanup the
+      // SLOT_LOST_PAYMENT_CAPTURED failure branch below already does for the
+      // same reason, just on the success path instead.
+      slotPicker.holdId = null;
+      slotPicker.heldSlot = null;
+      slotPicker.holdContext = null;
       goToStep('booking-confirmed');
     } catch (err) {
       console.error('[kal-booking-flow] Booking failed:', err);
+      // The number was fine when Continue checked it on Patient Details but
+      // has since been linked to a second patient. It is the number that is
+      // wrong, not the slot, so keep the hold and send the visitor back to
+      // fix it there, instead of releasing the slot and starting over.
+      if (err && err.code === 'PATIENT_PHONE_AMBIGUOUS') {
+        goToStep('patient-details');
+        showFieldError('phone', PHONE_NOT_BOOKABLE_MESSAGE);
+        scrollToFieldError('phone');
+        return;
+      }
       showBookingError(
         err instanceof Error && err.message && !err.message.startsWith('HTTP')
           ? err.message
           : 'Unable to complete your booking right now. Please try again.',
       );
-      // The hold was already placed before this call (handleSlotSelection()
-      // above, at slot-click time) — if creating the appointment itself
+      // SLOT_LOST_PAYMENT_CAPTURED: the backend already tried to
+      // re-establish this exact slot (it was gone) but the payment was
+      // captured -- nothing is refunded automatically, support resolves it.
+      // The hold itself no longer exists server-side by this point, so
+      // there's nothing meaningful left to release, unlike the plain
+      // hold-expiry case below. err.message is already the visitor-facing
+      // copy from the backend (partner-booking.use-cases.ts), shown above
+      // via showBookingError.
+      if (err && err.code === 'SLOT_LOST_PAYMENT_CAPTURED') {
+        paidOrder = null;
+        slotPicker.holdId = null;
+        slotPicker.heldSlot = null;
+        slotPicker.holdContext = null;
+        slotPicker.selectedSlot = null;
+        flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
+          chip.classList.remove('kal-slot-chip--active');
+        });
+        updateSlotContinueButton();
+        goToStep('slot-picker');
+        return;
+      }
+      // The visitor has already paid (Checkout succeeded). Do NOT release the
+      // hold or send them back to pick a slot: the error above explains the
+      // situation, and a retry keeps waiting for this same paid order (no
+      // second charge).
+      if (paidOrder && paidOrder.holdId === slotPicker.holdId) {
+        return;
+      }
+      // The hold was already placed before this call (handleSlotContinue()
+      // above, on Slot Picker's Continue) — if creating the appointment itself
       // failed, no appointment exists to protect, so release it rather
       // than leave the visitor's own in-progress hold sitting there for
       // its full TTL. Best-effort, same fallback as every other release
@@ -2898,6 +4135,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const failedHoldId = slotPicker.holdId;
       if (failedHoldId) {
         slotPicker.holdId = null;
+        slotPicker.heldSlot = null;
+        slotPicker.holdContext = null;
         slotPicker.selectedSlot = null;
         flow.querySelectorAll('[data-kal-slot-periods] .kal-slot-chip').forEach((chip) => {
           chip.classList.remove('kal-slot-chip--active');
@@ -2915,6 +4154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } finally {
       setBookingButtonsBusy(false);
+      if (blockedClose) setCloseBlocked(false);
     }
   };
 
@@ -2934,7 +4174,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitTherapyRequest = async () => {
     clearBookingError();
 
-    const facility = getCurrentFacility();
+    const facility = await getCurrentFacility();
     const therapies = Array.from(therapyDropdownSelect.selected, (key) => {
       const option = THERAPY_OPTIONS.find((o) => o.key === key);
       return option ? option.name : null;
@@ -3011,12 +4251,15 @@ document.addEventListener('DOMContentLoaded', () => {
       // without this, submitBooking() would still send that stale
       // selection as `concerns`, getting prefixed onto this booking's own
       // typed Concern field server-side ("Concerns: ...\n<typed text>").
-      concernSelect.selected.clear();
+      // Cleared through clearConcernSelection() so the row highlights and
+      // Continue are reset with it, not left showing the old selection.
+      clearConcernSelection();
       applyExperimentVisibility();
       applyExperimentStepNumbering();
       openFlow();
-      if (doctorId) selectDoctorById(doctorId);
-      goToStep('slot-picker');
+      (doctorId ? selectDoctorById(doctorId) : Promise.resolve(false))
+        .catch((err) => console.error('[kal-booking-flow] Could not select the doctor:', err))
+        .then(() => goToStep('slot-picker'));
     }
 
     // Facility selection, from the separate "Find a Clinic" page — see
@@ -3024,12 +4267,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // dialog itself is rendered sitewide via layout/theme.liquid), so it
     // works on the clinic-list page even though that page has no other
     // connection to the booking flow's own markup.
+    //
+    // No matching step here — renderClinicList() (also in this file)
+    // builds every clinic-list card from the Shopify Clinic entries, so
+    // data-facility-id is already that entry's facility_id (the CMS clinic
+    // id). The flow is: one card per Clinic entry, each carrying its own id
+    // -> a click reads that id straight off the card it came from. A clinic's
+    // display name can change in Shopify at any time without this ever
+    // pointing at the wrong clinic, since the id was never re-derived from
+    // the name in the first place.
     const facilityTrigger = e.target.closest('[data-kal-select-facility]');
     if (facilityTrigger) {
+      const facilityId = facilityTrigger.dataset.facilityId;
+      if (!facilityId) {
+        console.error('[kal-booking-flow] Clinic card is missing its facility id.');
+        return;
+      }
       storeFacility({
-        id: facilityTrigger.dataset.facilityId,
+        id: facilityId,
         name: facilityTrigger.dataset.locationName,
-        address: facilityTrigger.dataset.clinicAddress,
+        address: facilityTrigger.dataset.clinicAddress || null,
       });
       isExperimentB = false;
       applyExperimentVisibility();
@@ -3038,7 +4295,19 @@ document.addEventListener('DOMContentLoaded', () => {
       goToStep('entry');
     }
     if (e.target.closest('[data-kal-close]')) {
-      closeFlow();
+      // An active hold would otherwise just be dropped on the floor by
+      // closeFlow() — ask first instead of closing straight away. Nothing
+      // to lose if no hold is active yet (e.g. closing from Entry/Concern
+      // Select/Doctor Select), so requestClose() skips the confirmation there.
+      requestClose();
+    }
+
+    if (e.target.closest('[data-kal-leave-booking-dismiss]')) {
+      closeLeaveBookingModal();
+    }
+
+    if (e.target.closest('[data-kal-leave-booking-confirm]')) {
+      confirmLeaveBooking();
     }
 
     // Concern Select's floating scroll hint (mobile only, see that
@@ -3060,12 +4329,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // is never disabled (always clickable, errors shown on click instead —
     // see validatePatientDetailsAndShowErrors), this generic handler would
     // otherwise navigate unconditionally on every click, before validation
-    // ever got a say. Also excludes data-kal-confirm-booking — see its own
-    // dedicated handler below (BOOKING SUBMISSION) for why: it must only
-    // navigate after a real hold+appointment succeed, not unconditionally.
-    const gotoTrigger = e.target.closest('[data-kal-goto]:not([data-kal-patient-continue]):not([data-kal-confirm-booking])');
+    // ever got a say. Also excludes data-kal-confirm-booking (own handler
+    // below, BOOKING SUBMISSION) and data-kal-slot-continue (own handler
+    // below, handleSlotContinue()) — both must only navigate after a real
+    // hold (+appointment, for the former) succeeds, not unconditionally.
+    const gotoTrigger = e.target.closest(
+      '[data-kal-goto]:not([data-kal-patient-continue]):not([data-kal-confirm-booking]):not([data-kal-slot-continue]):not([data-kal-concern-continue])',
+    );
     if (gotoTrigger) {
       goToStep(gotoTrigger.dataset.kalGoto);
+    }
+
+    // Concern Select's Continue — "Other" needs its text first (own handler,
+    // not the plain data-kal-goto above, for the same reason as Patient
+    // Details' Continue).
+    const concernContinueTrigger = e.target.closest('[data-kal-concern-continue]:not(:disabled)');
+    if (concernContinueTrigger) {
+      if (otherConcernIsMissing()) {
+        showOtherConcernError();
+        flow.querySelector('[data-kal-other-concern]')?.focus();
+      } else {
+        goToStep(concernContinueTrigger.dataset.kalGoto);
+      }
+    }
+
+    // Slot Picker's Continue — places/replaces the real hold for whatever's
+    // currently selected and only navigates once that succeeds (see
+    // handleSlotContinue() above for why this moved off the per-click
+    // handler).
+    const slotContinueTrigger = e.target.closest('[data-kal-slot-continue]:not(:disabled)');
+    if (slotContinueTrigger) {
+      void handleSlotContinue();
     }
 
     // Confirmation's "Proceed to Payment"/"Continue" — runs the real
@@ -3090,8 +4384,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (validatePatientDetailsAndShowErrors()) {
         if (patientContinueTrigger.hasAttribute('data-kal-submit-therapy')) {
           submitTherapyRequest();
-        } else {
-          goToStep(patientContinueTrigger.dataset.kalGoto || 'confirmation');
+        } else if (!checkingPhone) {
+          // Consultation: the number is checked first, and the visitor stays
+          // on this page with an error under the field if it cannot be used.
+          checkingPhone = true;
+          patientContinueTrigger.disabled = true;
+          void checkPhoneIsBookable()
+            .then((canBook) => {
+              if (canBook) {
+                goToStep(patientContinueTrigger.dataset.kalGoto || 'confirmation');
+              } else {
+                showFieldError('phone', PHONE_NOT_BOOKABLE_MESSAGE);
+                scrollToFieldError('phone');
+              }
+            })
+            .finally(() => {
+              checkingPhone = false;
+              patientContinueTrigger.disabled = false;
+            });
         }
       }
     }
@@ -3191,7 +4501,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const slotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');
     if (slotChipTrigger && slotChipTrigger.dataset.kalSlotStart) {
-      void handleSlotSelection(slotChipTrigger);
+      selectSlotLocally(slotChipTrigger);
     }
 
     const slotTabTrigger = e.target.closest('[data-kal-slot-tab]');
@@ -3281,6 +4591,16 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollRegion.addEventListener('scroll', () => updateScrollHintVisibility(scrollRegion, hintButton));
   });
   window.addEventListener('resize', updateAllScrollHints);
+
+  // The "Other" concern text box on Concern Select.
+  document.addEventListener('input', (e) => {
+    const box = e.target.closest('[data-kal-other-concern]');
+    if (!box) return;
+    concernSelect.otherText = box.value;
+    growOtherConcernInput(box);
+    updateOtherConcernCount();
+    if (box.value.trim()) clearOtherConcernError();
+  });
 
   // Patient Details form fields — delegated the same way as clicks, so this
   // keeps working once a desktop composition duplicates these inputs.

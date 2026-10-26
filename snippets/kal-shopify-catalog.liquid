@@ -1,0 +1,89 @@
+{%- comment -%}
+  The clinics and doctors the booking flow shows, straight from Shopify, with
+  no request to the CMS: shop.metaobjects.clinic (Clinic entries) and
+  shop.metaobjects.doctor (Doctor entries) rendered into the page as JSON
+  for kal-booking-flow.js to read (getShopifyCatalog()).
+
+  Clinic entry:  facility_id (the CMS clinic id), name, address, city, timings.
+  Doctor entry:  doctor_id (the CMS staff id), name, photo, qualification,
+                 specialization (list), experience, languages (list), bio,
+                 clinics (list of Clinic entries: where the doctor is offered)
+                 and consultation_product (Product reference: the doctor's
+                 consultation product).
+
+  Prices come from that product's variants. Each variant is one clinic and one
+  mode: option "Mode" is "In-Clinic" or "Online", the metafield
+  custom.facility_id is the clinic id, the variant price is the fee, and the
+  optional custom.pay_now_discount_percent is the In-Clinic pay-now discount.
+  variant.price is in the smallest currency unit (paise for INR).
+
+  variant.price is the price Shopify shows shoppers, so it equals the price
+  saved on the variant only while Shopify adds nothing to it. Tax charged on
+  the variant makes Shopify show the price with tax added (a 9% tax showed
+  ₹545 for a ₹500 variant), so "Charge tax" must stay off on these variants.
+
+  Liquid can only read a product that is published to the Online Store
+  channel, so a doctor whose consultation_product is unset or unpublished has
+  an empty list here (the card then shows no price).
+{%- endcomment -%}
+<script type="application/json" id="kal-shopify-catalog">
+{
+  "currency": {{ shop.currency | json }},
+  "clinics": [
+    {%- for clinic in shop.metaobjects.clinic.values -%}
+    {
+      "id": {{ clinic.facility_id.value | json }},
+      "name": {{ clinic.name.value | json }},
+      "address": {{ clinic.address.value | json }},
+      "city": {{ clinic.city.value | json }},
+      "timings": {{ clinic.timings.value | json }}
+    }{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  ],
+  "doctors": [
+    {%- for doctor in shop.metaobjects.doctor.values -%}
+    {
+      "id": {{ doctor.doctor_id.value | json }},
+      "name": {{ doctor.name.value | json }},
+      "qualification": {{ doctor.qualification.value | json }},
+      "specialization": {{ doctor.specialization.value | json }},
+      "experience": {{ doctor.experience.value | json }},
+      "languages": {{ doctor.languages.value | json }},
+      "bio": {{ doctor.bio.value | json }},
+      {%- if doctor.photo.value != blank %}
+      "photoUrl": {{ doctor.photo.value | image_url: width: 400 | json }},
+      {%- else %}
+      "photoUrl": null,
+      {%- endif %}
+      "clinicIds": [
+        {%- for clinic in doctor.clinics.value -%}
+        {{ clinic.facility_id.value | json }}{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ],
+      "pricing": [
+        {%- assign consultation_product = doctor.consultation_product.value -%}
+        {%- if consultation_product != blank -%}
+          {%- assign mode_index = -1 -%}
+          {%- for option_name in consultation_product.options -%}
+            {%- assign option_name_lower = option_name | downcase -%}
+            {%- if option_name_lower == 'mode' -%}
+              {%- assign mode_index = forloop.index0 -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if mode_index >= 0 -%}
+            {%- for variant in consultation_product.variants -%}
+            {
+              "facilityId": {{ variant.metafields.custom.facility_id.value | json }},
+              "mode": {{ variant.options[mode_index] | json }},
+              "pricePaise": {{ variant.price }},
+              "payNowDiscountPercent": {{ variant.metafields.custom.pay_now_discount_percent.value | default: 0 | json }}
+            }{% unless forloop.last %},{% endunless %}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endif -%}
+      ]
+    }{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  ]
+}
+</script>
