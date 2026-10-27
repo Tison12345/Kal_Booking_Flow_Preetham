@@ -3844,12 +3844,26 @@ document.addEventListener('DOMContentLoaded', () => {
             // verification takes. Safe to call unconditionally; handler()
             // only ever fires once per Checkout session.
             checkoutSuspended = false;
-            const modalContainer = flow.querySelector('.kal-booking-flow__content');
-            if (modalContainer) {
-              modalContainer.innerHTML = '<div class="spinner">Verifying payment...</div>'; 
-            }
+            const overlay = document.createElement('div');
+            overlay.id = 'temp-payment-spinner';
+            overlay.style.cssText = `
+              position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+              background: #ffffff; display: flex; justify-content: center;
+              align-items: center; z-index: 9999;
+            `;
+            overlay.innerHTML = '<span>Verifying payment...</span>';
             
-            // 2. Now reopen the dialog safely
+            flow.appendChild(overlay);
+
+            // 2. Create an observer to watch for the parent app updating the UI
+            const observer = new MutationObserver(() => {
+              // The moment the parent app renders the confirmation screen, remove the overlay
+              overlay.remove();
+              observer.disconnect(); // Stop watching to save memory
+            });
+
+            // Start watching the dialog for added/removed elements or text changes
+            observer.observe(flow, { childList: true, subtree: true });
             flow.showModal();
             // Nothing from Checkout's callback is sent to the server as proof:
             // the server learns the payment happened from Razorpay itself
