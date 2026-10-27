@@ -3844,6 +3844,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // verification takes. Safe to call unconditionally; handler()
             // only ever fires once per Checkout session.
             checkoutSuspended = false;
+            const modalContainer = flow.querySelector('.kal-booking-flow__content');
+            if (modalContainer) {
+              modalContainer.innerHTML = '<div class="spinner">Verifying payment...</div>'; 
+            }
+            
+            // 2. Now reopen the dialog safely
             flow.showModal();
             // Nothing from Checkout's callback is sent to the server as proof:
             // the server learns the payment happened from Razorpay itself
