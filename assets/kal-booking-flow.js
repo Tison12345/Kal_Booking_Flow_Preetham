@@ -4906,18 +4906,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // On-screen keyboard state, tracked from the viewport's real height, NOT from
-  // input focus (dismissing the keyboard does not blur the input). The keyboard
-  // counts as open only while an input is focused AND the visible viewport is
-  // well below its height before focus; the dialog gets data-kal-keyboard-open.
-  //
-  // The CSS hides the footer CTA while it is set, and brings it back when the
-  // keyboard closes, even if the field is still focused.
-  //
-  // The dialog is also sized to the visual viewport while it is open
-  // (--kal-viewport-height / --kal-viewport-top, used by the CSS): on Android
-  // Chrome the keyboard shrinks only the VISUAL viewport, so the position:fixed
-  // 100dvh dialog would keep its full height with its lower fields behind the
-  // keyboard. Sized to what is really visible, the form scrolls to every field.
+  // input focus. The footer used to hide on `input:focus`, but dismissing the
+  // keyboard (Android's back gesture, iOS "Done") does not blur the input, so
+  // the footer stayed hidden until the visitor tapped somewhere else. The
+  // keyboard counts as open only while an input is focused AND the visible
+  // viewport is well below its height before focus. The CSS hides the footer
+  // off data-kal-keyboard-open, set here on the dialog.
   const KEYBOARD_MIN_HEIGHT_PX = 150; // above a collapsing browser toolbar (~50-100px), below any real keyboard
   const keyboardViewport = window.visualViewport || null;
   const currentViewportHeight = () => (keyboardViewport ? keyboardViewport.height : window.innerHeight);
@@ -4935,14 +4929,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Only with visualViewport: browsers that resize the layout viewport itself
-  // already shrink 100dvh with the keyboard, so there is nothing to apply.
-  const applyKeyboardViewport = () => {
-    if (!keyboardViewport) return;
-    flow.style.setProperty('--kal-viewport-height', `${keyboardViewport.height}px`);
-    flow.style.setProperty('--kal-viewport-top', `${keyboardViewport.offsetTop}px`);
-  };
-
   const updateKeyboardState = () => {
     const field = window.innerWidth < 750 && flow.open ? focusedField() : null;
     if (!field) {
@@ -4951,17 +4937,11 @@ document.addEventListener('DOMContentLoaded', () => {
       keyboardBaselineHeight = Math.max(window.innerHeight, currentViewportHeight());
     }
     const open = Boolean(field) && keyboardBaselineHeight - currentViewportHeight() >= KEYBOARD_MIN_HEIGHT;
-    if (open) applyKeyboardViewport();
     if (open === keyboardOpen) return;
     keyboardOpen = open;
     flow.toggleAttribute('data-kal-keyboard-open', open);
-    if (open) {
-      // The footer left and the dialog shrank to the visible area; re-centre the field.
-      scrollFieldIntoView(field);
-    } else {
-      flow.style.removeProperty('--kal-viewport-height');
-      flow.style.removeProperty('--kal-viewport-top');
-    }
+    // The footer just left the layout; re-centre the field being edited.
+    if (open) scrollFieldIntoView(field);
   };
 
   flow.addEventListener('focusin', (e) => {
@@ -4978,16 +4958,8 @@ document.addEventListener('DOMContentLoaded', () => {
   flow.addEventListener('close', () => {
     keyboardOpen = false;
     flow.removeAttribute('data-kal-keyboard-open');
-    flow.style.removeProperty('--kal-viewport-height');
-    flow.style.removeProperty('--kal-viewport-top');
   });
   // Both fire when the keyboard opens or closes; only one exists in some browsers.
-  if (keyboardViewport) {
-    keyboardViewport.addEventListener('resize', updateKeyboardState);
-    // The browser can pan the visual viewport while typing; keep the dialog on it.
-    keyboardViewport.addEventListener('scroll', () => {
-      if (keyboardOpen) applyKeyboardViewport();
-    });
-  }
+  if (keyboardViewport) keyboardViewport.addEventListener('resize', updateKeyboardState);
   window.addEventListener('resize', updateKeyboardState);
 });

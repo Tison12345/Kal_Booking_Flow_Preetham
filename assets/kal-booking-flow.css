@@ -7623,34 +7623,18 @@ div.kal-leave-booking-modal__backdrop {
   display: none !important;
 }
 
-/* Phones, keyboard open (data-kal-keyboard-open, set from the real viewport
-   height in kal-booking-flow.js, not from :focus: dismissing the keyboard does
-   not blur the input, so a :focus rule left the footer hidden afterwards).
-   The footer CTA is hidden while the keyboard is open and comes straight back
-   when it closes.
-   The dialog is also fitted to the visible area: on Android Chrome the keyboard
-   shrinks only the VISUAL viewport, so the fixed 100dvh dialog would keep its
-   full height with its lower part, the last fields, behind the keyboard. Sized
-   to the visual viewport, the form's own scroll area ends at the top of the
-   keyboard, so every field is reachable without any extra bottom padding. The
-   fallbacks apply when the variables are not set (browsers that resize 100dvh
-   themselves). */
+/* Keyed off data-kal-keyboard-open (set from the real viewport height in
+   kal-booking-flow.js), not :focus: dismissing the keyboard does not blur the
+   input, so a :focus rule left the footer hidden after the keyboard closed. */
 @media screen and (max-width: 749px) {
-  .kal-booking-flow[data-kal-keyboard-open] {
-    inset: var(--kal-viewport-top, 0px) 0 auto 0;
-    height: var(--kal-viewport-height, 100dvh);
-    max-height: var(--kal-viewport-height, 100dvh);
-  }
-
   .kal-booking-flow[data-kal-keyboard-open] .kal-step-patient-details .kal-step-shell__footer,
   .kal-booking-flow[data-kal-keyboard-open] .kal-step-therapy-details .kal-step-shell__footer {
     display: none;
   }
 
-  /* The scroll region's -16px bottom margin only cancels the panel gap above
-     the footer; with the footer gone it would cut off the last 16px of the form. */
   .kal-booking-flow[data-kal-keyboard-open] .kal-step-patient-details .kal-step-shell__scroll,
   .kal-booking-flow[data-kal-keyboard-open] .kal-step-therapy-details .kal-step-shell__scroll {
     margin-bottom: 0;
+    padding-bottom: 40vh; /* Gives the scroll container room to push lower inputs up */
   }
 }
