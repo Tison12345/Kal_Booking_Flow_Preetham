@@ -7611,3 +7611,19 @@ div.kal-leave-booking-modal__backdrop {
 .kal-payment-option__price-strike[hidden] {
   display: none !important;
 }
+
+/* Fix for mobile keyboard overlapping the footer on Patient Details */
+@media screen and (max-height: 600px) and (max-width: 749px) {
+  .kal-step-patient-details .kal-step-shell__panel {
+    height: auto; /* Lets the panel grow naturally */
+  }
+  
+  .kal-step-patient-details .kal-step-shell__scroll {
+    flex: none; /* Stops it from fighting for space */
+    overflow-y: visible; /* Lets the whole page scroll normally */
+  }
+  
+  .kal-step-patient-details .kal-step-shell__footer {
+    margin-top: 24px; /* Replaces 'auto' with normal spacing */
+  }
+}
