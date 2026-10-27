@@ -7621,9 +7621,15 @@ div.kal-leave-booking-modal__backdrop {
   display: none !important;
 }
 
-/* Safely hide the footer when the mobile keyboard is open to prevent overlap */
-@media screen and (max-height: 600px) and (max-width: 749px) {
-  .kal-step-patient-details .kal-step-shell__footer {
-    display: none !important;
+@media screen and (max-width: 749px) {
+  .kal-step-patient-details:has(input:focus, textarea:focus) .kal-step-shell__footer,
+  .kal-step-therapy-details:has(input:focus, textarea:focus) .kal-step-shell__footer {
+    display: none;
+  }
+
+  .kal-step-patient-details:has(input:focus, textarea:focus) .kal-step-shell__scroll,
+  .kal-step-therapy-details:has(input:focus, textarea:focus) .kal-step-shell__scroll {
+    margin-bottom: 0;
+    padding-bottom: 40vh; /* Gives the scroll container room to push lower inputs up */
   }
 }
