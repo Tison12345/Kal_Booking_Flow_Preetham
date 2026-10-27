@@ -218,23 +218,6 @@
     — same containing-block/overflow-clipping reasoning as the calendar
     modal above.
   {%- endcomment -%}
-  {%- comment -%}
-    "Processing" card shown over the flow while a paid booking is being
-    confirmed (see waitForPaidBooking() in kal-booking-flow.js): after
-    Razorpay Checkout closes, the booking is created server-side and can
-    take several seconds, during which Confirmation just sat there looking
-    frozen. No close button and no click-to-dismiss on purpose, since the
-    payment has already gone through. Direct child of <dialog> for the same
-    overflow/containing-block reason as the two modals around it.
-  {%- endcomment -%}
-  <div class="kal-processing-modal" data-kal-processing-modal role="alertdialog" aria-modal="true" aria-live="polite" aria-labelledby="kal-processing-title" hidden>
-    <div class="kal-processing-modal__backdrop"></div>
-    <div class="kal-processing-modal__panel">
-      <p class="kal-processing-modal__title" id="kal-processing-title">Confirming your booking...</p>
-      <span class="kal-processing-modal__spinner" aria-hidden="true"></span>
-    </div>
-  </div>
-
   <div class="kal-leave-booking-modal" data-kal-leave-booking-modal hidden>
     <div class="kal-leave-booking-modal__backdrop"></div>
     <div class="kal-leave-booking-modal__panel">
