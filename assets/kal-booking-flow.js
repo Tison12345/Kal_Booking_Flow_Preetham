@@ -3863,6 +3863,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 position: absolute;
                 inset: 0;
                 background: radial-gradient(circle at center, #FBF9F5 0%, #F2ECE1 100%);
+                background: white;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
