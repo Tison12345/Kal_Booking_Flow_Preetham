@@ -82,6 +82,7 @@
   height: 100dvh;
   max-width: 100%;
   max-height: 100%;
+  max-height: 100dvh;
   /* Overrides the browser's own dialog:modal default (overflow: auto).
      The dialog itself never scrolls; each step scrolls inside its own
      region. Without this, anything positioned past the dialog's edge
