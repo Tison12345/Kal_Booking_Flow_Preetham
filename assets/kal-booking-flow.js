@@ -3844,25 +3844,108 @@ document.addEventListener('DOMContentLoaded', () => {
             // verification takes. Safe to call unconditionally; handler()
             // only ever fires once per Checkout session.
             checkoutSuspended = false;
+            const style = document.createElement('style');
+            style.id = 'ka-loader-styles';
+            style.textContent = `
+              @keyframes ka-spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+              @keyframes ka-pulse {
+                0%, 100% { transform: scale(1); opacity: 0.85; }
+                50% { transform: scale(1.12); opacity: 1; }
+              }
+              @keyframes ka-shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+              }
+              #temp-payment-spinner {
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(circle at center, #FBF9F5 0%, #F2ECE1 100%);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                color: #1E3A2F;
+                transition: opacity 0.25s ease-out;
+              }
+              .ka-loader-ring {
+                position: relative;
+                width: 72px;
+                height: 72px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-bottom: 20px;
+              }
+              .ka-loader-ring::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                border: 2px solid rgba(30, 58, 47, 0.12);
+                border-top-color: #2E5A44;
+                border-right-color: #C5A059;
+                animation: ka-spin 1.2s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+              }
+              .ka-leaf-icon {
+                width: 32px;
+                height: 32px;
+                fill: #2E5A44;
+                animation: ka-pulse 2s ease-in-out infinite;
+              }
+              .ka-loader-title {
+                font-size: 1.125rem;
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                margin: 0 0 6px 0;
+                color: #1E3A2F;
+              }
+              .ka-loader-subtitle {
+                font-size: 0.875rem;
+                color: #5C6F66;
+                margin: 0 0 18px 0;
+              }
+              .ka-progress-bar {
+                width: 140px;
+                height: 3px;
+                border-radius: 4px;
+                background: linear-gradient(90deg, #E2D9C8 25%, #2E5A44 50%, #E2D9C8 75%);
+                background-size: 200% 100%;
+                animation: ka-shimmer 1.8s infinite linear;
+              }
+            `;
+
+            // 2. Build the overlay element with a botanical leaf SVG
             const overlay = document.createElement('div');
             overlay.id = 'temp-payment-spinner';
-            overlay.style.cssText = `
-              position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-              background: #ffffff; display: flex; justify-content: center;
-              align-items: center; z-index: 9999;
+            overlay.innerHTML = `
+              <div class="ka-loader-ring">
+                <svg class="ka-leaf-icon" viewBox="0 0 24 24">
+                  <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z"/>
+                </svg>
+              </div>
+              <p class="ka-loader-title">Confirming Your Consultation</p>
+              <p class="ka-loader-subtitle">Payment received — reserving your slot...</p>
+              <div class="ka-progress-bar"></div>
             `;
-            overlay.innerHTML = '<span>Verifying payment...</span>';
-            
+
+            flow.appendChild(style);
             flow.appendChild(overlay);
 
-            // 2. Create an observer to watch for the parent app updating the UI
+            // 3. Auto-remove with a smooth fade-out once the parent updates the modal
             const observer = new MutationObserver(() => {
-              // The moment the parent app renders the confirmation screen, remove the overlay
-              overlay.remove();
-              observer.disconnect(); // Stop watching to save memory
+              observer.disconnect();
+              overlay.style.opacity = '0';
+              setTimeout(() => {
+                overlay.remove();
+                style.remove();
+              }, 250);
             });
 
-            // Start watching the dialog for added/removed elements or text changes
             observer.observe(flow, { childList: true, subtree: true });
             flow.showModal();
             // Nothing from Checkout's callback is sent to the server as proof:
