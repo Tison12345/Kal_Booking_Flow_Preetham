@@ -2277,7 +2277,7 @@ document.addEventListener('DOMContentLoaded', () => {
         icon.innerHTML = flow.querySelector('.kal-slot-conflict-banner__icon')?.innerHTML || '';
         const text = document.createElement('span');
         text.setAttribute('data-kal-empty-slots-text', '');
-        text.textContent = 'No slots available in this window.';
+        text.textContent = `No slots available in the ${period}.`;
         empty.append(icon, text);
         panel.appendChild(empty);
         return;
@@ -3456,6 +3456,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // toggleConcern() itself, not just the experiment-open call sites, so
   // checking/unchecking "Other" updates this live.
   const applyExperimentVisibility = () => {
+    // Lets the CSS tell an Experiment B visit (opened at Slot Picker from a
+    // doctor card, nothing before it to go back to) from a normal one.
+    flow.toggleAttribute('data-kal-experiment-b', isExperimentB);
+
     const showConcernField = shouldShowConcernField();
     flow.querySelectorAll('[data-kal-concern-field]').forEach((el) => {
       el.hidden = !showConcernField;
