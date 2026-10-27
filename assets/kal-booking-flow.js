@@ -4195,6 +4195,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const processingModal = flow.querySelector('[data-kal-processing-modal]');
+  const setProcessingModalVisible = (visible) => {
+    if (processingModal) processingModal.hidden = !visible;
+  };
+
   // Check often at first, when the booking usually lands within a few seconds,
   // then ease off so a slow confirmation does not hammer the server.
   const PAID_BOOKING_FAST_POLL_INTERVAL_MS = 500;
@@ -4314,10 +4319,24 @@ document.addEventListener('DOMContentLoaded', () => {
             placingPayment = false;
           }
         }
-        appointment = await waitForPaidBooking(paidOrder.razorpayOrderId);
+        // Checkout is closed and the visitor has paid; the server is now
+        // creating the booking, which can take a few seconds. Cover the
+        // screen with the Processing card for exactly that wait so it
+        // doesn't look frozen.
+        setProcessingModalVisible(true);
+        try {
+          appointment = await waitForPaidBooking(paidOrder.razorpayOrderId);
+        } finally {
+          setProcessingModalVisible(false);
+        }
       } else {
         // Pay at clinic: nothing to pay, the appointment is created right here.
-        appointment = await postToPartnerApi('appointments', details, generateIdempotencyKey());
+        setProcessingModalVisible(true);
+        try {
+          appointment = await postToPartnerApi('appointments', details, generateIdempotencyKey());
+        } finally {
+          setProcessingModalVisible(false);
+        }
       }
 
       lastBookingResult = appointment;
@@ -4453,6 +4472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setBookingButtonsBusy(true);
+    setProcessingModalVisible(true);
     try {
       const result = await postToPartnerApi(
         'therapy-requests',
@@ -4479,6 +4499,7 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'Unable to submit your request right now. Please try again.',
       );
     } finally {
+      setProcessingModalVisible(false);
       setBookingButtonsBusy(false);
     }
   };
