@@ -3899,14 +3899,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 animation: ka-pulse 2s ease-in-out infinite;
               }
               .ka-loader-title {
-                font-size: 1.125rem;
+                font-size: 1.5rem;
                 font-weight: 600;
                 letter-spacing: -0.01em;
                 margin: 0 0 6px 0;
                 color: #1E3A2F;
               }
               .ka-loader-subtitle {
-                font-size: 0.875rem;
+                font-size: 1rem;
                 color: #5C6F66;
                 margin: 0 0 18px 0;
               }
