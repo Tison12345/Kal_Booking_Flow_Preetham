@@ -7484,15 +7484,6 @@ div.kal-leave-booking-modal__backdrop {
 /* Heading + subtext under the tick (Figma "Frame 3948"). Mobile: 4px apart
    and the subtext has its own 24px side inset, so it wraps at 295px. Desktop:
    16px apart, no inset. */
-/* Experiment B opens straight at Slot Picker, so there is no Doctor Select
-   behind it to go back to: both Back buttons (header chevron and desktop
-   footer) are hidden. visibility, not display, so the header and footer keep
-   their layout (location badge and Continue stay where they are). */
-.kal-booking-flow[data-kal-experiment-b] .kal-step-slot-picker [data-kal-back="doctor-select"] {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .kal-step-therapy-confirmed__intro {
   display: flex;
   flex-direction: column;
