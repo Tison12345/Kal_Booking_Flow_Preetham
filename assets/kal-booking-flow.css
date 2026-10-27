@@ -72,7 +72,7 @@
 }
 
 .kal-booking-flow {
-  position: relative;
+  position: fixed;
   border: none;
   padding: 0;
   margin: 0;
