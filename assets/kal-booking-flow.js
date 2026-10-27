@@ -4904,4 +4904,20 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
     }
   });
+
+  flow.addEventListener('focusin', (e) => {
+  if (window.innerWidth >= 750) return;
+  const input = e.target.closest('input, textarea');
+  if (!input) return;
+
+  const scrollContainer = input.closest('.kal-step-shell__scroll');
+  const fieldWrapper = input.closest('.kal-form-field') || input;
+
+  if (scrollContainer && fieldWrapper) {
+    // Wait for the mobile keyboard slide-up animation to finish
+    setTimeout(() => {
+      fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+});
 });
