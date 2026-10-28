@@ -7296,6 +7296,23 @@ div.kal-leave-booking-modal__backdrop {
     margin-bottom: 0;
     padding-bottom: 24px;
   }
+
+  /* The footer is a 2-column grid (help | buttons), so the submit-error
+     banner became a third grid child, wrapped the buttons onto a second
+     row and made the footer taller, squeezing the form above it. Taken
+     out of the grid and floated just above the footer instead, so an
+     error never changes the layout. */
+  .kal-step-therapy-details .kal-concern-select__footer--desktop {
+    position: relative;
+  }
+
+  .kal-step-therapy-details .kal-concern-select__footer--desktop > [data-kal-booking-error] {
+    position: absolute;
+    left: 324px;
+    right: 24px;
+    bottom: 100%;
+    margin: 0 0 8px;
+  }
 }
 
 /* ----------------------------------------------------------------------
