@@ -7623,17 +7623,14 @@ div.kal-leave-booking-modal__backdrop {
   display: none !important;
 }
 
-/* Keyed off data-kal-keyboard-open (set from the real viewport height in
-   kal-booking-flow.js), not :focus: dismissing the keyboard does not blur the
-   input, so a :focus rule left the footer hidden after the keyboard closed. */
 @media screen and (max-width: 749px) {
-  .kal-booking-flow[data-kal-keyboard-open] .kal-step-patient-details .kal-step-shell__footer,
-  .kal-booking-flow[data-kal-keyboard-open] .kal-step-therapy-details .kal-step-shell__footer {
+  .kal-step-patient-details:has(input:focus, textarea:focus) .kal-step-shell__footer,
+  .kal-step-therapy-details:has(input:focus, textarea:focus) .kal-step-shell__footer {
     display: none;
   }
 
-  .kal-booking-flow[data-kal-keyboard-open] .kal-step-patient-details .kal-step-shell__scroll,
-  .kal-booking-flow[data-kal-keyboard-open] .kal-step-therapy-details .kal-step-shell__scroll {
+  .kal-step-patient-details:has(input:focus, textarea:focus) .kal-step-shell__scroll,
+  .kal-step-therapy-details:has(input:focus, textarea:focus) .kal-step-shell__scroll {
     margin-bottom: 0;
     padding-bottom: 40vh; /* Gives the scroll container room to push lower inputs up */
   }

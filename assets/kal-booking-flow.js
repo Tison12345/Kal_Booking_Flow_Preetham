@@ -4905,61 +4905,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // On-screen keyboard state, tracked from the viewport's real height, NOT from
-  // input focus. The footer used to hide on `input:focus`, but dismissing the
-  // keyboard (Android's back gesture, iOS "Done") does not blur the input, so
-  // the footer stayed hidden until the visitor tapped somewhere else. The
-  // keyboard counts as open only while an input is focused AND the visible
-  // viewport is well below its height before focus. The CSS hides the footer
-  // off data-kal-keyboard-open, set here on the dialog.
-  const KEYBOARD_MIN_HEIGHT_PX = 150; // above a collapsing browser toolbar (~50-100px), below any real keyboard
-  const keyboardViewport = window.visualViewport || null;
-  const currentViewportHeight = () => (keyboardViewport ? keyboardViewport.height : window.innerHeight);
-  const focusedField = () => {
-    const el = document.activeElement;
-    return el && flow.contains(el) && el.matches('input, textarea') ? el : null;
-  };
-  let keyboardBaselineHeight = Math.max(window.innerHeight, currentViewportHeight());
-  let keyboardOpen = false;
-
-  const scrollFieldIntoView = (input) => {
-    const fieldWrapper = input.closest('.kal-form-field') || input;
-    if (input.closest('.kal-step-shell__scroll')) {
-      fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
-  const updateKeyboardState = () => {
-    const field = window.innerWidth < 750 && flow.open ? focusedField() : null;
-    if (!field) {
-      // No field being edited: this is the true full-height viewport, and
-      // also where it gets re-measured after a rotation or toolbar change.
-      keyboardBaselineHeight = Math.max(window.innerHeight, currentViewportHeight());
-    }
-    const open = Boolean(field) && keyboardBaselineHeight - currentViewportHeight() >= KEYBOARD_MIN_HEIGHT;
-    if (open === keyboardOpen) return;
-    keyboardOpen = open;
-    flow.toggleAttribute('data-kal-keyboard-open', open);
-    // The footer just left the layout; re-centre the field being edited.
-    if (open) scrollFieldIntoView(field);
-  };
-
   flow.addEventListener('focusin', (e) => {
-    if (window.innerWidth >= 750) return;
-    const input = e.target.closest('input, textarea');
-    if (!input) return;
+  if (window.innerWidth >= 750) return;
+  const input = e.target.closest('input, textarea');
+  if (!input) return;
 
+  const scrollContainer = input.closest('.kal-step-shell__scroll');
+  const fieldWrapper = input.closest('.kal-form-field') || input;
+
+  if (scrollContainer && fieldWrapper) {
     // Wait for the mobile keyboard slide-up animation to finish
-    setTimeout(() => scrollFieldIntoView(input), 300);
-    updateKeyboardState();
-  });
-  // activeElement is not updated yet when focusout fires, so check a tick later.
-  flow.addEventListener('focusout', () => setTimeout(updateKeyboardState, 0));
-  flow.addEventListener('close', () => {
-    keyboardOpen = false;
-    flow.removeAttribute('data-kal-keyboard-open');
-  });
-  // Both fire when the keyboard opens or closes; only one exists in some browsers.
-  if (keyboardViewport) keyboardViewport.addEventListener('resize', updateKeyboardState);
-  window.addEventListener('resize', updateKeyboardState);
+    setTimeout(() => {
+      fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+});
 });
