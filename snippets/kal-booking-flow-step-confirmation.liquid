@@ -306,6 +306,7 @@
         shrinking them, see kal-booking-flow.css's own comment on that.
       {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking>
+        <span class="kal-button-spinner" aria-hidden="true"></span>
         <span data-kal-mode-offline-only data-kal-confirm-payment-label>Proceed to Payment</span>
         <span class="kal-confirm-pay-cta" data-kal-mode-online-only hidden>
           <span class="kal-confirm-pay-cta__label">Proceed and pay</span>
@@ -353,6 +354,7 @@
         data-kal-mode-offline-only/-online-only, no JS changes needed.
       {%- endcomment -%}
       <button type="button" class="kal-step-doctor-select__continue" data-kal-confirm-booking>
+        <span class="kal-button-spinner" aria-hidden="true"></span>
         <span data-kal-mode-offline-only data-kal-confirm-payment-label>Proceed to Payment</span>
         <span class="kal-confirm-pay-cta" data-kal-mode-online-only hidden>
           <span class="kal-confirm-pay-cta__label">Proceed and pay</span>

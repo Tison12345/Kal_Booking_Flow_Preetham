@@ -3373,7 +3373,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // markup the first time, so it can be put back exactly as written.
   const setContinueBusy = (stepEl, busy, busyLabel) => {
     stepEl.setAttribute('aria-busy', String(busy));
-    stepEl.querySelectorAll('[data-kal-patient-continue], [data-kal-slot-continue]').forEach((btn) => {
+    stepEl.querySelectorAll('[data-kal-patient-continue], [data-kal-slot-continue], [data-kal-confirm-booking]').forEach((btn) => {
       // Measured before the spinner appears, so the width is the idle one.
       if (busy) btn.style.minWidth = `${btn.offsetWidth}px`;
       else btn.style.minWidth = '';
@@ -4316,7 +4316,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ?.dataset.kalPaymentMethod;
     const requiresOnlinePayment = selectedPaymentMethod === 'pay-now' || slotPicker.mode === 'video';
 
-    setBookingButtonsBusy(true);
+    const confirmStep = flow.querySelector('[data-kal-step="confirmation"]');
+    setContinueBusy(confirmStep, true);
     // Paying online: the popup stays open until the booking is confirmed (or
     // the wait gives up), so the visitor cannot release the slot they paid for.
     // Only the call that blocked it unblocks it, so a repeated click cannot.
@@ -4456,7 +4457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         goToStep('slot-picker');
       }
     } finally {
-      setBookingButtonsBusy(false);
+      setContinueBusy(confirmStep, false);
       if (blockedClose) setCloseBlocked(false);
     }
   };
