@@ -7641,8 +7641,12 @@ div.kal-leave-booking-modal__backdrop {
 }
 
 @media screen and (max-width: 749px) {
-  .kal-step-patient-details:has(input:focus, textarea:focus) .kal-step-shell__footer,
-  .kal-step-therapy-details:has(input:focus, textarea:focus) .kal-step-shell__footer {
+  /* Therapy Details is deliberately NOT in the footer rule below. Hiding
+     "Submit Request" while an input is focused meant that tapping it
+     blurred the input, which removed the button from layout before the
+     click landed — so no POST, no "Request received" screen. The footer
+     stays visible; the scroll padding below still lifts the focused field. */
+  .kal-step-patient-details:has(input:focus, textarea:focus) .kal-step-shell__footer {
     display: none;
   }
 
