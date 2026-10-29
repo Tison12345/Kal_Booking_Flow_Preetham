@@ -1179,10 +1179,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // post-layout measurements re-checked, not whatever scroll position
   // happened to be true the last time this ran.
   const SCROLL_HINT_BOTTOM_THRESHOLD = 4;
+  // Once a visitor has reached the bottom, the hint stays hidden even if
+  // they scroll back up — it only comes back when the step is entered
+  // again (see goToStep's reset below), not on every upward scroll.
+  const scrollHintReachedBottom = new WeakSet();
   const updateScrollHintVisibility = (scrollRegion, hintButton) => {
     const atBottom = scrollRegion.scrollTop + scrollRegion.clientHeight
       >= scrollRegion.scrollHeight - SCROLL_HINT_BOTTOM_THRESHOLD;
-    hintButton.hidden = atBottom;
+    if (atBottom) scrollHintReachedBottom.add(hintButton);
+    hintButton.hidden = atBottom || scrollHintReachedBottom.has(hintButton);
   };
   const updateAllScrollHints = () => {
     flow.querySelectorAll('[data-kal-scroll-hint]').forEach((hintButton) => {
@@ -1207,6 +1212,14 @@ document.addEventListener('DOMContentLoaded', () => {
     steps.forEach((step) => {
       step.hidden = step.dataset.kalStep !== stepName;
     });
+
+    // Entering Concern Select afresh shows the scroll hint again, even if
+    // the previous visit reached the bottom (see scrollHintReachedBottom).
+    if (stepName === 'concern-select') {
+      flow.querySelectorAll('[data-kal-scroll-hint]').forEach((hintButton) => {
+        scrollHintReachedBottom.delete(hintButton);
+      });
+    }
 
     // Lets kal-booking-flow.css size the desktop dialog per step (e.g.
     // Entry's own 802x600 export vs. every other step's shared 1180x750)
