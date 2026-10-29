@@ -3365,19 +3365,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // before any money is taken, so nothing is lost by not blocking here.
   let checkingPhone = false;
 
-  // Shows the wait on Patient Details while the number is checked: the
-  // Continue button keeps its width, shows a spinner and "Checking…", and
-  // the step is marked aria-busy so assistive tech knows it is working.
-  // Only the step the visitor is on is touched (mobile and desktop
-  // Continue buttons both live in it, one hidden at each width).
-  const setPatientContinueBusy = (stepEl, busy) => {
+  // Shows the wait on a step's Continue/Submit button while a server call
+  // runs: the button keeps its width, shows a spinner and busyLabel, and the
+  // step is marked aria-busy so assistive tech knows it is working. Only the
+  // step the visitor is on is touched (mobile and desktop buttons both live
+  // in it, one hidden at each width). The idle label is remembered from the
+  // markup the first time, so it can be put back exactly as written.
+  const setContinueBusy = (stepEl, busy, busyLabel) => {
     stepEl.setAttribute('aria-busy', String(busy));
     stepEl.querySelectorAll('[data-kal-patient-continue]').forEach((btn) => {
+      // Measured before the spinner appears, so the width is the idle one.
+      if (busy) btn.style.minWidth = `${btn.offsetWidth}px`;
+      else btn.style.minWidth = '';
       btn.classList.toggle('kal-step-doctor-select__continue--busy', busy);
       btn.disabled = busy;
-      btn.style.minWidth = busy ? `${btn.offsetWidth}px` : '';
       const label = btn.querySelector('[data-kal-continue-label]');
-      if (label) label.textContent = busy ? 'Checking…' : 'Continue';
+      if (!label) return;
+      if (!label.dataset.kalIdleLabel) label.dataset.kalIdleLabel = label.textContent;
+      label.textContent = busy ? busyLabel : label.dataset.kalIdleLabel;
     });
   };
 
@@ -4681,7 +4686,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // Consultation: the number is checked first, and the visitor stays
           // on this page with an error under the field if it cannot be used.
           checkingPhone = true;
-          patientContinueTrigger.disabled = true;
+          const patientStep = patientContinueTrigger.closest('[data-kal-step]');
+          setPatientContinueBusy(patientStep, true);
           void checkPhoneIsBookable()
             .then((canBook) => {
               if (canBook) {
@@ -4693,7 +4699,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .finally(() => {
               checkingPhone = false;
-              patientContinueTrigger.disabled = false;
+              setPatientContinueBusy(patientStep, false);
             });
         }
       }
