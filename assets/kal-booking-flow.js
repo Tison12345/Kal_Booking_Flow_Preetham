@@ -4491,7 +4491,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    setBookingButtonsBusy(true);
+    const therapyStep = flow.querySelector('[data-kal-step="therapy-details"]');
+    setContinueBusy(therapyStep, true, 'Submitting…');
     try {
       const result = await postToPartnerApi(
         'therapy-requests',
@@ -4518,7 +4519,7 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'Unable to submit your request right now. Please try again.',
       );
     } finally {
-      setBookingButtonsBusy(false);
+      setContinueBusy(therapyStep, false);
     }
   };
 
@@ -4687,7 +4688,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // on this page with an error under the field if it cannot be used.
           checkingPhone = true;
           const patientStep = patientContinueTrigger.closest('[data-kal-step]');
-          setPatientContinueBusy(patientStep, true);
+          setContinueBusy(patientStep, true, 'Checking…');
           void checkPhoneIsBookable()
             .then((canBook) => {
               if (canBook) {
@@ -4699,7 +4700,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .finally(() => {
               checkingPhone = false;
-              setPatientContinueBusy(patientStep, false);
+              setContinueBusy(patientStep, false);
             });
         }
       }
