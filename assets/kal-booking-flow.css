@@ -4341,6 +4341,44 @@ div.kal-leave-booking-modal__backdrop {
   box-shadow: none;
 }
 
+/* Busy while a server check runs (Patient Details' phone check). The button
+   is still disabled so it can't be pressed twice, but it keeps its normal
+   colour and shows a spinner, so it reads as "working" rather than "off". */
+.kal-step-doctor-select__continue--busy:disabled {
+  background: var(--kal-booking-flow-color-primary-dark);
+  cursor: progress;
+  box-shadow: 0px 8px 16px -6px rgba(30, 75, 60, 0.35);
+}
+
+.kal-button-spinner {
+  display: none;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.kal-step-doctor-select__continue--busy .kal-button-spinner {
+  display: inline-block;
+  animation: kal-button-spin 0.75s linear infinite;
+}
+
+@keyframes kal-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kal-step-doctor-select__continue--busy .kal-button-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
 .kal-icon-button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
