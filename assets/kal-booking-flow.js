@@ -3754,17 +3754,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Reuses the same :disabled styling every other Continue button on this
-  // flow already has (kal-booking-flow.css) rather than introducing a new
-  // loading-specific class. Covers both real-submission buttons — Confirmation's
-  // "Proceed to Payment" and Therapy Details' "Submit Request" — since both
-  // submitBooking() and submitTherapyRequest() share this helper.
-  const setBookingButtonsBusy = (busy) => {
-    flow.querySelectorAll('[data-kal-confirm-booking], [data-kal-submit-therapy]').forEach((btn) => {
-      btn.disabled = busy;
-    });
-  };
-
   // Posts to the BFF proxy (which holds the partner API key and forwards
   // to /api/v1/partner/*), same pattern every other real-data call in
   // this file uses. `idempotencyKey` is forwarded by the proxy as the
@@ -3824,6 +3813,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // with a plain Error (message shown via showBookingError, same as every
   // other booking failure) if they close Checkout without paying. A failed
   // attempt alone doesn't end it: Checkout stays open for a retry.
+  // TEMP-TIMING: temporary timing marks for the Proceed-to-payment wait.
+  // Remove every line tagged TEMP-TIMING (grep -n TEMP-TIMING).
+  let timingStartedAt = 0; // TEMP-TIMING
+  const timingMark = (label, isStart = false) => { // TEMP-TIMING
+    const now = performance.now(); // TEMP-TIMING
+    if (isStart) timingStartedAt = now; // TEMP-TIMING
+    console.log(`[kal-timing] +${Math.round(now - timingStartedAt)}ms ${label}`); // TEMP-TIMING
+  }; // TEMP-TIMING
   const collectPayment = (details) => new Promise((resolve, reject) => {
     if (!window.Razorpay) {
       reject(new Error('Payment is temporarily unavailable. Please try again in a moment.'));
@@ -3848,12 +3845,14 @@ document.addEventListener('DOMContentLoaded', () => {
       settled = true;
       fn();
     };
+    timingMark('order request sent'); // TEMP-TIMING
     postToPartnerApi(
       'payments/orders',
       details,
       getPaymentIdempotencyKey(slotPicker.holdId, 'payment-order', JSON.stringify(details)),
     )
       .then((order) => {
+        timingMark('order response received'); // TEMP-TIMING
         const rzp = new window.Razorpay({
           key: order.razorpayKeyId,
           amount: order.amount,
@@ -3871,6 +3870,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // the same number), so Checkout can't outlive the hold's runway.
           timeout: order.checkoutTimeoutSeconds,
           handler: (response) => {
+            timingMark('payment success callback'); // TEMP-TIMING
             // Razorpay doesn't call handler() until AFTER its own
             // "Payment Successful" screen finishes its ~3s auto-redirect
             // and closes itself — our dialog was closed (flow.close()
@@ -4034,8 +4034,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // calls flow.showModal() to bring Confirmation back once
         // Checkout is done with the screen.
         checkoutSuspended = true;
+        timingMark('dialog closed, opening razorpay'); // TEMP-TIMING
         flow.close();
         rzp.open();
+        timingMark('rzp.open() returned'); // TEMP-TIMING
+        requestAnimationFrame(() => timingMark('first frame after rzp.open()')); // TEMP-TIMING
       })
       .catch((err) => reject(err));
   });
@@ -4290,9 +4293,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastBookingResult = null;
 
   const submitBooking = async () => {
+    timingMark('proceed clicked', true); // TEMP-TIMING
     clearBookingError();
 
     const facility = await getCurrentFacility();
+    timingMark('facility ready'); // TEMP-TIMING
     if (!apiBaseUrl || !facility?.id || !selectedDoctorId || !slotPicker.selectedSlot || !slotPicker.holdId) {
       showBookingError('Missing clinic, doctor, or slot selection. Please go back and pick again.');
       return;
