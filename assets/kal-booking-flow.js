@@ -3364,6 +3364,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // and lets the visitor carry on: Proceed to payment checks the number again
   // before any money is taken, so nothing is lost by not blocking here.
   let checkingPhone = false;
+
+  // Shows the wait on Patient Details while the number is checked: the
+  // Continue button keeps its width, shows a spinner and "Checking…", and
+  // the step is marked aria-busy so assistive tech knows it is working.
+  // Only the step the visitor is on is touched (mobile and desktop
+  // Continue buttons both live in it, one hidden at each width).
+  const setPatientContinueBusy = (stepEl, busy) => {
+    stepEl.setAttribute('aria-busy', String(busy));
+    stepEl.querySelectorAll('[data-kal-patient-continue]').forEach((btn) => {
+      btn.classList.toggle('kal-step-doctor-select__continue--busy', busy);
+      btn.disabled = busy;
+      btn.style.minWidth = busy ? `${btn.offsetWidth}px` : '';
+      const label = btn.querySelector('[data-kal-continue-label]');
+      if (label) label.textContent = busy ? 'Checking…' : 'Continue';
+    });
+  };
+
   const checkPhoneIsBookable = async () => {
     try {
       const result = await postToPartnerApi(
