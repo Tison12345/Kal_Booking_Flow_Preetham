@@ -3373,7 +3373,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // markup the first time, so it can be put back exactly as written.
   const setContinueBusy = (stepEl, busy, busyLabel) => {
     stepEl.setAttribute('aria-busy', String(busy));
-    stepEl.querySelectorAll('[data-kal-patient-continue]').forEach((btn) => {
+    stepEl.querySelectorAll('[data-kal-patient-continue], [data-kal-slot-continue]').forEach((btn) => {
       // Measured before the spinner appears, so the width is the idle one.
       if (busy) btn.style.minWidth = `${btn.offsetWidth}px`;
       else btn.style.minWidth = '';
@@ -4160,6 +4160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestId = ++slotHoldRequestSequence;
     clearBookingError();
     placingSlotHold = true;
+    setContinueBusy(flow.querySelector('[data-kal-step="slot-picker"]'), true, 'Reserving slot…');
     updateSlotContinueButton();
 
     try {
@@ -4229,6 +4230,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       if (requestId === slotHoldRequestSequence) {
         placingSlotHold = false;
+        // Busy off first, then updateSlotContinueButton() sets disabled from
+        // the real selection — the reverse order would re-enable an empty
+        // Continue after a failed hold.
+        setContinueBusy(flow.querySelector('[data-kal-step="slot-picker"]'), false);
         updateSlotContinueButton();
       }
     }
