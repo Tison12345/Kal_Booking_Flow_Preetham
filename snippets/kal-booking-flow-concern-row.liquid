@@ -13,6 +13,8 @@
 
   Accepts:
   - icon_name: {String} passed to kal-booking-icons (one of the 'concern-*' icons)
+  - icon_image: {Image, optional} an image uploaded in the theme editor; when
+    present it is shown instead of icon_name
   - name: {String} e.g. "General Wellness"
   - concern_key: {String} value for data-kal-concern, e.g. "general-wellness" —
     matched against the concernSelect JS state to drive the checkbox state
@@ -31,7 +33,18 @@
 >
   <span class="kal-concern-row__left">
     <span class="kal-concern-row__icon">
-      {%- render 'kal-booking-icons', icon_name: icon_name -%}
+      {%- if icon_image != blank -%}
+        <img
+          class="kal-concern-row__icon-image"
+          src="{{ icon_image | image_url: width: 96 }}"
+          alt=""
+          width="24"
+          height="24"
+          loading="lazy"
+        >
+      {%- else -%}
+        {%- render 'kal-booking-icons', icon_name: icon_name -%}
+      {%- endif -%}
     </span>
     <span class="kal-concern-row__name">{{ name }}</span>
   </span>

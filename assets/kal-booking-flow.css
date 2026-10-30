@@ -2677,6 +2677,14 @@ div.kal-leave-booking-modal__backdrop {
   height: 24px;
 }
 
+/* An icon uploaded in the theme editor (the block's "Custom icon"), sized
+   to sit in the chip exactly like the built-in SVG icons above. */
+.kal-concern-row__icon-image {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
 .kal-concern-row__name {
   font-size: var(--kal-booking-flow-font-size-base);
   line-height: 140%;

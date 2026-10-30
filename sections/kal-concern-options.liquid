@@ -23,6 +23,7 @@
       <div class="kal-concern-option-source" {{ block.shopify_attributes }}>
         {%- render 'kal-booking-flow-concern-row',
           icon_name: block.settings.icon,
+          icon_image: block.settings.icon_image,
           name: block.settings.name,
           concern_key: block.settings.concern_key,
           selected: false
@@ -81,6 +82,12 @@
             { "value": "concern-neurology", "label": "Neurology (legacy)" }
           ],
           "default": "concern-general-wellness"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Custom icon (optional)",
+          "info": "Upload your own icon (square PNG, SVG or WebP, at least 96 x 96 px). When set, it is shown instead of the Icon chosen above. Remove it to go back to the chosen icon."
         }
       ]
     }
