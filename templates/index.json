@@ -85,13 +85,13 @@
     "kal_concern_options_test": {
       "type": "kal-concern-options",
       "blocks": {
-        "concern_option_GcBDai": {
+        "concern_option_HyYcJL": {
           "type": "concern_option",
           "settings": {
             "concern_key": "thakali",
             "name": "thakali",
             "icon": "concern-general-wellness",
-            "icon_image": "shopify://shop_images/sample-concern-icon.svg"
+            "icon_image": "shopify://shop_images/droplet_1.png"
           }
         },
         "concern-1": {
@@ -184,7 +184,7 @@
         }
       },
       "block_order": [
-        "concern_option_GcBDai",
+        "concern_option_HyYcJL",
         "concern-1",
         "concern-2",
         "concern-3",
