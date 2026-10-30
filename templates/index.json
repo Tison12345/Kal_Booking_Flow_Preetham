@@ -85,6 +85,15 @@
     "kal_concern_options_test": {
       "type": "kal-concern-options",
       "blocks": {
+        "concern_option_YqaGCx": {
+          "type": "concern_option",
+          "settings": {
+            "concern_key": "leaf",
+            "name": "leaf",
+            "icon": "concern-general-wellness",
+            "icon_image": "shopify://shop_images/sample-concern-icon.svg"
+          }
+        },
         "concern-1": {
           "type": "concern_option",
           "settings": {
@@ -175,6 +184,7 @@
         }
       },
       "block_order": [
+        "concern_option_YqaGCx",
         "concern-1",
         "concern-2",
         "concern-3",
