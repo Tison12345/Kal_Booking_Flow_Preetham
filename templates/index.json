@@ -88,9 +88,10 @@
         "concern_option_GcBDai": {
           "type": "concern_option",
           "settings": {
-            "concern_key": "",
-            "name": "General Wellness",
-            "icon": "concern-general-wellness"
+            "concern_key": "thakali",
+            "name": "thakali",
+            "icon": "concern-general-wellness",
+            "icon_image": "shopify://shop_images/sample-concern-icon.svg"
           }
         },
         "concern-1": {
