@@ -96,10 +96,13 @@
     </span>
 
     {%- if tag_list.size > 0 -%}
-      <span class="kal-doctor-card__tags">
-        {%- for tag in tag_list -%}
-          <span class="kal-doctor-card__tag">{{ tag | strip }}</span>
-        {%- endfor -%}
+      <span class="kal-doctor-card__expertise">
+        <span class="kal-doctor-card__expertise-label">Expertise:</span>
+        <span class="kal-doctor-card__tags">
+          {%- for tag in tag_list -%}
+            <span class="kal-doctor-card__tag">{{ tag | strip }}</span>
+          {%- endfor -%}
+        </span>
       </span>
     {%- endif -%}
   </span>

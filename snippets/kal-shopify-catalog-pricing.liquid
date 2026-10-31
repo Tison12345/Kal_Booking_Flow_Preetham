@@ -1,0 +1,27 @@
+{%- comment -%}
+  The "pricing" list entries for one doctor, from a consultation product's
+  variants (see kal-shopify-catalog.liquid for how a variant maps to a clinic and
+  a mode). Renders the comma-separated JSON objects only, not the brackets.
+
+  Accepts:
+  - consultation_product: {Product} the doctor's consultation product
+{%- endcomment -%}
+{%- if consultation_product != blank -%}
+  {%- assign mode_index = -1 -%}
+  {%- for option_name in consultation_product.options -%}
+    {%- assign option_name_lower = option_name | downcase -%}
+    {%- if option_name_lower == 'mode' -%}
+      {%- assign mode_index = forloop.index0 -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- if mode_index >= 0 -%}
+    {%- for variant in consultation_product.variants -%}
+    {
+      "facilityId": {{ variant.metafields.custom.facility_id.value | json }},
+      "mode": {{ variant.options[mode_index] | json }},
+      "pricePaise": {{ variant.price }},
+      "payNowDiscountPercent": {{ variant.metafields.custom.pay_now_discount_percent.value | default: 0 | json }}
+    }{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endif -%}

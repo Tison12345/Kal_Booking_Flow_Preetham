@@ -171,6 +171,12 @@
   display: none;
 }
 
+/* No circle border around the × on the Entry screen (it picks one up from the
+   shared .kal-step-doctor-select__back look). */
+.kal-booking-flow[data-kal-active-step="entry"] .kal-booking-flow__close {
+  border: none;
+}
+
 /* Disabled while a payment is being confirmed: leaving would release the slot. */
 [data-kal-close]:disabled {
   opacity: 0.4;
@@ -188,14 +194,28 @@
    Details and Confirmation share this same .kal-step-shell--progress-panel
    desktop layout now (see each step's own CSS section), so they need
    the same close-button fallback for the same reason — added here
-   rather than duplicating this rule per step. */
+   rather than duplicating this rule per step. The two therapy steps (Choose
+   therapy and Personal details) use that same desktop layout too, so they
+   get it as well. (Therapy Confirmed has its own close button.) */
 @media screen and (min-width: 750px) {
   .kal-booking-flow[data-kal-active-step="concern-select"] .kal-booking-flow__close[hidden],
   .kal-booking-flow[data-kal-active-step="doctor-select"] .kal-booking-flow__close[hidden],
   .kal-booking-flow[data-kal-active-step="slot-picker"] .kal-booking-flow__close[hidden],
   .kal-booking-flow[data-kal-active-step="patient-details"] .kal-booking-flow__close[hidden],
-  .kal-booking-flow[data-kal-active-step="confirmation"] .kal-booking-flow__close[hidden] {
+  .kal-booking-flow[data-kal-active-step="confirmation"] .kal-booking-flow__close[hidden],
+  .kal-booking-flow[data-kal-active-step="therapy-slot"] .kal-booking-flow__close[hidden],
+  .kal-booking-flow[data-kal-active-step="therapy-details"] .kal-booking-flow__close[hidden] {
     display: flex;
+  }
+
+  /* On the Entry screen the × sits inside the banner image's top-right corner
+     instead of the dialog's corner, which is outside the image. The image
+     starts 24px in from the dialog's top and right (the action panel's
+     padding), and the × keeps the same 12px inset from the image's edges as
+     it had from the dialog's: 24px + 12px = 36px. */
+  .kal-booking-flow[data-kal-active-step="entry"] .kal-booking-flow__close {
+    top: 36px;
+    right: 36px;
   }
 }
 
@@ -2023,6 +2043,52 @@
   display: none;
 }
 
+/* The list of clinics (only rendered when the clinic switcher setting is on):
+   dropped just under the badge, over the content below, inside the
+   position:relative wrapper above. The look (white card, rounded, shadow,
+   rows) is the shared .kal-country-picker__panel / __option styling. */
+.kal-facility-picker .kal-country-picker__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  box-sizing: border-box;
+  /* As wide as the badge it drops from, whatever size that is. */
+  width: 100%;
+  max-width: calc(100vw - 32px);
+  /* The whole list: 12px corners, 8px inside, 12px between the rows, solid. */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 12px;
+  opacity: 1;
+}
+
+.kal-facility-picker .kal-country-picker__panel[hidden] {
+  display: none;
+}
+
+/* One clinic in the list: the full width of the panel (so the width of the
+   badge), 22px high, 4px / 8px padding, 8px between the name and the tick, at
+   80% opacity. */
+.kal-facility-picker .kal-facility-picker__option {
+  box-sizing: border-box;
+  width: 100%;
+  height: 22px;
+  gap: 8px;
+  padding: 4px 8px;
+  opacity: 0.8;
+  line-height: 14px;
+}
+
+/* The active (selected) clinic is 24px high instead of 22px, on #EEF3EE, with
+   2px corners. */
+.kal-facility-picker .kal-facility-picker__option[aria-selected="true"] {
+  height: 24px;
+  background: #eef3ee;
+  border-radius: 2px;
+}
+
 .kal-facility-picker__check {
   display: none;
   flex-shrink: 0;
@@ -2034,10 +2100,155 @@
   height: 16px;
 }
 
+/* A 1px tick in the clinic list (the shared check icon is drawn much heavier).
+   non-scaling-stroke makes the 1px a real screen pixel, not 1 unit of the
+   24-unit icon scaled down to 16px. */
+.kal-facility-picker__check svg path {
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
 .kal-facility-picker__option[aria-selected="true"] .kal-facility-picker__check {
   display: flex;
 }
 
+
+/* "Switch clinic?" popup (only used when the clinic switcher setting is on):
+   a dimmed layer over the whole dialog with a centred white card. */
+.kal-facility-switch-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* Black at 20% over everything behind the popup. */
+  background: rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+}
+
+.kal-facility-switch-modal[hidden] {
+  display: none;
+}
+
+/* The card follows the "Appointment Card" design: 328px wide, 24px padding and
+   16px between its parts, white with a 1px #E5E5E5 border and 24px corners. */
+.kal-facility-switch-modal__card {
+  position: relative;
+  width: 328px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 24px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* 24px close icon, 8px above the content area and level with its right edge. */
+.kal-facility-switch-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: #4b4b4b;
+  cursor: pointer;
+  padding: 0;
+}
+
+.kal-facility-switch-modal__close svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* 80px round doctor photo (a plain grey circle until a photo is set). */
+.kal-facility-switch-modal__avatar {
+  display: block;
+  flex: none;
+  width: 80px;
+  height: 80px;
+  border-radius: 99px;
+  background: #d9d9d9;
+  overflow: hidden;
+}
+
+.kal-facility-switch-modal__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kal-facility-switch-modal__text {
+  align-self: stretch;
+  margin: 0;
+  font-size: 16px;
+  font-weight: var(--kal-booking-flow-font-weight-regular);
+  line-height: 140%;
+  text-align: center;
+  color: #4b4b4b;
+}
+
+/* Only the doctor's name is bold; the rest of the sentence is regular. */
+.kal-facility-switch-modal__text strong {
+  font-weight: 800;
+}
+
+/* The two buttons: 16px apart, each 46px high and 24px in from the card's
+   content edge (232px wide in a 280px content area). */
+.kal-facility-switch-modal__actions {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 16px;
+}
+
+.kal-facility-switch-modal__primary,
+.kal-facility-switch-modal__secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: calc(100% - 48px);
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 140%;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.kal-facility-switch-modal__primary {
+  border: none;
+  background: #1e4b3c;
+  color: #ffffff;
+}
+
+.kal-facility-switch-modal__secondary {
+  border: 1px solid #1e4b3c;
+  background: #ffffff;
+  color: #1e4b3c;
+  box-shadow: 0 8px 16px -6px rgba(30, 75, 60, 0.35);
+  box-sizing: border-box;
+}
+
+.kal-facility-switch-modal__secondary[hidden] {
+  display: none;
+}
 
 /* ----------------------------------------
    CALENDAR MODAL — Slot Picker's date picker, see kal-booking-flow.liquid's
@@ -2169,20 +2380,6 @@ div.kal-calendar-modal__backdrop {
 .kal-calendar-modal__cell:disabled {
   color: #c4c4c4;
   cursor: not-allowed;
-}
-
-.kal-calendar-modal__close {
-  width: 100%;
-  margin-top: 16px;
-  padding: 12px;
-  border: 1px solid var(--kal-booking-flow-color-border);
-  border-radius: 14px;
-  background: var(--kal-booking-flow-color-white);
-  color: var(--kal-booking-flow-color-heading);
-  font-family: inherit;
-  font-size: var(--kal-booking-flow-font-size-small);
-  font-weight: var(--kal-booking-flow-font-weight-bold);
-  cursor: pointer;
 }
 
 /* "Leave booking?" confirmation (see kal-booking-flow.liquid's own comment
@@ -2472,7 +2669,9 @@ div.kal-leave-booking-modal__backdrop {
    banner — the panel's other gaps (header-to-heading, banner-to-scroll)
    stay at the shared 16px, untouched. */
 .kal-concern-select__banner {
-  margin: -8px var(--kal-booking-flow-space-inset) 0;
+  /* 16px at the bottom: the banner is now the last thing in the panel, above
+     the dialog's bottom edge (mobile) or the footer's line (desktop). */
+  margin: -8px var(--kal-booking-flow-space-inset) 16px;
 }
 
 /* 25px side padding, not the shared 24px inset — Figma has each concern
@@ -2516,8 +2715,14 @@ div.kal-leave-booking-modal__backdrop {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  min-height: 18px;
   margin-top: -8px;
+}
+
+/* The row under the box holds the error and the "n/200" count, so it only
+   takes up room while one of them is showing (no empty 18px gap under the
+   box the rest of the time). */
+.kal-concern-select__other-meta:not(:has(.kal-form-error:not([hidden]))):not(:has(.kal-concern-select__other-count:not(:empty))) {
+  display: none;
 }
 
 .kal-concern-select__other-meta .kal-form-error {
@@ -2535,9 +2740,33 @@ div.kal-leave-booking-modal__backdrop {
   color: var(--kal-booking-flow-color-error);
 }
 
+/* On mobile, Continue's footer fades and slides up into place when it appears
+   (after a concern is picked, or after the "Other" box has opened), instead of
+   popping in. It runs each time that footer goes from hidden to shown. Mobile
+   only: the desktop footer (help text, Back and Continue) is fixed in place and
+   never animates. */
+@keyframes kal-concern-footer-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.kal-concern-select__footer--mobile[data-kal-concern-footer]:not([hidden]) {
+  animation: kal-concern-footer-in 0.3s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kal-concern-select__reveal {
     transition: none;
+  }
+
+  .kal-concern-select__footer--mobile[data-kal-concern-footer]:not([hidden]) {
+    animation: none;
   }
 }
 
@@ -2546,6 +2775,13 @@ div.kal-leave-booking-modal__backdrop {
   flex-direction: column;
   gap: var(--kal-booking-flow-space-inset-sm);
   padding: 0 24px 8px;
+}
+
+/* No space under the last concern row on this step: the banner (or the
+   "Other" box) follows it directly. Scoped, so the therapy page's own use of
+   this list keeps its bottom padding. */
+.kal-step-concern-select .kal-concern-select__list {
+  padding-bottom: 0;
 }
 
 /* Floating "more below" hint, shown at every width per this pass's
@@ -2602,7 +2838,7 @@ div.kal-leave-booking-modal__backdrop {
 }
 @media screen and (min-width: 750px) {
   .kal-concern-select__scroll-hint {
-    bottom: 0px; /* clears the footer's Continue button */
+    bottom: 60px; /* clears the "Not sure?" banner under the list */
   }
 }
 .kal-concern-row {
@@ -2748,6 +2984,11 @@ div.kal-leave-booking-modal__backdrop {
      svg picks it up too — confirmed against Figma, both the icon and the
      text are #1e4b3c. */
   color: var(--kal-booking-flow-color-primary-dark);
+}
+
+/* display:flex above would otherwise win over the hidden attribute. */
+.kal-concern-select__banner[hidden] {
+  display: none;
 }
 
 .kal-concern-select__banner .kal-icon--search svg {
@@ -3223,32 +3464,43 @@ div.kal-leave-booking-modal__backdrop {
   height: 14px;
 }
 
-/* Back to flex-wrap, not a 2-column grid — the grid's two tracks split
-   the row 50/50 regardless of content, so a short tag like "Other" sat
-   flush against the left edge of its half while the next tag started at
-   the fixed 50% mark, leaving a dead gap between them even though both
-   were short enough to sit right next to each other. flex-wrap packs
-   each tag to its own content width instead, so neighbors sit gap-apart
-   (the 8px gap below), not column-apart.
-   The 2-row cap this was built for (see kal-booking-flow.js's
-   DOCTOR_CARD_TAG_COUNT) is instead enforced with max-height + overflow:
-   hidden below — 2 × 26px chip row + 1 × 8px gap = 60px. With exactly 4
-   badges this is normally never reached (2 per row fits comfortably at
-   any card width this flow uses) and only guards the rare case a single
-   very long label can't be fully packed two-to-a-row. */
-.kal-doctor-card__tags {
+/* One line of tags, each shown in full (no ellipsis). When they are wider than
+   the card, kal-booking-flow.js repeats the set once (aria-hidden copies) and
+   sets --kal-tag-shift (the width of one set, gap included) and
+   --kal-tag-duration, so the line scrolls left endlessly with no jump. With
+   everything fitting, no copies are added and nothing moves. */
+/* "Expertise:" stays put at the left of the row while only the tags scroll
+   (the tags box is the clipped area). */
+.kal-doctor-card__expertise {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   padding: 0 12px 12px;
-  /* 60px of chip rows (2 x 26px + 8px gap) + the 12px bottom padding. The box
-     is border-box, so a plain 60px would clip that padding away and leave no
-     gap between the tags and the "Next slot" bar. */
-  max-height: 72px;
+}
+
+.kal-doctor-card__expertise[hidden] {
+  display: none;
+}
+
+.kal-doctor-card__expertise-label {
+  flex-shrink: 0;
+  font-size: var(--kal-booking-flow-font-size-small);
+  line-height: 140%;
+  color: var(--kal-booking-flow-color-body);
+  white-space: nowrap;
+}
+
+.kal-doctor-card__tags {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: nowrap;
+  gap: 8px;
   overflow: hidden;
 }
 
 .kal-doctor-card__tag {
+  flex-shrink: 0;
   padding: 2px 10px;
   border-radius: 999px;
   border: 1px solid var(--kal-booking-flow-color-tag-border);
@@ -3257,24 +3509,20 @@ div.kal-leave-booking-modal__backdrop {
   font-size: var(--kal-booking-flow-font-size-small);
   line-height: 140%;
   white-space: nowrap;
-  /* max-width caps at just under half the row (the 4px = half the 8px
-     gap, so two capped tags plus the gap between them exactly fill one
-     row) — not 100%. At 100%, a single long label could fill an entire
-     row by itself, which with exactly 4 badges (DOCTOR_CARD_TAG_COUNT)
-     and only a 2-row budget meant the 4th badge got wrapped to a 3rd
-     row and silently clipped by the container's max-height below ("i
-     cant see 4 badges"). Capping every tag at ~half the row guarantees
-     two always fit side by side, so all 4 always land in exactly 2
-     rows — the max-height/overflow below becomes a pure backstop, never
-     actually triggered. A short label is still its own content width
-     under this cap, not stretched to fill it — the gap stays a normal
-     8px either way, this only ever shrinks a tag that's otherwise too
-     long for the row. */
-  max-width: calc(50% - 4px);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   box-sizing: border-box;
+}
+
+.kal-doctor-card__tags[style*="--kal-tag-shift"] .kal-doctor-card__tag {
+  animation: kal-doctor-tags-scroll var(--kal-tag-duration, 12s) linear infinite;
+}
+
+.kal-doctor-card__tags[style*="--kal-tag-shift"]:hover .kal-doctor-card__tag {
+  animation-play-state: paused;
+}
+
+@keyframes kal-doctor-tags-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-1 * var(--kal-tag-shift))); }
 }
 
 /* Sand-tinted gradient by default, plain white only when selected —
@@ -3343,7 +3591,7 @@ div.kal-leave-booking-modal__backdrop {
    instead of photo+meta on top and tags stacked full-width below it. Uses
    display:contents on .kal-doctor-card__body to unwrap it so its two
    children (photo, info) become direct grid items of .kal-doctor-card__top
-   alongside .kal-doctor-card__tags — lets the 120px photo span both rows
+   alongside .kal-doctor-card__expertise — lets the 120px photo span both rows
    (grid-row:1/3) and stretch the full height of info+tags together,
    without touching the markup or the mobile layout (that stays the
    existing flex column: body row on top, tags full-width below). 120px
@@ -3351,7 +3599,7 @@ div.kal-leave-booking-modal__backdrop {
 @media screen and (min-width: 750px) {
   .kal-doctor-card__top {
     display: grid;
-    grid-template-columns: 120px 1fr;
+    grid-template-columns: 120px minmax(0, 1fr);
     column-gap: 12px;
     row-gap: 8px;
     padding: 12px;
@@ -3364,7 +3612,11 @@ div.kal-leave-booking-modal__backdrop {
   .kal-doctor-card__photo {
     grid-column: 1;
     grid-row: 1 / 3;
+    /* 120 x 146 on desktop, a fixed size rather than stretching to the height
+       of the text beside it. */
     width: 120px;
+    height: 146px;
+    align-self: start;
   }
 
   .kal-doctor-card__info {
@@ -3372,11 +3624,11 @@ div.kal-leave-booking-modal__backdrop {
     grid-row: 1;
   }
 
-  .kal-doctor-card__tags {
+  .kal-doctor-card__expertise {
+    min-width: 0;
     grid-column: 2;
     grid-row: 2;
     padding: 0;
-    max-height: 60px;
   }
 }
 

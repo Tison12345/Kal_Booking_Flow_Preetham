@@ -1,18 +1,22 @@
 {%- comment -%}
   The clinics and doctors the booking flow shows, straight from Shopify, with
-  no request to the CMS: shop.metaobjects.clinic (Clinic entries) and
-  shop.metaobjects.doctor (Doctor entries) rendered into the page as JSON
-  for kal-booking-flow.js to read (getShopifyCatalog()).
+  no request to the CMS, rendered into the page as JSON for kal-booking-flow.js
+  to read (getShopifyCatalog()).
 
-  Clinic entry:  facility_id (the CMS clinic id), name, address, city, timings.
-  Doctor entry:  doctor_id (the CMS staff id), name, photo, qualification,
-                 specialization (list), experience, languages (list), bio,
-                 clinics (list of Clinic entries: where the doctor is offered)
-                 and consultation_product (Product reference: the doctor's
-                 consultation product).
+  Clinics: shop.metaobjects.clinic (Clinic entries): facility_id (the CMS
+  clinic id), name, address, city, timings.
 
-  Prices come from that product's variants. Each variant is one clinic and one
-  mode: option "Mode" is "In-Clinic" or "Online", the metafield
+  Doctors: every product picked in Theme settings > "Doctor consultation
+  products" (settings.kal_doctor_products) that has custom.doctor_id set is a
+  doctor. The profile is in the product's own metafields (all in the
+  "custom" namespace): doctor_id (the CMS staff id), name, photo, qualification,
+  specialization (list), experience, languages (list), bio, and clinics (list of
+  Clinic entries: where the doctor is offered). A doctor with no doctor_id is
+  skipped; any other empty field just shows nothing. The old Doctor entries are
+  not read any more (the metaobject itself is left in Shopify for now).
+
+  Prices come from that same product's variants. Each variant is one clinic and
+  one mode: option "Mode" is "In-Clinic" or "Online", the metafield
   custom.facility_id is the clinic id, the variant price is the fee, and the
   optional custom.pay_now_discount_percent is the In-Clinic pay-now discount.
   variant.price is in the smallest currency unit (paise for INR).
@@ -23,8 +27,7 @@
   ₹545 for a ₹500 variant), so "Charge tax" must stay off on these variants.
 
   Liquid can only read a product that is published to the Online Store
-  channel, so a doctor whose consultation_product is unset or unpublished has
-  an empty list here (the card then shows no price).
+  channel, so a doctor product that is unpublished does not appear.
 {%- endcomment -%}
 <script type="application/json" id="kal-shopify-catalog">
 {
@@ -41,48 +44,37 @@
     {%- endfor -%}
   ],
   "doctors": [
-    {%- for doctor in shop.metaobjects.doctor.values -%}
+    {%- assign wrote_doctor = false -%}
+    {%- for product in settings.kal_doctor_products -%}
+    {%- assign doctor_id = product.metafields.custom.doctor_id.value -%}
+    {%- if doctor_id != blank -%}
+    {%- if wrote_doctor %},{% endif -%}
+    {%- assign wrote_doctor = true -%}
+    {%- assign specialization = product.metafields.custom.specialization.value -%}
+    {%- assign languages = product.metafields.custom.languages.value -%}
     {
-      "id": {{ doctor.doctor_id.value | json }},
-      "name": {{ doctor.name.value | json }},
-      "qualification": {{ doctor.qualification.value | json }},
-      "specialization": {{ doctor.specialization.value | json }},
-      "experience": {{ doctor.experience.value | json }},
-      "languages": {{ doctor.languages.value | json }},
-      "bio": {{ doctor.bio.value | json }},
-      {%- if doctor.photo.value != blank %}
-      "photoUrl": {{ doctor.photo.value | image_url: width: 400 | json }},
+      "id": {{ doctor_id | json }},
+      "name": {{ product.metafields.custom.name.value | json }},
+      "qualification": {{ product.metafields.custom.qualification.value | json }},
+      "specialization": {% if specialization != blank %}{{ specialization | json }}{% else %}[]{% endif %},
+      "experience": {{ product.metafields.custom.experience.value | json }},
+      "languages": {% if languages != blank %}{{ languages | json }}{% else %}[]{% endif %},
+      "bio": {{ product.metafields.custom.bio.value | json }},
+      {%- if product.metafields.custom.photo.value != blank %}
+      "photoUrl": {{ product.metafields.custom.photo.value | image_url: width: 400 | json }},
       {%- else %}
       "photoUrl": null,
       {%- endif %}
       "clinicIds": [
-        {%- for clinic in doctor.clinics.value -%}
+        {%- for clinic in product.metafields.custom.clinics.value -%}
         {{ clinic.facility_id.value | json }}{% unless forloop.last %},{% endunless %}
         {%- endfor -%}
       ],
       "pricing": [
-        {%- assign consultation_product = doctor.consultation_product.value -%}
-        {%- if consultation_product != blank -%}
-          {%- assign mode_index = -1 -%}
-          {%- for option_name in consultation_product.options -%}
-            {%- assign option_name_lower = option_name | downcase -%}
-            {%- if option_name_lower == 'mode' -%}
-              {%- assign mode_index = forloop.index0 -%}
-            {%- endif -%}
-          {%- endfor -%}
-          {%- if mode_index >= 0 -%}
-            {%- for variant in consultation_product.variants -%}
-            {
-              "facilityId": {{ variant.metafields.custom.facility_id.value | json }},
-              "mode": {{ variant.options[mode_index] | json }},
-              "pricePaise": {{ variant.price }},
-              "payNowDiscountPercent": {{ variant.metafields.custom.pay_now_discount_percent.value | default: 0 | json }}
-            }{% unless forloop.last %},{% endunless %}
-            {%- endfor -%}
-          {%- endif -%}
-        {%- endif -%}
+        {%- render 'kal-shopify-catalog-pricing', consultation_product: product -%}
       ]
-    }{% unless forloop.last %},{% endunless %}
+    }
+    {%- endif -%}
     {%- endfor -%}
   ]
 }

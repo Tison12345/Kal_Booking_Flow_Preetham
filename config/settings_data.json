@@ -128,6 +128,7 @@
     "cart_color_scheme": "scheme-1",
     "customer_account_menu": "customer-account-main-menu",
     "kal_booking_api_base_url": "https://kal-cms-vx-staging.vercel.app",
+    "kal_doctor_products": ["anita-sharma-consultation", "dr-neha-sharma-consultation"],
     "sections": {
       "main-password-header": {
         "type": "main-password-header",

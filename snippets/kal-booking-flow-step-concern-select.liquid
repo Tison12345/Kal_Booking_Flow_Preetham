@@ -161,13 +161,6 @@
       <h2 class="kal-step-doctor-select__heading">Choose your health concerns</h2>
     </div>
 
-    <div class="kal-concern-select__banner">
-      <span class="kal-icon kal-icon--search">
-        {%- render 'kal-booking-icons', icon_name: 'search' -%}
-      </span>
-      <span class="kal-concern-select__banner-text">Not sure? <strong>General Wellness</strong> will guide you from there.</span>
-    </div>
-
     <div class="kal-step-shell__scroll">
       {%- comment -%}
         Populated client-side from sections/kal-concern-options.liquid's
@@ -202,13 +195,26 @@
             <div class="kal-concern-select__other-meta">
               <p class="kal-form-error" data-kal-other-concern-error hidden>
                 <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
-                <span>Describe your concern, or untick Other.</span>
+                <span>Please specify your concern</span>
               </p>
               <span class="kal-concern-select__other-count" data-kal-other-concern-count></span>
             </div>
           </div>
         </div>
       </div>
+    </div>
+
+    {%- comment -%}
+      "Not sure?" banner, now pinned just below the concern list (it used to sit
+      above it). It is only shown while nothing is picked: syncConcernSelectionUi()
+      in kal-booking-flow.js hides it as soon as any concern is selected and
+      shows it again when the last one is unticked.
+    {%- endcomment -%}
+    <div class="kal-concern-select__banner" data-kal-concern-banner>
+      <span class="kal-icon kal-icon--search">
+        {%- render 'kal-booking-icons', icon_name: 'search' -%}
+      </span>
+      <span class="kal-concern-select__banner-text">Not sure? <strong>General Wellness</strong> will guide you from there.</span>
     </div>
 
     {%- comment -%}

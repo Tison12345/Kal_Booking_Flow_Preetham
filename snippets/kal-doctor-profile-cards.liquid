@@ -1,22 +1,28 @@
 {%- comment -%}
-  A "meet the doctor" card for every Doctor entry in Shopify
-  (shop.metaobjects.doctor), with a Consult button that opens the booking flow
-  straight at Slot Picker for that doctor (Experiment B, .kal-consult-cta).
-  Everything shown comes from the Doctor entry: name, photo, qualification,
-  specialization (list), experience and languages. The button carries the
-  entry's doctor_id (the CMS staff id), which is what the booking flow reads.
-  Nothing about a doctor is typed in this snippet.
+  A "meet the doctor" card for every doctor in Shopify, with a Consult button
+  that opens the booking flow straight at Slot Picker for that doctor
+  (Experiment B, .kal-consult-cta). A doctor is a product picked in Theme
+  settings > "Doctor consultation products" that has custom.doctor_id set; everything shown comes from that
+  product's metafields (custom.*): name, photo, qualification, specialization
+  (list), experience and languages. The button carries the doctor_id (the CMS
+  staff id), which is what the booking flow reads. Nothing about a doctor is
+  typed in this snippet. Same source as kal-shopify-catalog.liquid.
 {%- endcomment -%}
-{%- for doctor in shop.metaobjects.doctor.values -%}
-  {%- assign doctor_id = doctor.doctor_id.value -%}
-  {%- if doctor_id != blank and doctor.name.value != blank -%}
-    {%- assign experience_text = doctor.experience.value | append: '' | strip -%}
+{%- for product in settings.kal_doctor_products -%}
+  {%- assign doctor_id = product.metafields.custom.doctor_id.value -%}
+  {%- assign doctor_name = product.metafields.custom.name.value -%}
+  {%- if doctor_id != blank and doctor_name != blank -%}
+    {%- assign doctor_photo = product.metafields.custom.photo.value -%}
+    {%- assign doctor_qualification = product.metafields.custom.qualification.value -%}
+    {%- assign doctor_specialization = product.metafields.custom.specialization.value -%}
+    {%- assign doctor_languages = product.metafields.custom.languages.value -%}
+    {%- assign experience_text = product.metafields.custom.experience.value | append: '' | strip -%}
     {%- assign experience_years = experience_text | plus: 0 -%}
     <div style="max-width:420px;margin:0 auto 20px;border:1px solid #d8d8d0;border-radius:12px;padding:20px;display:flex;gap:16px;align-items:flex-start;font-family:sans-serif;">
-      {%- if doctor.photo.value != blank -%}
+      {%- if doctor_photo != blank -%}
         <img
-          src="{{ doctor.photo.value | image_url: width: 144 }}"
-          alt="{{ doctor.name.value | escape }}"
+          src="{{ doctor_photo | image_url: width: 144 }}"
+          alt="{{ doctor_name | escape }}"
           width="72"
           height="72"
           loading="lazy"
@@ -26,20 +32,20 @@
         <div style="width:72px;height:72px;border-radius:50%;background:#2f4f3f;flex-shrink:0;"></div>
       {%- endif -%}
       <div>
-        <div style="font-size:18px;font-weight:600;color:#1a1a1a;">{{ doctor.name.value | escape }}</div>
-        {%- if doctor.qualification.value != blank -%}
-          <div style="color:#666;font-size:14px;margin-top:4px;">{{ doctor.qualification.value | escape }}</div>
+        <div style="font-size:18px;font-weight:600;color:#1a1a1a;">{{ doctor_name | escape }}</div>
+        {%- if doctor_qualification != blank -%}
+          <div style="color:#666;font-size:14px;margin-top:4px;">{{ doctor_qualification | escape }}</div>
         {%- endif -%}
-        {%- if doctor.specialization.value.size > 0 -%}
-          <div style="color:#2f4f3f;font-size:14px;margin-top:4px;">{{ doctor.specialization.value | join: ', ' | escape }}</div>
+        {%- if doctor_specialization.size > 0 -%}
+          <div style="color:#2f4f3f;font-size:14px;margin-top:4px;">{{ doctor_specialization | join: ', ' | escape }}</div>
         {%- endif -%}
         {%- if experience_text != blank -%}
           <div style="color:#666;font-size:13px;margin-top:4px;">
             {%- if experience_years > 0 -%}{{ experience_years }} years of experience{%- else -%}{{ experience_text | escape }}{%- endif -%}
           </div>
         {%- endif -%}
-        {%- if doctor.languages.value.size > 0 -%}
-          <div style="color:#666;font-size:13px;margin-top:4px;">{{ doctor.languages.value | join: ', ' | escape }}</div>
+        {%- if doctor_languages.size > 0 -%}
+          <div style="color:#666;font-size:13px;margin-top:4px;">{{ doctor_languages | join: ', ' | escape }}</div>
         {%- endif -%}
         <div style="margin-top:12px;display:flex;gap:8px;">
           <button type="button" style="padding:8px 16px;border:1px solid #ccc;background:#f5f5f0;border-radius:6px;">View Profile</button>

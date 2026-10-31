@@ -1489,6 +1489,17 @@
       },
       {
         "type": "header",
+        "content": "Doctors"
+      },
+      {
+        "type": "product_list",
+        "id": "kal_doctor_products",
+        "label": "Doctor consultation products",
+        "info": "Pick each doctor's Consultation product (up to 50). The doctor's profile (name, photo, qualification, etc.) comes from that product's metafields, and the price from its variants. A product without a Doctor_id metafield is ignored.",
+        "limit": 50
+      },
+      {
+        "type": "header",
         "content": "CTA text"
       },
       {

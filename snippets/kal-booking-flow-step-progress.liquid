@@ -45,13 +45,13 @@
       {%- assign is_last = forloop.last -%}
       {%- if step_index < current_step -%}
         {%- assign state_modifier = ' kal-concern-select__stepper-step--completed' -%}
-        {%- assign state_text = 'Completed' -%}
+        {%- assign state_text = '' -%}
       {%- elsif step_index == current_step -%}
         {%- assign state_modifier = ' kal-concern-select__stepper-step--current' -%}
-        {%- assign state_text = 'In progress' -%}
+        {%- assign state_text = '' -%}
       {%- elsif step_index == next_step -%}
         {%- assign state_modifier = ' kal-concern-select__stepper-step--next' -%}
-        {%- assign state_text = 'Up next' -%}
+        {%- assign state_text = '' -%}
       {%- else -%}
         {%- assign state_modifier = '' -%}
         {%- assign state_text = '' -%}

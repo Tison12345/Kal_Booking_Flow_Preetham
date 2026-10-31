@@ -84,8 +84,8 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
 {%- comment -%}
-  Clinics and doctors from Shopify (shop.metaobjects.clinic / .doctor), as JSON
-  for kal-booking-flow.js. No request to the CMS is needed to show them.
+  Clinics (Clinic entries) and doctors (the consultation products picked in Theme settings)
+  from Shopify, as JSON for kal-booking-flow.js. No request to the CMS is needed to show them.
 {%- endcomment -%}
 {%- render 'kal-shopify-catalog' -%}
 
@@ -163,6 +163,37 @@
   </div>
 
   {%- comment -%}
+    "Switch clinic?" popup, used only when the clinic switcher is attached
+    (see kal-booking-flow-facility-picker.liquid, currently off) and the visitor picks a clinic
+    where the doctor they already chose isn't offered in person. "Change
+    Clinic" switches (the doctor must be picked again), "Book an online slot"
+    keeps the clinic and switches the mode to Video Consult instead (hidden
+    when that doctor has no online option), and the close button cancels.
+    Opened and closed by kal-booking-flow.js (FACILITY SWITCHER). A direct
+    child of <dialog>, like the calendar modal below, for the same
+    overflow-clipping reason.
+  {%- endcomment -%}
+  <div class="kal-facility-switch-modal" data-kal-facility-switch-modal hidden>
+    <div class="kal-facility-switch-modal__card">
+      <button type="button" class="kal-facility-switch-modal__close" data-kal-facility-switch-cancel aria-label="Close">
+        {%- render 'kal-booking-icons', icon_name: 'close' -%}
+      </button>
+      <span class="kal-facility-switch-modal__avatar" data-kal-facility-switch-photo aria-hidden="true"></span>
+      {%- comment -%}
+        The sentence is filled in by openFacilitySwitchModal() in
+        kal-booking-flow.js: "<doctor> is available in person only at <the
+        clinic(s) where the doctor is offered>. Are you sure you want to switch
+        clinics?" The doctor's name is bold, the rest regular.
+      {%- endcomment -%}
+      <p class="kal-facility-switch-modal__text" data-kal-facility-switch-text></p>
+      <div class="kal-facility-switch-modal__actions">
+        <button type="button" class="kal-facility-switch-modal__primary" data-kal-facility-switch-clinic>Change Clinic</button>
+        <button type="button" class="kal-facility-switch-modal__secondary" data-kal-facility-switch-online>Book an online slot</button>
+      </div>
+    </div>
+  </div>
+
+  {%- comment -%}
     Calendar modal for Slot Picker's date picker — rebuilt after being
     fully removed (see kal-booking-flow-step-slot-picker.liquid's own
     comment for why) once the day-strip went fully static. Restrictions
@@ -196,7 +227,6 @@
         <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
       </div>
       <div class="kal-calendar-modal__grid" data-kal-calendar-grid></div>
-      <button type="button" class="kal-calendar-modal__close" data-kal-close-calendar>Done</button>
     </div>
   </div>
 

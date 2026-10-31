@@ -233,13 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
       el.textContent = facility.name;
     });
 
+    // Only does anything when the clinic switcher is on (the list exists).
+    updateFacilityPickerSelection(facility.id);
   };
 
   // The clinics and doctors come from Shopify, not from the CMS: the theme
-  // renders shop.metaobjects.clinic and shop.metaobjects.doctor into the page
-  // as JSON (snippets/kal-shopify-catalog.liquid) and this reads it back.
+  // renders the Clinic entries (shop.metaobjects.clinic) and the doctor
+  // products (picked in Theme settings) into the page as JSON
+  // (snippets/kal-shopify-catalog.liquid) and this reads it back.
   // A clinic's id is its facility_id field (the CMS clinic id), a doctor's id
-  // is doctor_id (the CMS staff id), so the later booking calls still use real
+  // is its custom.doctor_id metafield (the CMS staff id), so the later booking calls still use real
   // CMS ids. No request is made to load either list.
   let shopifyCatalogCache = null;
 
@@ -545,11 +548,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // every switchable step (Concern Select/Doctor Select/Slot Picker)
   // swaps to a plain "Online Consultation" label. Switching back to
   // In-Clinic restores whatever facility name was showing before, from
-  // the button's own dataset. (The facility badge's own dropdown/switcher
-  // was removed per explicit instruction — see
-  // kal-booking-flow-facility-picker.liquid's own comment — so this no
-  // longer needs to also disable/close a picker toggle.)
+  // the button's own dataset. When the clinic switcher is turned on (see
+  // FACILITY SWITCHER below), the badge's toggle is also disabled and any
+  // open list closed while online: a disabled <button> fires no click, so
+  // that alone stops the list opening. With the switcher off there is no
+  // toggle in the page, so those two steps find nothing and do nothing.
   const setOnlineHeaderState = (isVideo) => {
+    flow.querySelectorAll('[data-kal-facility-toggle]').forEach((btn) => {
+      btn.disabled = isVideo;
+    });
+    if (isVideo) {
+      flow.querySelectorAll('[data-kal-facility-picker]').forEach((wrapper) => {
+        setFacilityPickerOpen(wrapper, false);
+      });
+    }
     flow.querySelectorAll('.kal-step-header__location-text').forEach((el) => {
       if (isVideo) {
         if (el.dataset.kalPrevFacilityText === undefined) el.dataset.kalPrevFacilityText = el.textContent;
@@ -567,6 +579,156 @@ document.addEventListener('DOMContentLoaded', () => {
     flow.querySelectorAll('[data-kal-location-icon-online]').forEach((el) => {
       el.hidden = !isVideo;
     });
+  };
+
+  // ----------------------------------------------------------------------
+  // FACILITY SWITCHER — the clinic badge at the top of the popup as a dropdown.
+  // OFF for now: one line in kal-booking-flow-facility-picker.liquid
+  // ("assign clinic_switcher = false") decides whether it renders the plain
+  // label (nothing below ever runs, as there is nothing to click) or the button
+  // with a down arrow and a list of the Clinic entries. To attach the dropdown,
+  // change that line to true; everything else is already here. The click
+  // handling for it is in the document click listener further down
+  // ("Facility switcher").
+  //
+  // Choosing another clinic: the new clinic is stored and shown everywhere, the
+  // doctor, day and slot picked for the old clinic are dropped (and a held slot
+  // released), the doctor list is rebuilt for the new clinic, and a visitor who
+  // was already on Date & Time goes back to Doctor Select to pick a doctor
+  // again, since the previous one may not work at the new clinic.
+  // ----------------------------------------------------------------------
+  const setFacilityPickerOpen = (wrapper, open) => {
+    const toggle = wrapper.querySelector('[data-kal-facility-toggle]');
+    const panel = wrapper.querySelector('[data-kal-facility-panel]');
+    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (panel) panel.hidden = !open;
+  };
+
+  // Ticks the current clinic in every copy of the list.
+  const updateFacilityPickerSelection = (facilityId) => {
+    flow.querySelectorAll('[data-kal-facility-option]').forEach((opt) => {
+      opt.setAttribute('aria-selected', String(opt.dataset.kalFacilityOptionId === facilityId));
+    });
+  };
+
+  const applyFacilitySwitch = (facility) => {
+    storeFacility(facility);
+    applyStoredFacility();
+
+    // Nothing chosen for the old clinic carries over.
+    const staleHoldId = slotPicker.holdId;
+    slotPicker.selectedSlot = null;
+    slotPicker.holdId = null;
+    slotPicker.heldSlot = null;
+    slotPicker.holdContext = null;
+    slotHoldRequestSequence += 1;
+    if (staleHoldId) void releaseSlotHoldViaPartnerApi(staleHoldId);
+    selectedDoctorId = null;
+    lastDoctorSelection = { doctorId: null, mode: null };
+    doctorListCache.clear();
+    doctorListInFlight.clear();
+    clearDayAvailabilityCache();
+    updateSlotContinueButton();
+
+    // Rebuilds the doctor list (and with it Doctor Select's Continue button
+    // and the doctor shown on later steps) for the new clinic.
+    void loadDoctorsForFacility();
+
+    if (flow.dataset.kalActiveStep === 'slot-picker') goToStep('doctor-select');
+  };
+
+  // The clinic picked in the list while the "Switch clinic?" popup is open;
+  // read back if "Change Clinic" is pressed, cleared on any button.
+  let pendingFacility = null;
+
+  const openFacilitySwitchModal = (facility, doctor) => {
+    pendingFacility = facility;
+    const modal = flow.querySelector('[data-kal-facility-switch-modal]');
+    if (!modal) return;
+    // What the doctor offers at the clinic that was just picked, from the
+    // doctor's variants in Shopify (one per clinic and mode):
+    //  - only a video consult there: "<doctor> is available at <clinic> for video
+    //    consult only."
+    //  - nothing there at all: "<doctor> is not available at <clinic>." plus where
+    //    the doctor is: "Available in person only at A, B and C."
+    const pricing = doctor.pricing || [];
+    const offersAt = (mode) => pricing.some(
+      (row) => row.facilityId === facility.id && String(row.mode).toLowerCase() === mode,
+    );
+    const videoOnlyHere = offersAt('online') && !offersAt('in-clinic');
+    const clinicNames = (doctor.clinicIds || [])
+      .map((id) => (getShopifyCatalog().clinics.find((clinic) => clinic && clinic.id === id) || {}).name)
+      .filter(Boolean);
+    const clinicList = clinicNames.length > 1
+      ? `${clinicNames.slice(0, -1).join(', ')} and ${clinicNames[clinicNames.length - 1]}`
+      : clinicNames[0] || '';
+    let sentence;
+    if (videoOnlyHere) {
+      sentence = ` is available at ${facility.name} for video consult only.`;
+    } else {
+      sentence = ` is not available at ${facility.name}.`;
+      if (clinicList) sentence += ` Available in person only at ${clinicList}.`;
+    }
+    modal.querySelectorAll('[data-kal-facility-switch-text]').forEach((el) => {
+      el.textContent = '';
+      const name = document.createElement('strong');
+      name.textContent = doctor.name;
+      el.appendChild(name);
+      el.appendChild(document.createTextNode(`${sentence} Are you sure you want to switch clinics?`));
+    });
+    // The doctor's photo in the round avatar (grey circle when there is none).
+    modal.querySelectorAll('[data-kal-facility-switch-photo]').forEach((el) => {
+      el.innerHTML = '';
+      if (doctor.photoUrl) {
+        const img = document.createElement('img');
+        img.src = doctor.photoUrl;
+        img.alt = '';
+        el.appendChild(img);
+      }
+    });
+    // "Book an online slot" only if this doctor has an Online price in Shopify.
+    const offersOnline = (doctor.pricing || []).some((row) => String(row.mode).toLowerCase() === 'online');
+    modal.querySelectorAll('[data-kal-facility-switch-online]').forEach((el) => {
+      el.hidden = !offersOnline;
+    });
+    modal.hidden = false;
+  };
+
+  const closeFacilitySwitchModal = () => {
+    pendingFacility = null;
+    const modal = flow.querySelector('[data-kal-facility-switch-modal]');
+    if (modal) modal.hidden = true;
+  };
+
+  const selectFacilityOption = (optionEl) => {
+    const wrapper = optionEl.closest('[data-kal-facility-picker]');
+    if (!wrapper) return;
+    setFacilityPickerOpen(wrapper, false);
+
+    const facility = { id: optionEl.dataset.kalFacilityOptionId, name: optionEl.dataset.kalFacilityName };
+    if (!facility.id) return;
+    const current = getStoredFacility();
+    if (current && current.id === facility.id) return;
+
+    // Once a doctor is chosen (Doctor Select and Date & Time), switching to a
+    // clinic that doctor isn't offered at asks first. Elsewhere, or when the
+    // doctor is offered at the new clinic too, it just switches.
+    const step = flow.dataset.kalActiveStep;
+    const doctor = (step === 'doctor-select' || step === 'slot-picker') && selectedDoctorId
+      ? getShopifyCatalog().doctors.find((item) => item && item.id === selectedDoctorId)
+      : null;
+    // "Offered in person there" means listed at that clinic AND with an
+    // In-Clinic price for it; a clinic with only a video consult asks too.
+    const inPersonThere = doctor
+      && (doctor.clinicIds || []).includes(facility.id)
+      && (doctor.pricing || []).some(
+        (row) => row.facilityId === facility.id && String(row.mode).toLowerCase() === 'in-clinic',
+      );
+    if (doctor && !inPersonThere) {
+      openFacilitySwitchModal(facility, doctor);
+    } else {
+      applyFacilitySwitch(facility);
+    }
   };
 
   // ----------------------------------------------------------------------
@@ -729,16 +891,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     tagsContainer.innerHTML = '';
-    tagsContainer.hidden = badges.length === 0;
+    (tagsContainer.closest('.kal-doctor-card__expertise') || tagsContainer).hidden = badges.length === 0;
     badges.forEach((text) => {
       const tagEl = document.createElement('span');
       tagEl.className = 'kal-doctor-card__tag';
       tagEl.textContent = text;
-      // Full label stays available as a tooltip even once the CSS
-      // ellipsis-truncates its on-card text (see .kal-doctor-card__tag).
-      tagEl.title = text;
       tagsContainer.appendChild(tagEl);
     });
+    observeDoctorCardTags(tagsContainer);
+  };
+
+  // The tags sit on one line and are shown in full; when they are wider than
+  // the card they scroll endlessly (see .kal-doctor-card__tags in the CSS). The
+  // distance is only known once the card is on screen, so it is measured on
+  // every resize of the box (also fires when a hidden step is first shown).
+  const measureDoctorCardTags = (box) => {
+    if (!box.clientWidth) return;
+    // Switch the animation off first and measure the untransformed layout; it
+    // is switched on again below for the originals and the copies together, so
+    // they all start from the same point instead of the copies lagging behind.
+    box.style.removeProperty('--kal-tag-shift');
+    box.querySelectorAll('[data-kal-tag-clone]').forEach((el) => el.remove());
+    void box.offsetWidth;
+    const tags = [...box.querySelectorAll('.kal-doctor-card__tag')];
+    if (!tags.length) return;
+    const style = getComputedStyle(box);
+    const available = box.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const last = tags[tags.length - 1];
+    const setWidth = last.offsetLeft + last.offsetWidth - tags[0].offsetLeft;
+    if (setWidth > available + 1) {
+      // One extra copy of the set, so the line can scroll by exactly one set
+      // width and start over without a visible jump.
+      tags.forEach((tag) => {
+        const copy = tag.cloneNode(true);
+        copy.setAttribute('aria-hidden', 'true');
+        copy.setAttribute('data-kal-tag-clone', '');
+        box.appendChild(copy);
+      });
+      const shift = box.querySelector('[data-kal-tag-clone]').offsetLeft - tags[0].offsetLeft;
+      box.style.setProperty('--kal-tag-shift', `${shift}px`);
+      box.style.setProperty('--kal-tag-duration', `${Math.max(8, shift / 30)}s`);
+    } else {
+      box.style.removeProperty('--kal-tag-shift');
+      box.style.removeProperty('--kal-tag-duration');
+    }
+  };
+  const doctorCardTagsObserver = new ResizeObserver((entries) => {
+    entries.forEach((entry) => measureDoctorCardTags(entry.target));
+  });
+  // The tag widths change once the web font has loaded, with no resize of the
+  // box itself, so measure every box again then.
+  document.fonts?.ready.then(() => {
+    document.querySelectorAll('.kal-doctor-card__tags').forEach(measureDoctorCardTags);
+  });
+  const observeDoctorCardTags = (box) => {
+    doctorCardTagsObserver.observe(box);
+    measureDoctorCardTags(box);
   };
 
   // Puts a text value after the icon in one of the card's meta rows (the icon
@@ -792,6 +1000,9 @@ document.addEventListener('DOMContentLoaded', () => {
         tag.textContent = text;
         tagsEl.appendChild(tag);
       });
+      const expertiseEl = tagsEl.closest('.kal-doctor-card__expertise');
+      if (expertiseEl) expertiseEl.hidden = !tagsEl.children.length;
+      observeDoctorCardTags(tagsEl);
     }
   };
 
@@ -1179,15 +1390,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // post-layout measurements re-checked, not whatever scroll position
   // happened to be true the last time this ran.
   const SCROLL_HINT_BOTTOM_THRESHOLD = 4;
-  // Once a visitor has reached the bottom, the hint stays hidden even if
-  // they scroll back up — it only comes back when the step is entered
-  // again (see goToStep's reset below), not on every upward scroll.
-  const scrollHintReachedBottom = new WeakSet();
+  // The hint is shown whenever there is more below, so it comes back as soon
+  // as the visitor scrolls up from the bottom, and hides again at the bottom.
   const updateScrollHintVisibility = (scrollRegion, hintButton) => {
+    // A step (or the whole dialog) that is not on screen has no size, which
+    // would read as "already at the bottom" and switch the hint off for good.
+    // Nothing can be measured then, so leave the hint as it is; it is checked
+    // again when the step is shown (goToStep) and whenever the list scrolls.
+    if (!scrollRegion.clientHeight) return;
     const atBottom = scrollRegion.scrollTop + scrollRegion.clientHeight
       >= scrollRegion.scrollHeight - SCROLL_HINT_BOTTOM_THRESHOLD;
-    if (atBottom) scrollHintReachedBottom.add(hintButton);
-    hintButton.hidden = atBottom || scrollHintReachedBottom.has(hintButton);
+    hintButton.hidden = atBottom;
   };
   const updateAllScrollHints = () => {
     flow.querySelectorAll('[data-kal-scroll-hint]').forEach((hintButton) => {
@@ -1212,14 +1425,6 @@ document.addEventListener('DOMContentLoaded', () => {
     steps.forEach((step) => {
       step.hidden = step.dataset.kalStep !== stepName;
     });
-
-    // Entering Concern Select afresh shows the scroll hint again, even if
-    // the previous visit reached the bottom (see scrollHintReachedBottom).
-    if (stepName === 'concern-select') {
-      flow.querySelectorAll('[data-kal-scroll-hint]').forEach((hintButton) => {
-        scrollHintReachedBottom.delete(hintButton);
-      });
-    }
 
     // Lets kal-booking-flow.css size the desktop dialog per step (e.g.
     // Entry's own 802x600 export vs. every other step's shared 1180x750)
@@ -1365,14 +1570,40 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  const updateConcernContinueButton = () => {
+  // How long the Continue footer waits when "Other" is the first thing ticked:
+  // the description box slides open (0.2s) and is then scrolled into view
+  // (smooth, starts at 0.2s), so Continue appears only after that, not on top
+  // of it. Without it the footer shrinks the list first and hides the box.
+  const CONCERN_FOOTER_AFTER_OTHER_MS = 600;
+  let concernFooterTimer = null;
+
+  const setConcernFooterHidden = (hidden) => {
+    flow.querySelectorAll('[data-kal-concern-footer]').forEach((footer) => {
+      footer.hidden = hidden;
+    });
+  };
+
+  const updateConcernContinueButton = ({ delayFooter = false } = {}) => {
     const hasSelection = concernSelect.selected.size > 0;
+    clearTimeout(concernFooterTimer);
+    concernFooterTimer = null;
     // Per the updated Figma spec, the footer (not just the button) is
     // absent until at least one concern is picked — a disabled-but-visible
     // button was the old behavior, before this pass.
-    flow.querySelectorAll('[data-kal-concern-footer]').forEach((footer) => {
-      footer.hidden = !hasSelection;
-    });
+    if (hasSelection && delayFooter) {
+      concernFooterTimer = setTimeout(() => {
+        concernFooterTimer = null;
+        // Only if something is still picked by then.
+        if (concernSelect.selected.size === 0) return;
+        setConcernFooterHidden(false);
+        // The footer takes room from the list, so keep the box in view.
+        if (concernSelect.selected.has('other')) {
+          flow.querySelector('[data-kal-other-concern-field]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }, CONCERN_FOOTER_AFTER_OTHER_MS);
+    } else {
+      setConcernFooterHidden(!hasSelection);
+    }
     flow.querySelectorAll('[data-kal-concern-continue]').forEach((btn) => {
       btn.disabled = !hasSelection;
     });
@@ -1399,6 +1630,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // only on the click that opens it, not on every later re-sync.
     const otherChecked = concernSelect.selected.has('other');
     const wasOpen = flow.querySelector('[data-kal-other-concern-field]')?.classList.contains('kal-concern-select__reveal--open');
+    const footerWasHidden = flow.querySelector('[data-kal-concern-footer]')?.hidden !== false;
     if (!otherChecked) concernSelect.otherText = '';
     flow.querySelectorAll('[data-kal-other-concern-field]').forEach((el) => {
       el.classList.toggle('kal-concern-select__reveal--open', otherChecked);
@@ -1425,8 +1657,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 200);
       });
     }
-    updateConcernContinueButton();
+    // The "Not sure?" banner only makes sense while nothing is picked.
+    flow.querySelectorAll('[data-kal-concern-banner]').forEach((el) => {
+      el.hidden = concernSelect.selected.size > 0;
+    });
+    // Continue waits for the "Other" box to appear and scroll into view, but
+    // only when it is the first thing ticked (the footer is still hidden) and
+    // the box has just opened; every other change shows or hides it at once.
+    updateConcernContinueButton({
+      delayFooter: otherChecked && !wasOpen && footerWasHidden,
+    });
     applyExperimentVisibility();
+    // The banner and the "Other" box change how much there is to scroll, with
+    // no scroll event; the box also animates open, so measure again after it.
+    updateAllScrollHints();
+    setTimeout(updateAllScrollHints, 250);
   };
 
   const toggleConcern = (concern) => {
@@ -1457,6 +1702,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sources.forEach((source) => {
       list.appendChild(source.cloneNode(true));
     });
+    updateAllScrollHints();
   };
 
   // ----------------------------------------------------------------------
@@ -1614,6 +1860,14 @@ document.addEventListener('DOMContentLoaded', () => {
     selected: new Set(),
   };
 
+  // The name and tag are typed in the theme editor and put into markup below,
+  // so a "&" or "<" in them must not break (or inject into) the list.
+  const escapeTherapyText = (text) => String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
   const renderTherapyDropdownList = () => {
     // Selected options first (in their original relative order), then the
     // rest — "the concern selected should be on top of the stack".
@@ -1628,13 +1882,13 @@ document.addEventListener('DOMContentLoaded', () => {
       list.innerHTML = sorted.map((option) => {
         const isSelected = therapyDropdownSelect.selected.has(option.key);
         const tagHtml = option.tag
-          ? `<span class="kal-therapy-option__tag">${option.tag}</span>`
+          ? `<span class="kal-therapy-option__tag">${escapeTherapyText(option.tag)}</span>`
           : '';
         return `
-          <button type="button" class="kal-therapy-option${isSelected ? ' kal-therapy-option--selected' : ''}" data-kal-therapy-option="${option.key}" aria-pressed="${isSelected}">
+          <button type="button" class="kal-therapy-option${isSelected ? ' kal-therapy-option--selected' : ''}" data-kal-therapy-option="${escapeTherapyText(option.key)}" aria-pressed="${isSelected}">
             <span class="kal-therapy-option__left">
               <span class="kal-therapy-option__checkbox" aria-hidden="true">${THERAPY_CHECK_ICON_SVG}</span>
-              <span class="kal-therapy-option__name">${option.name}</span>
+              <span class="kal-therapy-option__name">${escapeTherapyText(option.name)}</span>
             </span>
             ${tagHtml}
           </button>
@@ -1824,6 +2078,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // checkboxes, and THERAPY_OPTIONS-driven renderTherapyDropdownList()
   // right below).
   loadConcernOptions();
+  // Concern Select starts in the same state as after the last concern is
+  // unticked: nothing selected, so Continue is disabled (it was left enabled
+  // until the first tick, most visibly in the desktop footer, which is always
+  // on screen).
+  updateConcernContinueButton();
   loadTherapyCategoryOptions();
   loadTherapyOptions();
 
@@ -2481,12 +2740,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Scrolls the currently-selected chip into view within the strip —
   // explicit instruction: selecting a date (via the strip itself or the
   // calendar modal) must never leave its own card scrolled out of sight.
-  // 'nearest' rather than 'center' so an already-visible chip (the common
-  // case — clicking a chip you can already see) doesn't needlessly
-  // re-center the whole strip under your finger.
+  // The chip is centred in the strip (not just brought into view, which left
+  // a chip near the edge sitting at the very end). Only the strip's own
+  // scroll position is moved, never the page or the dialog; the browser keeps
+  // it within the strip's ends, so the first and last chips just sit as far
+  // toward the middle as the strip allows.
   const scrollSelectedDayChipIntoView = () => {
     const active = flow.querySelector('.kal-day-strip__track .kal-day-chip--active');
-    if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    const track = active?.closest('.kal-day-strip__track');
+    if (!active || !track) return;
+    const chipCentre = active.getBoundingClientRect().left
+      - track.getBoundingClientRect().left + track.scrollLeft + active.offsetWidth / 2;
+    track.scrollTo({ left: chipCentre - track.clientWidth / 2, behavior: 'smooth' });
   };
 
   // The server now reads a doctor's schedule once for the whole range and
@@ -3556,13 +3821,12 @@ document.addEventListener('DOMContentLoaded', () => {
       let stateText = '';
       if (stepIndex < currentStep) {
         stateModifier = ' kal-concern-select__stepper-step--completed';
-        stateText = 'Completed';
       } else if (stepIndex === currentStep) {
         stateModifier = ' kal-concern-select__stepper-step--current';
-        stateText = 'In progress';
+        // No "Completed" / "In progress" / "Up next" text: the steps are told
+        // apart by their circle styling alone (check, ring, tan ring).
       } else if (stepIndex === nextStep) {
         stateModifier = ' kal-concern-select__stepper-step--next';
-        stateText = 'Up next';
       }
       const numberContent = stepIndex < currentStep ? progressCheckIconHTML : String(stepIndex);
       return `<li class="kal-concern-select__stepper-step${stateModifier}">`
@@ -4586,6 +4850,48 @@ document.addEventListener('DOMContentLoaded', () => {
     // display name can change in Shopify at any time without this ever
     // pointing at the wrong clinic, since the id was never re-derived from
     // the name in the first place.
+    // Facility switcher (only present when the theme setting is on): a click on
+    // a clinic in the list switches to it, a click on the badge opens/closes the
+    // list, and a click anywhere else closes any open list. Every lookup is
+    // scoped to the wrapper the click happened in, since the badge is rendered
+    // more than once (one per step, all in the page at once).
+    const facilityOption = e.target.closest('[data-kal-facility-option]');
+    const facilityToggle = e.target.closest('[data-kal-facility-toggle]');
+    const facilitySwitchClinic = e.target.closest('[data-kal-facility-switch-clinic]');
+    const facilitySwitchOnline = e.target.closest('[data-kal-facility-switch-online]');
+    const facilitySwitchCancel = e.target.closest('[data-kal-facility-switch-cancel]');
+    if (facilitySwitchClinic || facilitySwitchOnline) {
+      // Either way the visitor picks a doctor again on Doctor Select: whoever
+      // was chosen only made sense for the old clinic and mode.
+      const facility = pendingFacility;
+      closeFacilitySwitchModal();
+      if (facilitySwitchClinic) {
+        // "Change Clinic": a real switch to the clinic that was picked.
+        if (facility) applyFacilitySwitch(facility);
+        setMode('in-clinic');
+      } else {
+        // "Book an online slot": the clinic picked in the list is dropped
+        // (online has no clinic) and only the mode changes. setMode('video')
+        // also swaps the header to "Online Consultation" and greys the arrow.
+        setMode('video');
+      }
+      goToStep('doctor-select');
+    } else if (facilitySwitchCancel) {
+      closeFacilitySwitchModal();
+    } else if (facilityOption) {
+      selectFacilityOption(facilityOption);
+    } else if (facilityToggle) {
+      const wrapper = facilityToggle.closest('[data-kal-facility-picker]');
+      if (wrapper) {
+        const isOpen = facilityToggle.getAttribute('aria-expanded') === 'true';
+        setFacilityPickerOpen(wrapper, !isOpen);
+      }
+    } else {
+      flow.querySelectorAll('[data-kal-facility-picker]').forEach((wrapper) => {
+        if (!wrapper.contains(e.target)) setFacilityPickerOpen(wrapper, false);
+      });
+    }
+
     const facilityTrigger = e.target.closest('[data-kal-select-facility]');
     if (facilityTrigger) {
       const facilityId = facilityTrigger.dataset.facilityId;
@@ -4657,7 +4963,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (concernContinueTrigger) {
       if (otherConcernIsMissing()) {
         showOtherConcernError();
-        flow.querySelector('[data-kal-other-concern]')?.focus();
+        const otherBox = flow.querySelector('[data-kal-other-concern]');
+        // focus() on its own scrolls only enough to show the box, which leaves
+        // the error under it half hidden. The error row has just appeared, so
+        // scroll the whole field (box and error) fully into view once that
+        // has been laid out.
+        otherBox?.focus({ preventScroll: true });
+        requestAnimationFrame(() => {
+          otherBox?.closest('.kal-concern-select__other')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
       } else {
         goToStep(concernContinueTrigger.dataset.kalGoto);
       }
@@ -4803,11 +5117,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dayNum,
       );
       applyCalendarDateSelection(picked);
-      // Stays open — per explicit instruction, picking a date is not
-      // itself a close action (only the icon toggle, "Done", or clicking
-      // outside close it). Re-render so the grid's own --selected cell
-      // reflects the new pick while it's still showing.
+      // There is no "Done" button: picking a date selects it and closes the
+      // calendar, the same on mobile and desktop. (The icon toggle and a click
+      // outside the panel still close it without picking.) The grid is
+      // re-rendered so its --selected cell is right the next time it opens.
       renderCalendarMonth();
+      closeCalendarModal();
     }
 
     const slotChipTrigger = e.target.closest('.kal-slot-chip:not(:disabled)');

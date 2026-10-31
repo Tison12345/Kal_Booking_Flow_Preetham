@@ -1,34 +1,83 @@
 {% comment %}
-  Plain, non-interactive facility badge — per explicit instruction, the
-  dropdown/switcher (clinic list, "not available here" Continue/Change
-  Clinic warning) is removed entirely. This now just displays either the
-  current facility name (In-Clinic) or "Online Consultation" (Video
-  Consult), toggled purely by the existing setOnlineHeaderState() in
-  kal-booking-flow.js — that function already drives this off the shared
-  .kal-step-header__location-text class and the
-  data-kal-location-icon-offline/-online pair, both still present here,
-  so no JS changes were needed to keep that swap working. Used both for
-  the mobile step-header badge (via kal-booking-flow-step-header.liquid)
-  and the desktop "Selected Clinic" left-column pill (every other step's
-  own liquid), same as before.
+  The clinic badge shown at the top of the booking popup (mobile step header)
+  and as the desktop "Selected Clinic" pill in each step's left column. It
+  shows the current clinic name (In-Clinic) or "Online Consultation" (Video
+  Consult), swapped by setOnlineHeaderState() in kal-booking-flow.js, which
+  drives it off the shared .kal-step-header__location-text class and the
+  data-kal-location-icon-offline/-online pair.
+
+  Two looks, chosen by the single line "assign clinic_switcher = false" below
+  (there is no theme-editor setting for it):
+
+  - false (the current state): a plain, non-interactive label.
+  - true: the same badge becomes a button with a down arrow. Clicking it opens a
+    list of the clinics (the Clinic entries, shop.metaobjects.clinic) and
+    choosing one switches the booking to that clinic, with a "switch clinic?"
+    popup when the chosen doctor is not offered in person there. All of that is
+    already in the theme: the markup below, the click handling in
+    kal-booking-flow.js (FACILITY SWITCHER), the popup in
+    kal-booking-flow.liquid and the styling in kal-booking-flow.css. To attach
+    the dropdown later, change that one line to true. The switcher only appears
+    on steps 1 to 3 (or where no step_number is given, the mobile header),
+    because after that a doctor and a time are already chosen.
 
   Accepts:
-  - location_text: {String} facility name shown in the badge — defaults
-    to "Indiranagar" (dummy value, same placeholder used everywhere else
-    in this flow until it's wired to a real facility).
-  - extra_class: {String} optional, appended to the outer
-    .kal-facility-picker wrapper for context-specific styling (e.g.
-    Concern Select's desktop pill look), without needing a copy of this
-    markup per context.
+  - step_number: {Number} which step this copy is on; the switcher is only
+    offered on steps 1-3.
+  - location_text: {String} clinic name shown in the badge, defaults to
+    "Indiranagar" (a placeholder until the real clinic is applied).
+  - extra_class: {String} optional, appended to the outer .kal-facility-picker
+    wrapper for context-specific styling (e.g. Concern Select's desktop pill look).
 
   Usage:
-  {% render 'kal-booking-flow-facility-picker', location_text: 'Indiranagar' %}
+  {% render 'kal-booking-flow-facility-picker', step_number: 1, location_text: 'Indiranagar' %}
 {% endcomment %}
 
 {%- liquid
   assign location_text = location_text | default: 'Indiranagar'
+  assign clinic_switcher = false
+  assign switchable = false
+  if clinic_switcher
+    if step_number == blank or step_number <= 3
+      assign switchable = true
+    endif
+  endif
 -%}
 
+{%- if switchable -%}
+<div class="kal-facility-picker{% if extra_class %} {{ extra_class }}{% endif %}" data-kal-facility-picker>
+  <button
+    type="button"
+    class="kal-step-header__location-badge"
+    data-kal-facility-toggle
+    aria-haspopup="listbox"
+    aria-expanded="false"
+  >
+    <span class="kal-step-header__location-badge-left">
+      <span class="kal-icon kal-icon--location">
+        <span data-kal-location-icon-offline>{%- render 'kal-booking-icons', icon_name: 'location-pin' -%}</span>
+        <span data-kal-location-icon-online hidden>{%- render 'kal-booking-icons', icon_name: 'mode-online' -%}</span>
+      </span>
+      <span class="kal-step-header__location-text">{{ location_text }}</span>
+      <span class="kal-step-header__location-chevron" aria-hidden="true">
+        {%- render 'kal-booking-icons', icon_name: 'chevron-down' -%}
+      </span>
+    </span>
+  </button>
+  <ul class="kal-country-picker__panel" data-kal-facility-panel hidden role="listbox" aria-label="Choose a clinic">
+    {%- for clinic in shop.metaobjects.clinic.values -%}
+      {%- if clinic.facility_id.value != blank and clinic.name.value != blank -%}
+    <li role="presentation">
+      <button type="button" class="kal-country-picker__option kal-facility-picker__option" data-kal-facility-option data-kal-facility-option-id="{{ clinic.facility_id.value | escape }}" data-kal-facility-name="{{ clinic.name.value | escape }}" role="option" aria-selected="false">
+        <span class="kal-country-picker__label">{{ clinic.name.value | escape }}</span>
+        <span class="kal-facility-picker__check">{%- render 'kal-booking-icons', icon_name: 'check' -%}</span>
+      </button>
+    </li>
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
+</div>
+{%- else -%}
 <div class="kal-facility-picker{% if extra_class %} {{ extra_class }}{% endif %}">
   <div class="kal-step-header__location-badge">
     <span class="kal-step-header__location-badge-left">
@@ -40,3 +89,4 @@
     </span>
   </div>
 </div>
+{%- endif -%}
