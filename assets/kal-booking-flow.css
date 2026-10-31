@@ -4565,11 +4565,17 @@ div.kal-leave-booking-modal__backdrop {
 
 /* Experiment B opens straight at Slot Picker, so there is no Doctor Select
    behind it to go back to: both Back buttons (header chevron and desktop
-   footer) are hidden. visibility, not display, so the header and footer keep
-   their layout (location badge and Continue stay where they are). */
+   footer) are hidden.
+   - Footer: visibility, not display, so Continue stays where it is on the right.
+   - Header (mobile): display none, so the location badge, which fills the row
+     (flex:1), takes the Back button's place instead of leaving a gap. */
 .kal-booking-flow[data-kal-experiment-b] .kal-step-slot-picker [data-kal-back="doctor-select"] {
   visibility: hidden;
   pointer-events: none;
+}
+
+.kal-booking-flow[data-kal-experiment-b] .kal-step-slot-picker .kal-step-shell__header [data-kal-back="doctor-select"] {
+  display: none;
 }
 
 .kal-step-slot-picker .kal-slot-chip {
