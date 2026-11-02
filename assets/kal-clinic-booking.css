@@ -1,0 +1,40 @@
+/* Clinic page booking block (sections/kal-clinic-booking.liquid). Reuses the
+   --kal-* custom properties defined in kal-booking-flow.css's :root — that
+   stylesheet is loaded sitewide via layout/theme.liquid. */
+
+.kal-clinic-booking {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: var(--kal-booking-flow-font-family);
+  text-align: center;
+}
+
+.kal-clinic-booking__cta {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 8px;
+  background: var(--kal-booking-flow-color-primary);
+  color: var(--kal-booking-flow-color-on-primary);
+  font: inherit;
+  font-weight: var(--kal-booking-flow-font-weight-bold);
+  cursor: pointer;
+}
+
+.kal-clinic-booking__doctors {
+  margin-top: 40px;
+}
+
+.kal-clinic-booking__heading {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--kal-booking-flow-color-heading);
+  margin: 0 0 24px;
+}
+
+.kal-clinic-booking__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  text-align: left;
+}

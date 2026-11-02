@@ -1,0 +1,75 @@
+{% comment %}
+  Booking block for a clinic's own page. Used by templates/page.clinic.json.
+
+  The clinic comes from the page itself: its Clinic metafield (custom.clinic,
+  a reference to a Shopify Clinic entry). So every clinic page uses this same
+  section, and only the metafield changes between clinics.
+
+  Renders:
+  - the Request Appointment button. It opens the booking flow with this clinic
+    already chosen, same as picking it on "Find a Clinic".
+  - this clinic's doctors (the doctor cards, filtered to this clinic).
+
+  Nothing about the clinic or its doctors is typed here.
+{% endcomment %}
+
+{%- assign clinic_entry = page.metafields.custom.clinic.value -%}
+
+{%- if clinic_entry and settings.kal_booking_enabled -%}
+  {{ 'kal-clinic-booking.css' | asset_url | stylesheet_tag }}
+
+  <div class="kal-clinic-booking">
+    <button
+      type="button"
+      class="kal-request-appointment-cta kal-clinic-booking__cta"
+      data-facility-id="{{ clinic_entry.facility_id.value | escape }}"
+      data-location-name="{{ clinic_entry.name.value | escape }}"
+      data-clinic-address="{{ clinic_entry.address.value | escape }}"
+      data-clinic-phone="{{ clinic_entry.phone.value | escape }}"
+    >
+      {{ section.settings.cta_text | escape }}
+    </button>
+
+    {%- if section.settings.show_doctors -%}
+      <div class="kal-clinic-booking__doctors">
+        {%- if section.settings.doctors_heading != blank -%}
+          <h2 class="kal-clinic-booking__heading">{{ section.settings.doctors_heading | escape }}</h2>
+        {%- endif -%}
+        <div class="kal-clinic-booking__cards">
+          {%- render 'kal-doctor-profile-cards', clinic_entry: clinic_entry -%}
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Clinic booking (Kal)",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "cta_text",
+      "label": "Button text",
+      "default": "Request Appointment"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_doctors",
+      "label": "Show this clinic's doctors",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "doctors_heading",
+      "label": "Doctors heading",
+      "default": "Our doctors at this clinic"
+    }
+  ],
+  "presets": [
+    { "name": "Clinic booking (Kal)" }
+  ]
+}
+{% endschema %}
