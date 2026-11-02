@@ -1,0 +1,48 @@
+{% comment %}
+  Booking block for a clinic's own page. Rendered from sections/main-page.liquid,
+  so every page that already uses the normal page layout gets it, with no
+  template to choose.
+
+  The clinic is the Clinic entry whose "page" field points at this page. A page
+  that isn't any clinic's page renders nothing.
+
+  Renders:
+  - the Request Appointment button. It opens the booking flow with this clinic
+    already chosen, same as picking it on "Find a Clinic".
+  - this clinic's doctors (the doctor cards, filtered to this clinic).
+
+  Nothing about the clinic or its doctors is typed here.
+{% endcomment %}
+
+{%- assign clinic_entry = nil -%}
+{%- if page -%}
+  {%- for clinic in shop.metaobjects.clinic.values -%}
+    {%- if clinic.page.value and clinic.page.value.id == page.id -%}
+      {%- assign clinic_entry = clinic -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+
+{%- if clinic_entry and settings.kal_booking_enabled -%}
+  {{ 'kal-clinic-booking.css' | asset_url | stylesheet_tag }}
+
+  <div class="kal-clinic-booking">
+    <button
+      type="button"
+      class="kal-request-appointment-cta kal-clinic-booking__cta"
+      data-facility-id="{{ clinic_entry.facility_id.value | escape }}"
+      data-location-name="{{ clinic_entry.name.value | escape }}"
+      data-clinic-address="{{ clinic_entry.address.value | escape }}"
+      data-clinic-phone="{{ clinic_entry.phone.value | escape }}"
+    >
+      Request Appointment
+    </button>
+
+    <div class="kal-clinic-booking__doctors">
+      <h2 class="kal-clinic-booking__heading">Our doctors at this clinic</h2>
+      <div class="kal-clinic-booking__cards">
+        {%- render 'kal-doctor-profile-cards', clinic_entry: clinic_entry -%}
+      </div>
+    </div>
+  </div>
+{%- endif -%}
