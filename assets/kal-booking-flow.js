@@ -222,6 +222,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // A clinic page's own CTA and doctor Consult buttons carry the clinic they
+  // belong to (data-facility-id and friends, see sections/kal-clinic-booking.liquid
+  // and snippets/kal-doctor-profile-cards.liquid). Storing that clinic before the
+  // flow opens makes it the one every step uses, same as picking it on "Find a
+  // Clinic". A trigger without data-facility-id leaves the stored clinic alone.
+  const storeFacilityFromTrigger = (trigger) => {
+    if (!trigger || !trigger.dataset.facilityId) return;
+    storeFacility({
+      id: trigger.dataset.facilityId,
+      name: trigger.dataset.locationName,
+      address: trigger.dataset.clinicAddress || null,
+      phone: trigger.dataset.clinicPhone || null,
+    });
+  };
+
   const applyStoredFacility = () => {
     const facility = getStoredFacility();
     if (!facility || !facility.id) return;
@@ -4565,7 +4580,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Any CTA anywhere on the site with this class opens the flow at Entry
   // (Experiment A — see BOOKING EXPERIMENT above).
   document.addEventListener('click', (e) => {
-    if (e.target.closest('.kal-request-appointment-cta')) {
+    const requestCtaTrigger = e.target.closest('.kal-request-appointment-cta');
+    if (requestCtaTrigger) {
+      storeFacilityFromTrigger(requestCtaTrigger);
       isExperimentB = false;
       applyExperimentVisibility();
       applyExperimentStepNumbering();
@@ -4580,6 +4597,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // card puts it directly on the Consult button.
     const consultCtaTrigger = e.target.closest('.kal-consult-cta');
     if (consultCtaTrigger) {
+      storeFacilityFromTrigger(consultCtaTrigger);
       const doctorId = consultCtaTrigger.dataset.doctorId
         || consultCtaTrigger.closest('[data-doctor-id]')?.dataset.doctorId
         || null;
