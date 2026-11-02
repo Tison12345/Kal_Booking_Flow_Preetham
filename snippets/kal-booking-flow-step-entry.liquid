@@ -86,15 +86,17 @@
         been picked, so there's no location to show yet. Own class
         (.kal-step-entry__help) rather than overloading
         .kal-step-entry__location, which every other step still depends
-        on for its address bar. Phone number is a DUMMY placeholder, same
-        as the mobile/desktop location text elsewhere in this step.
+        on for its address bar. The number here is the default shown before
+        a clinic is picked; kal-booking-flow.js's applyStoredFacility()
+        swaps in the picked clinic's own phone (data-kal-clinic-phone) on
+        every step's help line, this one included.
       {%- endcomment -%}
       <div class="kal-step-entry__help">
         <span class="kal-icon kal-icon--help">
           {%- render 'kal-booking-icons', icon_name: 'help-circle' -%}
         </span>
         <span class="kal-step-entry__help-text">
-          Need assistance? Call us at +91 804012 3456
+          Need assistance? Call us at <span data-kal-clinic-phone>+91 804012 3456</span>
         </span>
       </div>
     </div>
