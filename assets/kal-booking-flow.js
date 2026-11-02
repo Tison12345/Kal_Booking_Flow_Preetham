@@ -167,6 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // ----------------------------------------------------------------------
   const FACILITY_STORAGE_KEY = 'kalSelectedFacility';
 
+  // Shown in every "Need assistance? Call us at ..." line (data-kal-clinic-phone)
+  // until a clinic is picked, and again whenever the picked clinic has no
+  // phone set in Shopify. Must match the text the snippets render.
+  const DEFAULT_SUPPORT_PHONE = '+91 804012 3456';
+
   // Identifies this browser across requests so the backend can tell "the
   // same visitor is switching their own hold" apart from "a different
   // visitor is trying to exclude someone else's hold" — every Shopify
@@ -231,6 +236,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // existing "Indiranagar"-only default (see kal-booking-flow-step-header.liquid).
     flow.querySelectorAll('.kal-step-header__location-text').forEach((el) => {
       el.textContent = facility.name;
+    });
+
+    // The clinic's own contact number, so a visitor who picked a clinic
+    // calls that clinic. Falls back to the default line when the clinic has
+    // no phone, rather than keeping the previous clinic's number.
+    flow.querySelectorAll('[data-kal-clinic-phone]').forEach((el) => {
+      el.textContent = facility.phone || DEFAULT_SUPPORT_PHONE;
     });
 
   };
@@ -325,6 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
           city: null,
           state: null,
           timings: clinic.timings || null,
+          phone: clinic.phone || null,
         }));
     }
     return Promise.resolve(facilityOptionsCache);
@@ -365,6 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
       button.setAttribute('data-kal-select-facility', '');
       button.dataset.facilityId = facility.id;
       button.dataset.locationName = facility.name;
+      button.dataset.clinicPhone = facility.phone || '';
       button.textContent = facility.name;
       item.appendChild(button);
 
@@ -4611,6 +4625,7 @@ document.addEventListener('DOMContentLoaded', () => {
         id: facilityId,
         name: facilityTrigger.dataset.locationName,
         address: facilityTrigger.dataset.clinicAddress || null,
+        phone: facilityTrigger.dataset.clinicPhone || null,
       });
       isExperimentB = false;
       applyExperimentVisibility();
