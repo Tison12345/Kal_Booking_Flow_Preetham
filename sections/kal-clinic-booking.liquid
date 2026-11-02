@@ -1,9 +1,9 @@
 {% comment %}
   Booking block for a clinic's own page. Used by templates/page.clinic.json.
 
-  The clinic comes from the page itself: its Clinic metafield (custom.clinic,
-  a reference to a Shopify Clinic entry). So every clinic page uses this same
-  section, and only the metafield changes between clinics.
+  The clinic comes from the page itself: the Clinic entry whose "page" field
+  points at this page. So every clinic page uses this same section, and only
+  that field changes between clinics.
 
   Renders:
   - the Request Appointment button. It opens the booking flow with this clinic
@@ -13,7 +13,14 @@
   Nothing about the clinic or its doctors is typed here.
 {% endcomment %}
 
-{%- assign clinic_entry = page.metafields.custom.clinic.value -%}
+{%- assign clinic_entry = nil -%}
+{%- if page -%}
+  {%- for clinic in shop.metaobjects.clinic.values -%}
+    {%- if clinic.page.value and clinic.page.value.id == page.id -%}
+      {%- assign clinic_entry = clinic -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
 
 {%- if clinic_entry and settings.kal_booking_enabled -%}
   {{ 'kal-clinic-booking.css' | asset_url | stylesheet_tag }}
