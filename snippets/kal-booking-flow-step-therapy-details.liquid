@@ -265,6 +265,17 @@
               <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
               <span data-kal-field-error-text></span>
             </p>
+            {%- comment -%}
+              Server-side booking refusals for the number (already linked to
+              another patient / already has a therapy request) — shown here,
+              under the email field, with the same copy the consultation flow
+              uses under its phone field. Set by submitTherapyRequest() in
+              kal-booking-flow.js via showFieldError('booking', ...).
+            {%- endcomment -%}
+            <p class="kal-form-error" data-kal-field-error="booking" hidden>
+              <span class="kal-form-error__icon">{%- render 'kal-booking-icons', icon_name: 'alert-circle' -%}</span>
+              <span data-kal-field-error-text></span>
+            </p>
           </div>
         </div>
       </div>
